@@ -73,7 +73,13 @@ export function UserNav() {
           )}
 
           <div className="flex items-center gap-1.5 text-xs">
-            <span className="font-medium text-white">{displayName}</span>
+            <Link
+              href="/profile"
+              className="font-medium text-white hover:underline"
+              title="View your archivist profile"
+            >
+              {displayName}
+            </Link>
             <span className="text-[10px] bg-red-800 text-amber-200 px-1.5 py-0.2 rounded uppercase">
               {role ?? "user"}
             </span>

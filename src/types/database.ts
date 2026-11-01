@@ -24,7 +24,7 @@ export type AdminActionType =
   | "CONTACT"
   | "REMOVE";
 
-export interface UserProfileRecord {
+export type UserProfileRecord = {
   id: string;
   display_name: string;
   role: UserRole;
@@ -32,9 +32,9 @@ export interface UserProfileRecord {
   submission_count: number;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface DriveLinkRecord {
+export type DriveLinkRecord = {
   id: string;
   drive_url: string;
   google_file_id: string;
@@ -45,9 +45,9 @@ export interface DriveLinkRecord {
   is_removed: boolean;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LinkMetadataRecord {
+export type LinkMetadataRecord = {
   link_id: string;
   title: string;
   author_name: string;
@@ -69,9 +69,9 @@ export interface LinkMetadataRecord {
 
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface LinkVerificationRecord {
+export type LinkVerificationRecord = {
   id: string;
   link_id: string;
   automated_risk_score: number;
@@ -82,18 +82,18 @@ export interface LinkVerificationRecord {
   admin_notes: string | null;
   verification_badge: VerificationBadge;
   created_at: string;
-}
+};
 
-export interface AdminActionRecord {
+export type AdminActionRecord = {
   id: string;
   link_id: string;
   admin_id: string;
   action_type: AdminActionType;
   reason: string;
   executed_at: string;
-}
+};
 
-export interface PublicSearchFeedRecord {
+export type PublicSearchFeedRecord = {
   work_id: string;
   upload_mode: UploadMode;
   uploaded_at: string;
@@ -111,9 +111,9 @@ export interface PublicSearchFeedRecord {
   admin_verified_at: string | null;
   automated_risk_score: number;
   path_reveal_token: string;
-}
+};
 
-export interface AdminTriageFeedRecord {
+export type AdminTriageFeedRecord = {
   link_id: string;
   drive_url: string;
   google_file_id: string;
@@ -134,9 +134,9 @@ export interface AdminTriageFeedRecord {
   automated_flags: Json | null;
   scanner_passed: boolean | null;
   admin_notes: string | null;
-}
+};
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       user_profiles: {
@@ -146,6 +146,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Omit<UserProfileRecord, "id">>;
+        Relationships: [];
       };
       drive_links: {
         Row: DriveLinkRecord;
@@ -155,6 +156,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Omit<DriveLinkRecord, "id">>;
+        Relationships: [];
       };
       link_metadata: {
         Row: LinkMetadataRecord;
@@ -163,6 +165,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Omit<LinkMetadataRecord, "link_id">>;
+        Relationships: [];
       };
       link_verifications: {
         Row: LinkVerificationRecord;
@@ -171,6 +174,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<LinkVerificationRecord, "id">>;
+        Relationships: [];
       };
       admin_actions: {
         Row: AdminActionRecord;
@@ -179,22 +183,30 @@ export interface Database {
           executed_at?: string;
         };
         Update: Partial<Omit<AdminActionRecord, "id">>;
+        Relationships: [];
       };
     };
     Views: {
       vw_public_search_feed: {
         Row: PublicSearchFeedRecord;
+        Relationships: [];
       };
       vw_admin_triage_feed: {
         Row: AdminTriageFeedRecord;
+        Relationships: [];
       };
     };
-    Functions: Record<string, never>;
+    Functions: {
+      [_ in never]: never;
+    };
     Enums: {
       user_role: UserRole;
       upload_mode: UploadMode;
       verification_status: VerificationStatus;
       admin_action_type: AdminActionType;
     };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
-}
+};
