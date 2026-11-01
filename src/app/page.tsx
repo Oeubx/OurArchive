@@ -12,11 +12,22 @@ export default function HomePage() {
         </p>
 
         <div className="mt-8 p-4 bg-gray-50 border border-gray-200 rounded text-left text-xs space-y-2">
-          <div className="font-semibold text-gray-700">Infrastructure Status (Module 0):</div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-gray-700">Infrastructure Status (Module 0):</span>
+            <a
+              href="/api/health"
+              className="text-ao3-red hover:underline font-mono text-[11px]"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              /api/health &rarr;
+            </a>
+          </div>
           <ul className="list-disc pl-5 text-gray-600 space-y-1">
             <li>Edge Middleware: Active (Anti-bot rate limits enforced)</li>
             <li>Zero-Download Streaming Proxy: Ready</li>
-            <li>Supabase BaaS Layer: Initialized</li>
+            <li>Supabase BaaS Layer: Initialized & Verified</li>
+            <li>Operational Telemetry: Active</li>
           </ul>
         </div>
       </div>
