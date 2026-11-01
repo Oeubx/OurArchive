@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { TakedownModal } from "@/components/takedown/TakedownModal";
 
 interface ReaderData {
   workId: string;
@@ -29,6 +30,7 @@ export default function ReaderPage() {
   const [data, setData] = useState<ReaderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTakedownModal, setShowTakedownModal] = useState(false);
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
@@ -142,15 +144,17 @@ export default function ReaderPage() {
             <div className="flex items-center border border-gray-400/40 rounded overflow-hidden">
               <button
                 onClick={() => setFontSizePx((prev) => Math.max(14, prev - 2))}
-                className="px-2 py-1 hover:bg-black/10 text-xs font-bold"
+                className="px-2 py-1 hover:bg-black/10 text-[11px]"
                 title="Decrease font size"
               >
                 A-
               </button>
-              <span className="px-1.5 py-1 text-[10px] font-mono opacity-80">{fontSizePx}px</span>
+              <span className="px-2 py-1 text-[10px] font-mono opacity-70">
+                {fontSizePx}px
+              </span>
               <button
                 onClick={() => setFontSizePx((prev) => Math.min(28, prev + 2))}
-                className="px-2 py-1 hover:bg-black/10 text-xs font-bold"
+                className="px-2 py-1 hover:bg-black/10 text-[11px]"
                 title="Increase font size"
               >
                 A+
@@ -187,6 +191,15 @@ export default function ReaderPage() {
                 Night
               </button>
             </div>
+
+            {/* Direct Takedown / Report Trigger */}
+            <button
+              onClick={() => setShowTakedownModal(true)}
+              className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 rounded text-[11px] font-medium transition flex items-center gap-1"
+              title="Report content or submit immediate author takedown"
+            >
+              <span>🚨</span> Takedown
+            </button>
           </div>
         </div>
       </header>
@@ -312,6 +325,14 @@ export default function ReaderPage() {
           </article>
         )}
       </main>
+
+      {/* Takedown Modal in Reader */}
+      <TakedownModal
+        isOpen={showTakedownModal}
+        workId={workId}
+        workTitle={data?.title}
+        onClose={() => setShowTakedownModal(false)}
+      />
     </div>
   );
 }

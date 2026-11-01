@@ -146,6 +146,56 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Rate-limiting Rule 4: Immediate Takedown Requests (/api/takedown) -> max 5 req/hour
+  if (pathname.startsWith("/api/takedown")) {
+    const limit = 5;
+    const windowMs = 60 * 60 * 1000;
+    const result = checkRateLimit(`takedown:${ip}`, limit, windowMs);
+
+    if (!result.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Takedown submission rate limit reached. Please wait before submitting another request or email the admin directly.",
+          retryAfterSeconds: result.reset,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": result.reset.toString(),
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+  }
+
+  // Rate-limiting Rule 5: Assisted Upload Intake (/api/assisted-intake) -> max 5 req/hour
+  if (pathname.startsWith("/api/assisted-intake")) {
+    const limit = 5;
+    const windowMs = 60 * 60 * 1000;
+    const result = checkRateLimit(`assisted:${ip}`, limit, windowMs);
+
+    if (!result.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Assisted intake velocity limit reached: maximum 5 submissions per hour.",
+          retryAfterSeconds: result.reset,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": result.reset.toString(),
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+  }
+
   // Refresh Supabase auth session cookies
   const { supabaseResponse, user } = await updateSession(request);
 
