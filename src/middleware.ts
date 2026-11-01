@@ -121,6 +121,31 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Rate-limiting Rule 3: Reader View Stream (/api/reader/*) -> max 30 req/min
+  if (pathname.startsWith("/api/reader")) {
+    const limit = 30;
+    const windowMs = 60 * 1000;
+    const result = checkRateLimit(`reader:${ip}`, limit, windowMs);
+
+    if (!result.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Reader stream rate limit reached. Please wait 30 seconds before loading more chapters.",
+          retryAfterSeconds: result.reset,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": result.reset.toString(),
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+  }
+
   // Refresh Supabase auth session cookies
   const { supabaseResponse, user } = await updateSession(request);
 
@@ -151,13 +176,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (e.g. robots.txt)
-     */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
