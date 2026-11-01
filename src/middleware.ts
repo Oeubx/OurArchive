@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
 interface RateLimitEntry {
   count: number;
@@ -62,7 +63,7 @@ function checkRateLimit(
   };
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
@@ -120,13 +121,15 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Forward request with security and audit headers
-  const response = NextResponse.next();
-  response.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  // Refresh Supabase auth session cookies
+  const { supabaseResponse } = await updateSession(request);
 
-  return response;
+  // Apply emergency platform headers
+  supabaseResponse.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");
+  supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
+  supabaseResponse.headers.set("X-Frame-Options", "DENY");
+
+  return supabaseResponse;
 }
 
 export const config = {
