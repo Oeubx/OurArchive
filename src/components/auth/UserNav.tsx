@@ -4,13 +4,17 @@ import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { signOutUser } from "@/lib/services/auth";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { UploadModal } from "@/components/upload/UploadModal";
+import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 
 export function UserNav() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showAssistedModal, setShowAssistedModal] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -63,6 +67,13 @@ export function UserNav() {
     <div className="flex items-center gap-3">
       {user ? (
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="px-2.5 py-1 text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 rounded shadow-xs transition flex items-center gap-1"
+          >
+            <span>+</span> Submit Work
+          </button>
+
           {isAdmin && (
             <Link
               href="/admin"
@@ -93,17 +104,37 @@ export function UserNav() {
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setShowModal(true)}
-          className="text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 px-3 py-1 rounded shadow-xs transition"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAssistedModal(true)}
+            className="text-xs text-amber-200 hover:text-white underline transition px-1"
+            title="Submit a view-only link without signing in"
+          >
+            Assisted Intake
+          </button>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 px-3 py-1 rounded shadow-xs transition"
+          >
+            Sign In
+          </button>
+        </div>
       )}
 
       <AuthModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
+
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => window.location.reload()}
+      />
+
+      <AssistedIntakeModal
+        isOpen={showAssistedModal}
+        onClose={() => setShowAssistedModal(false)}
       />
     </div>
   );
