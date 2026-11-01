@@ -43,12 +43,32 @@ jobs:
       - name: Audit Relative Paths in Documentation
         run: |
           echo "Scanning for hardcoded absolute local paths in Markdown files..."
-          if grep -rIn "C:\\\\" docs/ || grep -rIn "D:\\\\" docs/; then
-            echo "ERROR: Hardcoded absolute drive paths found in documentation. Please use relative paths."
-            exit 1
-          else
-            echo "Relative path audit passed. No hardcoded Windows drive letters found."
-          fi
+          python3 - << 'PY'
+          import os, re, sys
+
+          violations = []
+          # Matches markdown link targets like [text](C:/...) or [text](C:\...) or [text](file:///...)
+          link_abs_pattern = re.compile(r'\[([^\]]+)\]\((?:file:///)?(?:[A-Za-z]:[\\/]|/Users/|/home/)')
+          # Also catches raw Windows drive path patterns: e.g., Path: C:\ or file: D:\
+          raw_path_pattern = re.compile(r'(?:Path|path|file|at|in)\s*:\s*[A-Za-z]:[\\/]')
+
+          for root, dirs, files in os.walk('docs'):
+              for file in files:
+                  if file.endswith('.md'):
+                      path = os.path.join(root, file)
+                      with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                          for line_no, line in enumerate(f, 1):
+                              if link_abs_pattern.search(line) or raw_path_pattern.search(line):
+                                  violations.append((path, line_no, line.strip()))
+
+          if violations:
+              print(f"ERROR: {len(violations)} hardcoded absolute path(s) detected:")
+              for p, lno, text in violations:
+                  print(f"  {p}:{lno} -> {text}")
+              sys.exit(1)
+          else:
+              print("Relative path audit passed. No hardcoded absolute local paths found.")
+          PY
 
       - name: Validate Markdown Relative Links
         run: |

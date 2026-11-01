@@ -43,7 +43,7 @@ flowchart TD
 - **Target Execution Time**: Under 3 minutes.
 - **Jobs**:
   1. **Documentation Link Integrity**: Parses all Markdown files to verify relative file paths and validate that internal links point to existing files.
-  2. **Absolute Path Shield**: Greps the repository for hardcoded Windows (`C:\`, `D:\`) or local user directories to ensure zero-defect portability.
+  2. **Absolute Path Shield**: Verifies that documentation links do not contain local absolute file paths or machine-specific drive letters to ensure zero-defect portability.
   3. **Code Syntax & Static Analysis**: Runs TypeScript type-checking (`tsc --noEmit`) and ESLint.
 
 ### Tier 2: Full Promotion Regression Gate
