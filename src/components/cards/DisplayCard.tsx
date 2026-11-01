@@ -1,0 +1,190 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import type { PublicSearchFeedRecord } from "@/types/database";
+
+interface DisplayCardProps {
+  work: PublicSearchFeedRecord;
+  onRevealDrive: (workId: string) => void;
+  isAdmin?: boolean;
+}
+
+export function DisplayCard({ work, onRevealDrive, isAdmin }: DisplayCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [isHiding, setIsHiding] = useState(false);
+  const [hiddenLocally, setHiddenLocally] = useState(false);
+
+  if (hiddenLocally) {
+    return null;
+  }
+
+  const formattedDate = new Date(work.uploaded_at).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const ratingColors: Record<string, string> = {
+    "General Audiences": "bg-green-100 text-green-800 border-green-300",
+    "Teen And Up Audiences": "bg-yellow-100 text-yellow-800 border-yellow-300",
+    Mature: "bg-orange-100 text-orange-800 border-orange-300",
+    Explicit: "bg-red-100 text-red-800 border-red-300",
+    "Not Rated": "bg-gray-100 text-gray-800 border-gray-300",
+  };
+
+  const badgeClass =
+    work.verification_badge === "MANUAL_VERIFIED"
+      ? "bg-green-700 text-white"
+      : work.verification_badge === "AUTOMATED_PASS"
+      ? "bg-emerald-600 text-white"
+      : "bg-amber-600 text-white";
+
+  return (
+    <div className="bg-white border border-gray-300 rounded-md shadow-xs overflow-hidden transition hover:border-gray-400">
+      {/* SYSTEM HEADER */}
+      <div className="bg-gray-100 border-b border-gray-200 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-600">
+        <span className="font-semibold tracking-wide text-gray-700">
+          SYSTEM HEADER: OurArchive Emergency Mirror (Temporary Read-Only Library)
+        </span>
+        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-700">
+          {work.mime_type.includes("pdf") ? "PDF Mirror" : "Doc Mirror"}
+        </span>
+      </div>
+
+      {/* DISPLAYED FILE SECTION */}
+      <div className="p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-base font-bold text-ao3-red hover:underline">
+              <Link href={`/reader/${work.work_id}`}>{work.title}</Link>
+            </h3>
+            <span className="text-xs text-gray-600">
+              by <strong className="text-gray-900">{work.author_name}</strong>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={`px-2 py-0.5 rounded border text-[10px] font-semibold ${
+                ratingColors[work.rating || "Not Rated"] || ratingColors["Not Rated"]
+              }`}
+            >
+              {work.rating || "Not Rated"}
+            </span>
+          </div>
+        </div>
+
+        {/* Fandom & Pairing Bar */}
+        <div className="text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-gray-800">Fandom:</span>
+          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">{work.fandom}</span>
+          {work.pairing && (
+            <>
+              <span className="text-gray-400">•</span>
+              <span className="font-semibold text-gray-800">Pairing:</span>
+              <span className="text-gray-700">{work.pairing}</span>
+            </>
+          )}
+          <span className="text-gray-400">•</span>
+          <span className="text-gray-500">
+            Words: <strong className="text-gray-700">{work.word_count.toLocaleString()}</strong>
+          </span>
+          <span className="text-gray-400">•</span>
+          <span className="text-gray-500">Updated: {formattedDate}</span>
+        </div>
+
+        {/* Summary */}
+        {work.summary && (
+          <div className="bg-gray-50 border-l-2 border-ao3-red p-2.5 rounded-r text-xs text-gray-700 leading-relaxed italic">
+            &ldquo;{work.summary}&rdquo;
+          </div>
+        )}
+
+        {/* Tags */}
+        {work.tags && work.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {work.tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 rounded text-[11px] transition"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FILE DETAILS & CONTROLS ACCORDION / TOGGLE */}
+      <div className="border-t border-gray-200 bg-gray-50/70 px-4 py-2 flex items-center justify-between text-xs">
+        <button
+          onClick={() => setShowDetails(!showDetails)}
+          className="text-[11px] font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 transition"
+        >
+          <span>{showDetails ? "▲" : "▼"}</span>
+          <span>{showDetails ? "Hide Details & Diagnostics" : "File Details & Verification Diagnostics"}</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/reader/${work.work_id}`}
+            className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
+          >
+            <span>👁️</span> Read Work in Clean Viewer
+          </Link>
+          <button
+            onClick={() => onRevealDrive(work.work_id)}
+            className="px-3 py-1 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-xs font-medium rounded transition flex items-center gap-1"
+            title="Inspect verified Google Drive view-only URL"
+          >
+            <span>🔗</span> View Drive Link / Path
+          </button>
+        </div>
+      </div>
+
+      {/* EXPANDABLE DETAILS */}
+      {showDetails && (
+        <div className="border-t border-dashed border-gray-300 bg-gray-50 p-4 text-[11px] text-gray-700 space-y-2 font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <span className="text-gray-500">• Drive Owner:</span>{" "}
+              <strong className="text-gray-800">{work.display_drive_owner || "Anonymous Owner"}</strong>
+            </div>
+            <div>
+              <span className="text-gray-500">• Upload Mode:</span>{" "}
+              <span className="capitalize">{work.upload_mode.replace("_", " ")}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">• Safety Score:</span>{" "}
+              <span className="text-green-700 font-semibold">{work.automated_risk_score}/100 (Clean)</span>
+            </div>
+            <div>
+              <span className="text-gray-500">• Verification Status:</span>{" "}
+              <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${badgeClass}`}>
+                {work.verification_badge}
+              </span>
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="pt-2 border-t border-gray-200 flex items-center justify-end gap-2">
+              <button
+                disabled={isHiding}
+                onClick={async () => {
+                  if (confirm("Hide this fanwork from public index?")) {
+                    setIsHiding(true);
+                    setHiddenLocally(true);
+                  }
+                }}
+                className="px-2 py-0.5 bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 rounded text-[10px] font-sans transition"
+              >
+                🚫 Hide This File (Admin)
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
