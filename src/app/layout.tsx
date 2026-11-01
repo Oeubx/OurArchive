@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { UserNav } from "@/components/auth/UserNav";
 
 export const metadata: Metadata = {
   title: "OurArchive — Emergency Read-Only Platform for AO3 Users",
@@ -15,16 +16,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-white text-gray-900 antialiased">
-        <header className="bg-ao3-red text-white py-2 px-4 shadow">
+        <header className="bg-ao3-red text-white py-2.5 px-4 shadow">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
               <span className="text-xl font-bold tracking-tight">OurArchive</span>
-              <span className="ml-2 text-xs bg-ao3-darkred px-2 py-0.5 rounded text-amber-200">
+              <span className="text-xs bg-ao3-darkred px-2 py-0.5 rounded text-amber-200">
                 Emergency Service
               </span>
             </div>
-            <div className="text-xs text-red-100">
-              Read-Only • Zero-Download • Temporary Bridge
+            <div className="flex items-center gap-4">
+              <span className="hidden sm:inline text-xs text-red-100">
+                Read-Only • Zero-Download • Temporary Bridge
+              </span>
+              <UserNav />
             </div>
           </div>
         </header>

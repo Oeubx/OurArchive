@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
 interface RateLimitEntry {
   count: number;
@@ -62,7 +63,7 @@ function checkRateLimit(
   };
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
@@ -120,13 +121,32 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Forward request with security and audit headers
-  const response = NextResponse.next();
-  response.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
+  // Refresh Supabase auth session cookies
+  const { supabaseResponse, user } = await updateSession(request);
 
-  return response;
+  // Admin Route Protection Rule: Enforce RBAC on /admin/* (except /admin/unauthorized)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/unauthorized") {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "admin_login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const role = user.app_metadata?.role as string | undefined;
+    if (role !== "admin") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin/unauthorized";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // Apply emergency platform headers
+  supabaseResponse.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");
+  supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
+  supabaseResponse.headers.set("X-Frame-Options", "DENY");
+
+  return supabaseResponse;
 }
 
 export const config = {
