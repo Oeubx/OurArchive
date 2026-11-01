@@ -122,7 +122,24 @@ export async function middleware(request: NextRequest) {
   }
 
   // Refresh Supabase auth session cookies
-  const { supabaseResponse } = await updateSession(request);
+  const { supabaseResponse, user } = await updateSession(request);
+
+  // Admin Route Protection Rule: Enforce RBAC on /admin/* (except /admin/unauthorized)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/unauthorized") {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "admin_login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const role = user.app_metadata?.role as string | undefined;
+    if (role !== "admin") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin/unauthorized";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
 
   // Apply emergency platform headers
   supabaseResponse.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");

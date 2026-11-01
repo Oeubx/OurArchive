@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/client";
-import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { UserProfileRecord } from "@/types/database";
 
 /**
@@ -21,30 +20,6 @@ export async function getCurrentProfile(): Promise<UserProfileRecord | null> {
 
   if (error) {
     console.error("Error fetching user profile:", error);
-    return null;
-  }
-
-  return data;
-}
-
-/**
- * Server-Side: Fetches the authenticated user's profile inside Server Components / Route Handlers.
- */
-export async function getServerProfile(): Promise<UserProfileRecord | null> {
-  const supabase = createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (error) {
     return null;
   }
 
