@@ -93,6 +93,49 @@ export interface AdminActionRecord {
   executed_at: string;
 }
 
+export interface PublicSearchFeedRecord {
+  work_id: string;
+  upload_mode: UploadMode;
+  uploaded_at: string;
+  title: string;
+  author_name: string;
+  fandom: string;
+  pairing: string | null;
+  rating: string | null;
+  word_count: number;
+  summary: string | null;
+  tags: string[];
+  mime_type: string;
+  display_drive_owner: string | null;
+  verification_badge: VerificationBadge;
+  admin_verified_at: string | null;
+  automated_risk_score: number;
+  path_reveal_token: string;
+}
+
+export interface AdminTriageFeedRecord {
+  link_id: string;
+  drive_url: string;
+  google_file_id: string;
+  upload_mode: UploadMode;
+  verification_status: VerificationStatus;
+  is_hidden: boolean;
+  is_removed: boolean;
+  uploader_user_id: string | null;
+  uploader_name: string | null;
+  submitted_at: string;
+  title: string | null;
+  author_name: string | null;
+  fandom: string | null;
+  mime_type: string | null;
+  file_size_bytes: number | null;
+  drive_owner_email: string | null;
+  automated_risk_score: number | null;
+  automated_flags: Json | null;
+  scanner_passed: boolean | null;
+  admin_notes: string | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -138,7 +181,14 @@ export interface Database {
         Update: Partial<Omit<AdminActionRecord, "id">>;
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      vw_public_search_feed: {
+        Row: PublicSearchFeedRecord;
+      };
+      vw_admin_triage_feed: {
+        Row: AdminTriageFeedRecord;
+      };
+    };
     Functions: Record<string, never>;
     Enums: {
       user_role: UserRole;
