@@ -32,11 +32,11 @@ export function DisplayCard({
   });
 
   const ratingColors: Record<string, string> = {
-    "General Audiences": "bg-green-100 text-green-800 border-green-300",
-    "Teen And Up Audiences": "bg-yellow-100 text-yellow-800 border-yellow-300",
-    Mature: "bg-orange-100 text-orange-800 border-orange-300",
-    Explicit: "bg-red-100 text-red-800 border-red-300",
-    "Not Rated": "bg-gray-100 text-gray-800 border-gray-300",
+    "General Audiences": "bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300 border-green-300 dark:border-green-800",
+    "Teen And Up Audiences": "bg-yellow-100 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-800",
+    Mature: "bg-orange-100 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800",
+    Explicit: "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-300 dark:border-red-800",
+    "Not Rated": "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700",
   };
 
   const badgeClass =
@@ -47,13 +47,13 @@ export function DisplayCard({
       : "bg-amber-600 text-white";
 
   return (
-    <div className="bg-white border border-gray-300 rounded-md shadow-xs overflow-hidden transition hover:border-gray-400">
+    <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-xs overflow-hidden transition hover:border-gray-400 dark:hover:border-gray-600">
       {/* SYSTEM HEADER */}
-      <div className="bg-gray-100 border-b border-gray-200 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-600">
-        <span className="font-semibold tracking-wide text-gray-700">
+      <div className="bg-subtle-light dark:bg-subtle-dark border-b border-border-light dark:border-border-dark px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+        <span className="font-semibold tracking-wide text-gray-700 dark:text-gray-300">
           SYSTEM HEADER: OurArchive Emergency Mirror (Temporary Read-Only Library)
         </span>
-        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-700">
+        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
           {work.mime_type.includes("pdf") ? "PDF Mirror" : "Doc Mirror"}
         </span>
       </div>
@@ -62,11 +62,11 @@ export function DisplayCard({
       <div className="p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-bold text-ao3-red hover:underline">
+            <h3 className="text-base font-bold text-ao3-red dark:text-ao3-lightred hover:underline">
               <Link href={`/reader/${work.work_id}`}>{work.title}</Link>
             </h3>
-            <span className="text-xs text-gray-600">
-              by <strong className="text-gray-900">{work.author_name}</strong>
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              by <strong className="text-gray-900 dark:text-gray-100">{work.author_name}</strong>
             </span>
           </div>
 
@@ -82,27 +82,27 @@ export function DisplayCard({
         </div>
 
         {/* Fandom & Pairing Bar */}
-        <div className="text-xs text-gray-600 flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-gray-800">Fandom:</span>
-          <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-700">{work.fandom}</span>
+        <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-gray-800 dark:text-gray-200">Fandom:</span>
+          <span className="bg-subtle-light dark:bg-subtle-dark px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">{work.fandom}</span>
           {work.pairing && (
             <>
               <span className="text-gray-400">•</span>
-              <span className="font-semibold text-gray-800">Pairing:</span>
-              <span className="text-gray-700">{work.pairing}</span>
+              <span className="font-semibold text-gray-800 dark:text-gray-200">Pairing:</span>
+              <span className="text-gray-700 dark:text-gray-300">{work.pairing}</span>
             </>
           )}
           <span className="text-gray-400">•</span>
-          <span className="text-gray-500">
-            Words: <strong className="text-gray-700">{work.word_count.toLocaleString()}</strong>
+          <span className="text-gray-500 dark:text-gray-400">
+            Words: <strong className="text-gray-700 dark:text-gray-300">{work.word_count.toLocaleString()}</strong>
           </span>
           <span className="text-gray-400">•</span>
-          <span className="text-gray-500">Updated: {formattedDate}</span>
+          <span className="text-gray-500 dark:text-gray-400">Updated: {formattedDate}</span>
         </div>
 
         {/* Summary */}
         {work.summary && (
-          <div className="bg-gray-50 border-l-2 border-ao3-red p-2.5 rounded-r text-xs text-gray-700 leading-relaxed italic">
+          <div className="bg-canvas-light dark:bg-canvas-dark border-l-2 border-ao3-red p-2.5 rounded-r text-xs text-gray-700 dark:text-gray-300 leading-relaxed italic">
             &ldquo;{work.summary}&rdquo;
           </div>
         )}
@@ -113,7 +113,7 @@ export function DisplayCard({
             {work.tags.map((tag, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 rounded text-[11px] transition"
+                className="px-2 py-0.5 bg-subtle-light dark:bg-subtle-dark hover:bg-gray-200 dark:hover:bg-gray-700 border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 rounded text-[11px] transition"
               >
                 {tag}
               </span>
@@ -123,10 +123,10 @@ export function DisplayCard({
       </div>
 
       {/* FILE DETAILS & CONTROLS ACCORDION / TOGGLE */}
-      <div className="border-t border-gray-200 bg-gray-50/70 px-4 py-2 flex items-center justify-between text-xs flex-wrap gap-2">
+      <div className="border-t border-border-light dark:border-border-dark bg-subtle-light/70 dark:bg-subtle-dark/70 px-4 py-2 flex items-center justify-between text-xs flex-wrap gap-2">
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="text-[11px] font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 transition"
+          className="text-[11px] font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-1 transition"
         >
           <span>{showDetails ? "▲" : "▼"}</span>
           <span>{showDetails ? "Hide Details & Diagnostics" : "File Details & Verification Diagnostics"}</span>
@@ -142,7 +142,7 @@ export function DisplayCard({
 
           <button
             onClick={() => onRevealDrive(work.work_id)}
-            className="px-3 py-1 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-xs font-medium rounded transition flex items-center gap-1"
+            className="px-3 py-1 bg-surface-light dark:bg-surface-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 text-xs font-medium rounded transition flex items-center gap-1"
             title="Inspect verified Google Drive view-only URL"
           >
             <span>🔗</span> View Drive Link
@@ -151,7 +151,7 @@ export function DisplayCard({
           {onReportTakedown && (
             <button
               onClick={() => onReportTakedown(work.work_id, work.title)}
-              className="px-2.5 py-1 bg-white hover:bg-red-50 border border-gray-200 text-gray-500 hover:text-red-700 text-xs rounded transition flex items-center gap-1"
+              className="px-2.5 py-1 bg-surface-light dark:bg-surface-dark hover:bg-red-50 dark:hover:bg-red-950/30 border border-border-light dark:border-border-dark text-gray-500 hover:text-red-700 dark:hover:text-red-400 text-xs rounded transition flex items-center gap-1"
               title="Report issue or request immediate removal"
             >
               <span>🚨</span> Takedown
@@ -162,22 +162,22 @@ export function DisplayCard({
 
       {/* EXPANDABLE DETAILS */}
       {showDetails && (
-        <div className="border-t border-dashed border-gray-300 bg-gray-50 p-4 text-[11px] text-gray-700 space-y-2 font-mono">
+        <div className="border-t border-dashed border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark p-4 text-[11px] text-gray-700 dark:text-gray-300 space-y-2 font-mono">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <span className="text-gray-500">• Drive Owner:</span>{" "}
-              <strong className="text-gray-800">{work.display_drive_owner || "Anonymous Owner"}</strong>
+              <span className="text-gray-500 dark:text-gray-400">• Drive Owner:</span>{" "}
+              <strong className="text-gray-800 dark:text-gray-200">{work.display_drive_owner || "Anonymous Owner"}</strong>
             </div>
             <div>
-              <span className="text-gray-500">• Upload Mode:</span>{" "}
+              <span className="text-gray-500 dark:text-gray-400">• Upload Mode:</span>{" "}
               <span className="capitalize">{work.upload_mode.replace("_", " ")}</span>
             </div>
             <div>
-              <span className="text-gray-500">• Safety Score:</span>{" "}
-              <span className="text-green-700 font-semibold">{work.automated_risk_score}/100 (Clean)</span>
+              <span className="text-gray-500 dark:text-gray-400">• Safety Score:</span>{" "}
+              <span className="text-green-700 dark:text-green-400 font-semibold">{work.automated_risk_score}/100 (Clean)</span>
             </div>
             <div>
-              <span className="text-gray-500">• Verification Status:</span>{" "}
+              <span className="text-gray-500 dark:text-gray-400">• Verification Status:</span>{" "}
               <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${badgeClass}`}>
                 {work.verification_badge}
               </span>
@@ -185,7 +185,7 @@ export function DisplayCard({
           </div>
 
           {isAdmin && (
-            <div className="pt-2 border-t border-gray-200 flex items-center justify-end gap-2">
+            <div className="pt-2 border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
               <button
                 disabled={isHiding}
                 onClick={async () => {
@@ -211,7 +211,7 @@ export function DisplayCard({
                     }
                   }
                 }}
-                className="px-2 py-0.5 bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 rounded text-[10px] font-sans transition disabled:opacity-50"
+                className="px-2 py-0.5 bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 hover:bg-red-200 border border-red-300 dark:border-red-800 rounded text-[10px] font-sans transition disabled:opacity-50"
               >
                 {isHiding ? "Hiding..." : "🚫 Hide This File (Admin)"}
               </button>
