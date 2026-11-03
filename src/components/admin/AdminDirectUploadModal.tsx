@@ -217,7 +217,7 @@ export function AdminDirectUploadModal({
                     </strong>
                   ) : (
                     <span className="text-amber-700 dark:text-amber-400">
-                      • Default (Unchecked): Routes into the &ldquo;Under Verification&rdquo; triage queue for inspection.
+                      • Default (Unchecked): If you cannot verify this work now, leaving this unchecked routes it into the &ldquo;Under Verification&rdquo; queue so community Verifiers can inspect and verify it themselves.
                     </span>
                   )}
                 </span>
