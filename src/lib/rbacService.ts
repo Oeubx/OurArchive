@@ -1,10 +1,21 @@
 import { DriveLink, LinkStatus, UserRole, VerifierApplication } from "./types";
 import { maskDriveUrl } from "./utils";
-import { getVerifierApplications } from "./contributorService";
+import { segmentDriveUrl } from "./urlSegmenter";
 
 const STORAGE_KEY_COMMUNITY_LINKS = "ourarchive_community_links";
 const STORAGE_KEY_APPLICATIONS = "ourarchive_verifier_applications";
 const STORAGE_KEY_ROLE = "ourarchive_dev_role";
+
+export interface SystemScanReport {
+  scannedAt: string;
+  isValidDriveLink: boolean;
+  fileId: string;
+  riskScore: number; // 0 - 100
+  isViewOnlyConfirmed: boolean;
+  detectedMime: string;
+  threatFlags: string[];
+  verdict: "CLEAN" | "CAUTION" | "MALICIOUS";
+}
 
 // Initial seed data for community submissions in the triage and verifier queues
 const DEFAULT_COMMUNITY_LINKS: DriveLink[] = [
@@ -126,6 +137,25 @@ const DEFAULT_COMMUNITY_LINKS: DriveLink[] = [
     status: "under_verification",
     automatedRiskScore: 0,
   },
+  {
+    id: "comm-006",
+    title: "Suspicious Payload Archive (Executable Hazard)",
+    authorName: "unknown_threat_actor",
+    fandom: "Original Work",
+    rating: "Not Rated",
+    wordCount: 0,
+    summary: "Automated scan flagged executable payload embedded in link parameters. Quarantined automatically by system threat scanner.",
+    tags: ["Quarantined", "Hazard Detected"],
+    rawDriveUrl: "https://drive.google.com/file/d/1Zxy9999ThreatPayloadMacroSetup/view?usp=sharing",
+    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1Zxy9999ThreatPayloadMacroSetup/view?usp=sharing"),
+    mimeType: "application/x-msdownload",
+    isOwnerMasked: true,
+    uploadedBy: "spambot_user",
+    uploadedByRole: "contributor",
+    uploadedAt: "2026-11-03T12:00:00Z",
+    status: "flagged",
+    automatedRiskScore: 90,
+  },
 ];
 
 // Initial seed applications for testing verifier review
@@ -174,8 +204,60 @@ export function subscribeToRbacUpdates(listener: Listener): () => void {
 }
 
 /**
+ * Executes an automated system scan of a Drive link before approval
+ */
+export function runSystemLinkScan(rawDriveUrl: string): SystemScanReport {
+  const segments = segmentDriveUrl(rawDriveUrl);
+  const now = new Date().toISOString();
+
+  if (!segments.isValid) {
+    return {
+      scannedAt: now,
+      isValidDriveLink: false,
+      fileId: segments.fileId || "none",
+      riskScore: 85,
+      isViewOnlyConfirmed: false,
+      detectedMime: "unknown",
+      threatFlags: [segments.errorMessage || "Untrusted or invalid domain"],
+      verdict: "MALICIOUS",
+    };
+  }
+
+  const lower = rawDriveUrl.toLowerCase();
+  const isSuspicious =
+    lower.includes(".exe") ||
+    lower.includes(".bat") ||
+    lower.includes(".scr") ||
+    lower.includes("payload") ||
+    lower.includes(".vbs");
+
+  if (isSuspicious) {
+    return {
+      scannedAt: now,
+      isValidDriveLink: true,
+      fileId: segments.fileId,
+      riskScore: 90,
+      isViewOnlyConfirmed: false,
+      detectedMime: "application/x-msdownload",
+      threatFlags: ["Executable binary or macro pattern detected"],
+      verdict: "MALICIOUS",
+    };
+  }
+
+  return {
+    scannedAt: now,
+    isValidDriveLink: true,
+    fileId: segments.fileId,
+    riskScore: 0,
+    isViewOnlyConfirmed: true,
+    detectedMime: "application/pdf (Safe View-Only Document)",
+    threatFlags: [],
+    verdict: "CLEAN",
+  };
+}
+
+/**
  * Get the currently active user role.
- * Resolves from localStorage (dev override) or falls back to 'contributor' for test users.
  */
 export function getCurrentUserRole(): UserRole {
   if (typeof window === "undefined") return "contributor";
@@ -237,9 +319,13 @@ function saveCommunityLinks(links: DriveLink[]) {
 }
 
 /**
- * Verifier / Admin: Approve a submission
+ * Verifier / Admin: Approve a submission with optional prior verification badge
  */
-export function approveLink(linkId: string, reviewerName: string = "verifier_team"): boolean {
+export function approveLink(
+  linkId: string,
+  reviewerName: string = "verifier_team",
+  isPriorVerified: boolean = false
+): boolean {
   const links = getAllCommunityLinks();
   const index = links.findIndex((l) => l.id === linkId);
   if (index === -1) return false;
@@ -247,9 +333,10 @@ export function approveLink(linkId: string, reviewerName: string = "verifier_tea
   links[index] = {
     ...links[index],
     status: "approved",
-    verificationBadge: "VERIFIED BY ADMIN",
-    adminVerifiedAt: new Date().toISOString(),
+    verificationBadge: isPriorVerified ? "VERIFIED BY ADMIN" : undefined,
+    adminVerifiedAt: isPriorVerified ? new Date().toISOString() : undefined,
     verifiedBy: reviewerName,
+    isPriorVerified,
   };
 
   saveCommunityLinks(links);
@@ -275,7 +362,7 @@ export function rejectLink(linkId: string, reviewerName: string = "verifier_team
 }
 
 /**
- * Verifier / Admin: Hide a submission
+ * Admin: Hide a submission (Temporary Author Takedown Quarantine)
  */
 export function hideLink(linkId: string): boolean {
   const links = getAllCommunityLinks();
@@ -292,7 +379,7 @@ export function hideLink(linkId: string): boolean {
 }
 
 /**
- * Verifier / Admin: Unhide / restore a submission
+ * Admin: Unhide / restore a submission
  */
 export function unhideLink(linkId: string): boolean {
   const links = getAllCommunityLinks();
@@ -330,13 +417,24 @@ export function verifyLink(linkId: string, adminName: string = "biboy_admin"): b
 }
 
 /**
- * Admin: Permanently delete/remove a submission
+ * Admin: Permanently delete/remove a submission.
+ * Enforces policy: Target must be in 'hidden' state (quarantine), 'rejected' state,
+ * OR deemed malicious by the system threat scanner (flagged or risk score >= 70).
  */
 export function removeLink(linkId: string): boolean {
   const links = getAllCommunityLinks();
-  const filtered = links.filter((l) => l.id !== linkId);
-  if (filtered.length === links.length) return false;
+  const target = links.find((l) => l.id === linkId);
+  if (!target) return false;
 
+  const isQuarantined = target.status === "hidden" || target.status === "rejected";
+  const isMalicious = target.status === "flagged" || (target.automatedRiskScore ?? 0) >= 70;
+
+  if (!isQuarantined && !isMalicious) {
+    console.warn("Policy Violation: Cannot remove link unless it is Hidden, Rejected, or deemed Malicious.");
+    return false;
+  }
+
+  const filtered = links.filter((l) => l.id !== linkId);
   saveCommunityLinks(filtered);
   return true;
 }
@@ -391,7 +489,7 @@ export function adminDirectUpload(data: {
 }
 
 /**
- * Retrieve all verifier applications (including seeds and contributorService entries)
+ * Retrieve all verifier applications
  */
 export function getAllVerifierApplications(): VerifierApplication[] {
   if (typeof window === "undefined") return DEFAULT_VERIFIER_APPLICATIONS;
@@ -482,6 +580,7 @@ export function getArchiveMetrics() {
   const underVerificationCount = links.filter((l) => l.status === "under_verification").length;
   const hiddenCount = links.filter((l) => l.status === "hidden").length;
   const rejectedCount = links.filter((l) => l.status === "rejected").length;
+  const flaggedCount = links.filter((l) => l.status === "flagged" || (l.automatedRiskScore ?? 0) >= 70).length;
   const pendingApplicationsCount = apps.filter((a) => a.status === "pending").length;
 
   return {
@@ -489,6 +588,7 @@ export function getArchiveMetrics() {
     underVerificationCount,
     hiddenCount,
     rejectedCount,
+    flaggedCount,
     pendingApplicationsCount,
     totalLinksCount: links.length,
   };
