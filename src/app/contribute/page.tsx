@@ -1,104 +1,171 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
+import { BecomeVerifierModal } from "@/components/contribute/BecomeVerifierModal";
+import { ContributorTable } from "@/components/contribute/ContributorTable";
 import { UploadModal } from "@/components/upload/UploadModal";
-import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
+import { createClient } from "@/lib/supabase/client";
+import { getMyContributions, addMyContribution } from "@/lib/contributorService";
+import { DriveLink } from "@/lib/types";
 
 export default function ContributePage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("contributor@example.com");
+  const [userName, setUserName] = useState<string>("Community Contributor");
+
+  const [contributions, setContributions] = useState<DriveLink[]>([]);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [showVerifierModal, setShowVerifierModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showAssistedModal, setShowAssistedModal] = useState(false);
+
+  // Check auth state on mount
+  useEffect(() => {
+    const supabase = createClient();
+
+    function evaluateAuth(user: { email?: string; user_metadata?: { full_name?: string } } | null) {
+      const devAuth = typeof window !== "undefined" ? localStorage.getItem("ourarchive_dev_auth") : null;
+      if (devAuth === "authenticated") {
+        setIsAuthenticated(true);
+        setUserEmail(localStorage.getItem("ourarchive_dev_email") || "contributor@example.com");
+        setUserName(localStorage.getItem("ourarchive_dev_name") || "Demo Contributor");
+        setShowAuthGate(false);
+        return;
+      }
+
+      if (user) {
+        setIsAuthenticated(true);
+        setUserEmail(user.email || "contributor@example.com");
+        setUserName(user.user_metadata?.full_name || user.email?.split("@")[0] || "Contributor");
+        setShowAuthGate(false);
+      } else {
+        setIsAuthenticated(false);
+        setShowAuthGate(true);
+      }
+    }
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      evaluateAuth(user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      evaluateAuth(session?.user ?? null);
+    });
+
+    setContributions(getMyContributions());
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  function handleSimulateLogin() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ourarchive_dev_auth", "authenticated");
+      localStorage.setItem("ourarchive_dev_email", "reader_charlie@example.com");
+      localStorage.setItem("ourarchive_dev_name", "reader_charlie");
+    }
+    setIsAuthenticated(true);
+    setUserEmail("reader_charlie@example.com");
+    setUserName("reader_charlie");
+    setShowAuthGate(false);
+    setContributions(getMyContributions());
+  }
+
+  function handleSignOut() {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("ourarchive_dev_auth");
+      localStorage.removeItem("ourarchive_dev_email");
+      localStorage.removeItem("ourarchive_dev_name");
+    }
+    setIsAuthenticated(false);
+    setShowAuthGate(true);
+  }
+
+  function handleUploadSuccess() {
+    setContributions(getMyContributions());
+    setShowUploadModal(false);
+  }
 
   return (
-    <div className="py-6 max-w-4xl mx-auto space-y-8">
-      {/* Page Title & Breadcrumb */}
-      <div className="space-y-2 border-b border-border-light dark:border-border-dark pb-4">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          <Link href="/" className="hover:underline">Home</Link> &rarr; <span>Contribute</span>
+    <div className="py-6 max-w-5xl mx-auto space-y-6">
+      {/* Breadcrumb & Navigation */}
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-border-light dark:border-border-dark pb-3">
+        <div className="flex items-center gap-1.5">
+          <Link href="/" className="hover:underline">Home</Link>
+          <span>&rarr;</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">Contribute Portal</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-          Contribute to the Emergency Archive
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Share author-approved view-only Google Drive links to keep transformative works accessible during AO3 outages.
-        </p>
+
+        {isAuthenticated && (
+          <div className="flex items-center gap-3">
+            <span className="text-gray-600 dark:text-gray-400">
+              Signed in as <strong className="text-gray-900 dark:text-gray-100">{userName}</strong>
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="text-ao3-red dark:text-ao3-lightred hover:underline text-[11px]"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Safety Notice Banner */}
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg p-5 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200 text-sm">
-          <span>⚠️ Reader Safety Notice</span>
-        </div>
-        <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-          All contributed links undergo automated threat scanning and human verification before appearing in the public archive. This ensures view-only permissions, validates document MIME types, and protects our community from malicious files.
-        </p>
-      </div>
-
-      {/* Two Contribution Pathways */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Direct Upload Card */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-4 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="text-2xl">🔗</div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              Submit Direct Drive Link
-            </h2>
-            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              If you have an author-approved, view-only Google Drive link (PDF, Google Doc, or HTML format), submit it directly through our instant validation form.
+      {/* TOP MOST CONTENT: Warning Sign & Become a Verifier Button */}
+      <section className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-xs transition-colors duration-150">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200 text-sm">
+              <span className="text-base">⚠️</span>
+              <span>Reader Safety & Verification Notice</span>
+            </div>
+            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed max-w-2xl">
+              All contributed and uploaded links shall go through strict verification to avoid malicious hacking, dangerous executable downloads, or broken permissions, for the safety and peace of mind of our fellow readers.
             </p>
           </div>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="w-full py-2.5 px-4 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition text-center"
-          >
-            Open Submission Form
-          </button>
-        </div>
 
-        {/* Assisted Intake Card */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-4 flex flex-col justify-between">
-          <div className="space-y-2">
-            <div className="text-2xl">🤝</div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              Assisted Intake / Email Submission
-            </h2>
-            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-              Prefer not to sign in? Send us an email directly at{" "}
-              <a href="mailto:ourarchive.aid@gmail.com" className="text-ao3-red dark:text-ao3-lightred underline font-mono">
-                ourarchive.aid@gmail.com
-              </a>{" "}
-              or use the assisted intake desk, and our team will verify and index it manually.
-            </p>
+          <div className="shrink-0">
+            <button
+              onClick={() => setShowVerifierModal(true)}
+              className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-1.5"
+            >
+              <span>🛡️</span>
+              <span>Become a Verifier</span>
+            </button>
           </div>
-          <button
-            onClick={() => setShowAssistedModal(true)}
-            className="w-full py-2.5 px-4 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs font-semibold rounded transition text-center"
-          >
-            Assisted Intake Request
-          </button>
         </div>
-      </div>
+      </section>
 
-      {/* Guidelines Accordion */}
-      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-3">
-        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-          📋 Submission Guidelines & Rules
-        </h3>
-        <ul className="list-disc pl-5 text-xs text-gray-600 dark:text-gray-400 space-y-1.5 leading-relaxed">
-          <li><strong>View-Only Requirement:</strong> Links must have edit permissions disabled (&ldquo;Anyone with the link can view&rdquo;). Writable links are rejected automatically.</li>
-          <li><strong>Allowed Formats:</strong> PDF, Google Docs, EPUB, and Plain Text. Executables, macro files, and password-protected archives are strictly blocked.</li>
-          <li><strong>Author Consent:</strong> Only share works where the author has approved emergency distribution.</li>
-        </ul>
-      </div>
+      {/* MAIN CONTENT: Contributor Uploads Display Table */}
+      <section>
+        <ContributorTable
+          contributions={contributions}
+          onUploadClick={() => setShowUploadModal(true)}
+        />
+      </section>
 
       {/* Modals */}
+      <ContributorAuthGateModal
+        isOpen={showAuthGate && !isAuthenticated}
+        onClose={() => setShowAuthGate(false)}
+        onSimulateLogin={handleSimulateLogin}
+      />
+
+      <BecomeVerifierModal
+        isOpen={showVerifierModal}
+        onClose={() => setShowVerifierModal(false)}
+        userEmail={userEmail}
+        userName={userName}
+      />
+
       <UploadModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-      />
-      <AssistedIntakeModal
-        isOpen={showAssistedModal}
-        onClose={() => setShowAssistedModal(false)}
+        onSuccess={handleUploadSuccess}
       />
     </div>
   );
