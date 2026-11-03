@@ -355,16 +355,25 @@ export default function VerifierManagePage() {
           <LinkInspectionModal
             link={inspectingLink}
             isOpen={!!inspectingLink}
+            isAdmin={role === "admin"}
             onClose={() => setInspectingLink(null)}
-            onApprove={(id) => {
-              approveLink(id, role === "admin" ? "biboy_admin" : "community_verifier");
+            onApprove={(id, isPriorVerified) => {
+              approveLink(
+                id,
+                role === "admin" ? "biboy_admin" : "community_verifier",
+                isPriorVerified
+              );
             }}
             onReject={(id) => {
               rejectLink(id, role === "admin" ? "biboy_admin" : "community_verifier");
             }}
-            onHide={(id) => {
-              hideLink(id);
-            }}
+            onHide={
+              role === "admin"
+                ? (id) => {
+                    hideLink(id);
+                  }
+                : undefined
+            }
           />
         </>
       )}

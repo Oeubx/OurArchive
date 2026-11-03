@@ -1,28 +1,63 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { DriveLink } from "@/lib/types";
+import { runSystemLinkScan, SystemScanReport } from "@/lib/rbacService";
 
 interface LinkInspectionModalProps {
   link: DriveLink | null;
   isOpen: boolean;
+  isAdmin?: boolean;
   onClose: () => void;
-  onApprove: (id: string) => void;
+  onApprove: (id: string, isPriorVerified: boolean) => void;
   onReject: (id: string) => void;
-  onHide: (id: string) => void;
+  onHide?: (id: string) => void;
+  onRemove?: (id: string) => void;
 }
 
 export function LinkInspectionModal({
   link,
   isOpen,
+  isAdmin = false,
   onClose,
   onApprove,
   onReject,
   onHide,
+  onRemove,
 }: LinkInspectionModalProps) {
   const [safetyAcknowledged, setSafetyAcknowledged] = useState(false);
+  const [isPriorVerified, setIsPriorVerified] = useState(false);
+  const [scanReport, setScanReport] = useState<SystemScanReport | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSafetyAcknowledged(false);
+      setIsPriorVerified(link?.isPriorVerified || false);
+      setScanReport(null);
+      setIsScanning(false);
+    }
+  }, [isOpen, link]);
 
   if (!isOpen || !link) return null;
+
+  function handleRunScan() {
+    if (!link) return;
+    setIsScanning(true);
+    setTimeout(() => {
+      const report = runSystemLinkScan(link.rawDriveUrl);
+      setScanReport(report);
+      setIsScanning(false);
+    }, 450);
+  }
+
+  const isMalicious =
+    link.status === "flagged" ||
+    link.automatedRiskScore >= 70 ||
+    scanReport?.verdict === "MALICIOUS";
+
+  const isQuarantined = link.status === "hidden" || link.status === "rejected";
+  const canPermanentDelete = isAdmin && (isQuarantined || isMalicious);
 
   return (
     <div
@@ -42,6 +77,11 @@ export function LinkInspectionModal({
             >
               Inspect Fanwork Submission
             </h3>
+            {isAdmin && (
+              <span className="text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded font-mono font-bold uppercase">
+                Admin Mode
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -57,9 +97,17 @@ export function LinkInspectionModal({
         <div className="p-5 overflow-y-auto space-y-4 text-xs text-gray-700 dark:text-gray-300">
           {/* Fanwork Primary Details */}
           <div className="space-y-1.5 border-b border-border-light dark:border-border-dark pb-3">
-            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              {link.title}
-            </h4>
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                {link.title}
+              </h4>
+              {link.status === "flagged" && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 uppercase shrink-0">
+                  ⚠️ Threat Flagged
+                </span>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 text-gray-500 dark:text-gray-400">
               <span>Author: <strong className="text-gray-800 dark:text-gray-200">{link.authorName}</strong></span>
               <span>•</span>
@@ -110,16 +158,95 @@ export function LinkInspectionModal({
             </div>
           </div>
 
-          {/* SAFETY WARNING & MANDATORY CHECKBOX */}
+          {/* 1. SYSTEM LINK & CONTENT CHECKER BUTTON & DIAGNOSTIC CARD */}
+          <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-blue-900 dark:text-blue-300 text-xs block">
+                  Automated Security & Content Threat Checker
+                </span>
+                <span className="text-[11px] text-blue-800/80 dark:text-blue-400 block mt-0.5">
+                  Inspects Google Drive endpoints, permissions, payload integrity, and binary executable patterns.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRunScan}
+                disabled={isScanning}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition shadow-xs flex items-center justify-center gap-1.5 shrink-0"
+              >
+                {isScanning ? (
+                  <>
+                    <span className="animate-spin">⏳</span> Scanning...
+                  </>
+                ) : (
+                  <>
+                    <span>🛡️</span> Run System Scan
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Live Scan Report Readout */}
+            {scanReport && (
+              <div className="p-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark space-y-2 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-[11px]">
+                    System Scan Diagnostic Report:
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      scanReport.verdict === "CLEAN"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                        : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 animate-pulse"
+                    }`}
+                  >
+                    {scanReport.verdict === "CLEAN"
+                      ? "✓ Safe (Risk Score: 0%)"
+                      : `⚠️ Malicious Threat (${scanReport.riskScore}%)`}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-gray-600 dark:text-gray-400">
+                  <div>View-Only Permissions: <strong className={scanReport.isViewOnlyConfirmed ? "text-emerald-600" : "text-red-600"}>{scanReport.isViewOnlyConfirmed ? "CONFIRMED" : "UNVERIFIED"}</strong></div>
+                  <div>Detected MIME: <strong className="text-gray-800 dark:text-gray-200">{scanReport.detectedMime}</strong></div>
+                </div>
+                {scanReport.threatFlags.length > 0 && (
+                  <div className="text-[10px] text-red-600 dark:text-red-400 font-semibold">
+                    Threat Flags: {scanReport.threatFlags.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 2. PRIOR VERIFICATION OVERRIDE CHECKBOX */}
+          <label className="flex items-start gap-2.5 p-3 rounded-lg bg-canvas-light dark:bg-canvas-dark border border-border-light dark:border-border-dark cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isPriorVerified}
+              onChange={(e) => setIsPriorVerified(e.target.checked)}
+              className="mt-0.5 rounded border-amber-400 text-ao3-red focus:ring-ao3-red"
+            />
+            <div>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 block">
+                Assign prior verification override (isVerifiedPrior)
+              </span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                If checked, upon approval this work will be assigned the <strong>&ldquo;VERIFIED BY ADMIN&rdquo;</strong> badge.
+              </span>
+            </div>
+          </label>
+
+          {/* 3. SAFETY WARNING & MANDATORY CHECKBOX */}
           <div className="p-4 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-800/60 space-y-3">
             <div className="flex items-start gap-2.5">
               <span className="text-base text-amber-600 dark:text-amber-400 shrink-0">⚠️</span>
               <div>
                 <strong className="block text-amber-900 dark:text-amber-300 text-xs">
-                  Verifier Safety Warning & Caution
+                  Verifier Manual Inspection Caution
                 </strong>
                 <p className="text-[11px] text-amber-800 dark:text-amber-400 leading-relaxed mt-0.5">
-                  Opening unfamiliar external links carries inherent risks. Please judge the link first, check metadata for view-only permissions, and do not execute or download unknown binary files.
+                  Opening unfamiliar external links carries inherent risks. You can manually inspect this link, but please judge the link first and exercise caution regarding external link credibility before opening.
                 </p>
               </div>
             </div>
@@ -132,7 +259,7 @@ export function LinkInspectionModal({
                 className="mt-0.5 rounded border-amber-400 text-ao3-red focus:ring-ao3-red dark:bg-gray-800 dark:border-amber-700"
               />
               <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                I have reviewed the metadata, will exercise caution, and understand the safety precautions before inspecting this link.
+                I have judged the link credibility, will exercise caution, and understand safety precautions before manually opening this link.
               </span>
             </label>
 
@@ -151,7 +278,7 @@ export function LinkInspectionModal({
                 <button
                   type="button"
                   disabled
-                  title="Check the safety warning box above to unlock external link inspection"
+                  title="Check the caution box above to unlock external link inspection"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-md font-semibold text-xs cursor-not-allowed"
                 >
                   <span>🔒</span> View Link (Locked until caution confirmed)
@@ -172,30 +299,53 @@ export function LinkInspectionModal({
           </button>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                onHide(link.id);
-                onClose();
-              }}
-              className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-xs font-semibold transition"
-            >
-              👁️ Hide
-            </button>
+            {/* ADMIN EXCLUSIVE: HIDE (Quarantine) */}
+            {isAdmin && onHide && (
+              <button
+                type="button"
+                onClick={() => {
+                  onHide(link.id);
+                  onClose();
+                }}
+                className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-xs font-semibold transition"
+                title="Quarantine link for author takedown checking"
+              >
+                👁️ Hide
+              </button>
+            )}
+
+            {/* ADMIN EXCLUSIVE: PERMANENT DELETE (Only if Hidden/Rejected/Malicious) */}
+            {canPermanentDelete && onRemove && (
+              <button
+                type="button"
+                onClick={() => {
+                  onRemove(link.id);
+                  onClose();
+                }}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-semibold transition shadow-xs"
+                title="Permanently remove and expunge from database"
+              >
+                🗑️ Permanent Delete
+              </button>
+            )}
+
+            {/* VERIFIER & ADMIN: REJECT */}
             <button
               type="button"
               onClick={() => {
                 onReject(link.id);
                 onClose();
               }}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-semibold transition"
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-semibold transition"
             >
               ❌ Reject
             </button>
+
+            {/* VERIFIER & ADMIN: APPROVE */}
             <button
               type="button"
               onClick={() => {
-                onApprove(link.id);
+                onApprove(link.id, isPriorVerified);
                 onClose();
               }}
               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold transition shadow-xs"
