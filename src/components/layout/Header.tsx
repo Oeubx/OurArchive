@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserNav } from "@/components/auth/UserNav";
 
@@ -15,8 +16,18 @@ export function Header() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="text-xl font-bold tracking-tight hover:opacity-90 flex items-center gap-2"
+            className="text-xl font-bold tracking-tight hover:opacity-90 flex items-center gap-2.5"
           >
+            <div className="w-8 h-8 rounded-md overflow-hidden bg-white/10 ring-1 ring-white/30 shrink-0 shadow-xs relative">
+              <Image
+                src="/images/ourarchive-logo.jpg"
+                alt="OurArchive Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+                priority
+              />
+            </div>
             <span>OurArchive</span>
           </Link>
           <span className="hidden sm:inline-block text-[11px] font-medium bg-ao3-darkred px-2 py-0.5 rounded text-amber-200 border border-red-800">

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SearchSection } from "@/components/search/SearchSection";
 import type { SearchFilters } from "@/components/search/SearchSection";
 import { DisplayCard } from "@/components/cards/DisplayCard";
@@ -130,14 +131,26 @@ export default function HomePage() {
     <div className="space-y-6 py-2">
       {/* Non-Technical Introduction Banner */}
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-5 text-gray-800 dark:text-gray-200 shadow-xs transition-colors duration-150">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-light dark:border-border-dark pb-3">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold text-ao3-red dark:text-ao3-lightred">
-              Welcome to OurArchive
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl">
-              This system&apos;s purpose is to simply compile all the drive links into one and allow searching, online reading and a redirection to the owner&apos;s drive link.
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-light dark:border-border-dark pb-3">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-border-light dark:border-border-dark shrink-0 shadow-xs bg-subtle-light dark:bg-subtle-dark relative">
+              <Image
+                src="/images/ourarchive-logo.jpg"
+                alt="OurArchive Symbol"
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+                priority
+              />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold text-ao3-red dark:text-ao3-lightred">
+                Welcome to OurArchive
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-2xl">
+                This system&apos;s purpose is to simply compile all the drive links into one and allow searching, online reading and a redirection to the owner&apos;s drive link.
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button

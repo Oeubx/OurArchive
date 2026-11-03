@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -76,8 +77,19 @@ export function Footer() {
 
         {/* Sub-Footer Bar */}
         <div className="border-t border-border-light dark:border-border-dark pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-gray-500 dark:text-gray-400 text-[11px]">
-          <div>
-            &copy; {new Date().getFullYear()} OurArchive. Non-commercial, zero-download fanwork streaming index.
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded overflow-hidden shrink-0 border border-border-light dark:border-border-dark relative">
+              <Image
+                src="/images/ourarchive-logo.jpg"
+                alt="OurArchive Emblem"
+                width={20}
+                height={20}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span>
+              &copy; {new Date().getFullYear()} OurArchive. Non-commercial, zero-download fanwork streaming index.
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:underline">

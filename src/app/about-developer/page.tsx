@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -26,15 +27,28 @@ export default function AboutDeveloperPage() {
 
       {/* Origin Story & Mission */}
       <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <span>📖 The Origin Story</span>
-        </h2>
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          Hello! I am a software developer and longtime fanfiction reader. When Archive of Our Own (AO3) experiences downtime—whether scheduled for database maintenance or unscheduled due to DDoS attacks and server overloads—millions of readers and writers across the globe suddenly lose access to the stories that offer them comfort, entertainment, and connection.
-        </p>
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          In response, readers and authors began organizing ad-hoc Google Drive links and spreadsheets across social media. However, finding specific fanworks across disorganized links was difficult, and clicking raw Drive links posed security questions.
-        </p>
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+          <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-lg overflow-hidden border border-border-light dark:border-border-dark shrink-0 shadow-sm bg-subtle-light dark:bg-subtle-dark relative">
+            <Image
+              src="/images/ourarchive-logo.jpg"
+              alt="OurArchive Symbol Illustration"
+              width={144}
+              height={144}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="space-y-3 flex-1">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <span>📖 The Origin Story</span>
+            </h2>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              Hello! I am a software developer and longtime fanfiction reader. When Archive of Our Own (AO3) experiences downtime—whether scheduled for database maintenance or unscheduled due to DDoS attacks and server overloads—millions of readers and writers across the globe suddenly lose access to the stories that offer them comfort, entertainment, and connection.
+            </p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              In response, readers and authors began organizing ad-hoc Google Drive links and spreadsheets across social media. However, finding specific fanworks across disorganized links was difficult, and clicking raw Drive links posed security questions.
+            </p>
+          </div>
+        </div>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium bg-canvas-light dark:bg-canvas-dark p-3.5 rounded border border-border-light dark:border-border-dark">
           <strong>OurArchive</strong> was conceived to solve this exact problem: compile author-approved Google Drive links into a single searchable index, provide a distraction-free online reader, and protect readers through metadata verification.
         </p>
