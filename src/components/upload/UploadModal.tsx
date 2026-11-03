@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { addMyContribution } from "@/lib/contributorService";
+import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface UploadModalProps {
 
 export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [driveUrl, setDriveUrl] = useState("");
+  const [confirmedViewOnly, setConfirmedViewOnly] = useState(false);
+
   const [title, setTitle] = useState("");
   const [authorName, setAuthorName] = useState("");
   const [fandom, setFandom] = useState("");
@@ -28,12 +31,26 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const segments = segmentDriveUrl(driveUrl);
+
   if (!isOpen) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
+
+    // Enforce link segmentation and view-only safety check
+    if (!segments.isValid) {
+      setError(segments.errorMessage || "Please enter a valid Google Drive or Docs link.");
+      return;
+    }
+
+    if (!confirmedViewOnly) {
+      setError("Please confirm that the link is view-only and has edit permissions disabled.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -43,6 +60,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         .filter((t) => t.length > 0);
 
       const parsedWordCount = typeof wordCount === "number" ? wordCount : 0;
+      const canonicalUrl = segments.canonicalUrl;
 
       // Add to local contributor store so it appears immediately on user's dashboard
       addMyContribution({
@@ -54,7 +72,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         wordCount: parsedWordCount,
         summary: summary.trim(),
         tags,
-        rawDriveUrl: driveUrl,
+        rawDriveUrl: canonicalUrl,
         mimeType: "application/pdf",
         isOwnerMasked,
         uploadedBy: "current_contributor",
@@ -67,7 +85,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            driveUrl,
+            driveUrl: canonicalUrl,
             title: title.trim() || undefined,
             authorName: authorName.trim(),
             fandom: fandom.trim(),
@@ -84,7 +102,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         // API offline fallback handled gracefully
       }
 
-      setSuccessMessage("Work submitted successfully! It is now pending automated threat scanning.");
+      setSuccessMessage("Work submitted successfully! The segmented link is now pending automated verification.");
       setTimeout(() => {
         onSuccess?.();
         onClose();
@@ -99,7 +117,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
         <div className="bg-ao3-red text-white px-5 py-3 flex items-center justify-between">
           <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
           <button
@@ -128,18 +146,96 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             <strong>Zero-Download & Safety Rule:</strong> Only Google Drive/Docs links set to <em>&quot;Anyone with the link can view&quot;</em> are accepted. Editable links will be rejected to protect the author&apos;s content from vandalism.
           </div>
 
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-              Google Drive View-Only Link <span className="text-red-600">*</span>
-            </label>
+          {/* SEGMENTED LINK INPUT BOX (Prevents Abrupt Executions) */}
+          <div className="bg-canvas-light dark:bg-canvas-dark border border-border-light dark:border-border-dark rounded-lg p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="block font-bold text-gray-800 dark:text-gray-200 text-xs">
+                Google Drive View-Only Link (Segmented Safety Input) <span className="text-red-600">*</span>
+              </label>
+              <span className="text-[10px] font-mono text-gray-500">Defanged Preview</span>
+            </div>
+
             <input
-              type="url"
+              type="text"
               required
               value={driveUrl}
               onChange={(e) => setDriveUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/.../view?usp=sharing"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs font-mono"
+              placeholder="Paste raw link: e.g. https://drive.google.com/file/d/1BxyZ9qK8.../view?usp=sharing"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs font-mono"
             />
+
+            {/* Sliced Segments Display */}
+            {driveUrl && (
+              <div className="space-y-2 pt-1 border-t border-border-light dark:border-border-dark">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Deconstructed Non-Executable Slices:
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  {/* Slice 1: Domain */}
+                  <div className="p-2 rounded bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
+                    <span className="text-gray-400 block text-[9px] uppercase font-mono">1. Domain Prefix</span>
+                    <span className="font-mono font-semibold text-green-700 dark:text-green-400 select-all">
+                      {segments.protocolDomain}
+                    </span>
+                  </div>
+
+                  {/* Slice 2: Resource Path */}
+                  <div className="p-2 rounded bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
+                    <span className="text-gray-400 block text-[9px] uppercase font-mono">2. Resource Path</span>
+                    <span className="font-mono text-gray-700 dark:text-gray-300 select-all">
+                      {segments.resourcePath || "(none)"}
+                    </span>
+                  </div>
+
+                  {/* Slice 3: File ID */}
+                  <div className="p-2 rounded bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
+                    <span className="text-gray-400 block text-[9px] uppercase font-mono">
+                      3. Resource File ID ({segments.fileId.length} chars)
+                    </span>
+                    <span className="font-mono text-ao3-red dark:text-ao3-lightred font-bold select-all break-all">
+                      {segments.fileId || "(missing ID)"}
+                    </span>
+                  </div>
+
+                  {/* Slice 4: Access Mode */}
+                  <div className="p-2 rounded bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
+                    <span className="text-gray-400 block text-[9px] uppercase font-mono">4. Mode Parameters</span>
+                    <span className="font-mono text-gray-600 dark:text-gray-400 select-all">
+                      {segments.accessParams || "view?usp=sharing"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Validation verdict */}
+                <div className="text-[11px] pt-1">
+                  {segments.isValid ? (
+                    <div className="text-green-700 dark:text-green-400 font-semibold flex items-center gap-1">
+                      <span>✅</span>
+                      <span>Link successfully sliced into 4 safe, verified segments.</span>
+                    </div>
+                  ) : (
+                    <div className="text-red-600 dark:text-red-400 font-medium">
+                      ⚠️ {segments.errorMessage}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation Checkbox */}
+            <div className="flex items-start gap-2 pt-1 border-t border-border-light dark:border-border-dark">
+              <input
+                type="checkbox"
+                id="confirmViewOnly"
+                checked={confirmedViewOnly}
+                onChange={(e) => setConfirmedViewOnly(e.target.checked)}
+                className="mt-0.5 rounded text-ao3-red focus:ring-ao3-red"
+              />
+              <label htmlFor="confirmViewOnly" className="text-gray-700 dark:text-gray-300 text-[11px] leading-tight cursor-pointer">
+                I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
+              </label>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -285,8 +381,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-ao3-red hover:bg-ao3-darkred rounded transition disabled:opacity-50"
+              disabled={loading || !segments.isValid || !confirmedViewOnly}
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-ao3-red hover:bg-ao3-darkred rounded transition disabled:opacity-40"
             >
               {loading ? "Verifying & Submitting..." : "Submit Work"}
             </button>
