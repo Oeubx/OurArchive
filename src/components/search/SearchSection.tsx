@@ -48,7 +48,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 shadow-xs space-y-3">
+    <div id="search" className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-4 shadow-xs space-y-3 transition-colors duration-150">
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Main Search Input */}
         <div className="flex items-center gap-2">
@@ -61,7 +61,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by title, author name, fandom, or summary keywords..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-ao3-red focus:border-ao3-red outline-hidden text-xs bg-white"
+              className="w-full pl-9 pr-3 py-2 border border-border-light dark:border-border-dark rounded focus:ring-2 focus:ring-ao3-red focus:border-ao3-red outline-hidden text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500"
             />
           </div>
 
@@ -77,7 +77,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
             <button
               type="button"
               onClick={handleReset}
-              className="px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-600 text-xs rounded transition"
+              className="px-3 py-2 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-600 dark:text-gray-300 text-xs rounded transition"
               title="Reset all search filters"
             >
               Reset
@@ -88,7 +88,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
         {/* Filters Row: Fandom, Tag, and Rating Pills */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+            <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Filter by Fandom:
             </label>
             <input
@@ -96,12 +96,12 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={fandom}
               onChange={(e) => setFandom(e.target.value)}
               placeholder="e.g. Heartstopper, Arcane, Harry Potter"
-              className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-ao3-red outline-hidden"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-ao3-red outline-hidden"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+            <label className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
               Filter by Tag / Trope:
             </label>
             <input
@@ -109,14 +109,14 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={tag}
               onChange={(e) => setTag(e.target.value)}
               placeholder="e.g. Fluff, Slow Burn, Mutual Pining"
-              className="w-full px-3 py-1.5 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-ao3-red outline-hidden"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-ao3-red outline-hidden"
             />
           </div>
         </div>
 
         {/* Rating Pills */}
         <div className="pt-1">
-          <span className="block text-[11px] font-semibold text-gray-700 mb-1.5">
+          <span className="block text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
             Rating Category:
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -130,7 +130,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
                   className={`px-2.5 py-1 text-[11px] rounded transition border ${
                     active
                       ? "bg-ao3-red text-white border-ao3-red font-semibold shadow-xs"
-                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                      : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
                   }`}
                 >
                   {r}
