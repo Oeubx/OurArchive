@@ -324,7 +324,25 @@ export async function executeAdminAction({
       };
     }
 
-    case "REMOVE": {
+        case "REMOVE": {
+      // Security Policy: Only works in 'hidden' state (author takedown), 'rejected' state,
+      // or if deemed malicious by the automated threat scanner (flagged or risk score >= 70)
+      const isMalicious =
+        link.verification_status === "flagged" ||
+        (currentVerification?.automated_risk_score ?? 0) >= 70;
+      const isQuarantined =
+        Boolean(link.is_hidden) || link.verification_status === "rejected";
+
+      if (!isQuarantined && !isMalicious) {
+        return {
+          success: false,
+          action: "REMOVE",
+          linkId,
+          error:
+            "Policy Violation: Fanworks can only be permanently removed if they are Hidden, Rejected, or deemed Malicious by the threat scanner.",
+        };
+      }
+
       if (hardDelete) {
         // Cascade delete from PostgreSQL
         const { error: deleteError } = await adminSupabase

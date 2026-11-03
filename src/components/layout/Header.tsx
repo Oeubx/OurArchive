@@ -6,38 +6,52 @@ import Image from "next/image";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserNav } from "@/components/auth/UserNav";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentUserRole, subscribeToRbacUpdates } from "@/lib/rbacService";
+import type { UserRole } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
 export function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState<UserRole | "guest">("guest");
 
   useEffect(() => {
     // Check role from Supabase auth and local dev override
     const supabase = createClient();
 
-    function checkAdminRole(user: User | null) {
+    function determineRole(user: User | null) {
       const devRole = typeof window !== "undefined" ? localStorage.getItem("ourarchive_dev_role") : null;
-      if (devRole === "admin") {
-        setIsAdmin(true);
+      if (devRole === "admin" || devRole === "verifier" || devRole === "contributor") {
+        setRole(devRole);
         return;
       }
-      const role = (user?.app_metadata as Record<string, unknown> | undefined)?.role;
-      setIsAdmin(role === "admin");
+      const userMetaRole = (user?.app_metadata as Record<string, unknown> | undefined)?.role as UserRole | undefined;
+      if (userMetaRole) {
+        setRole(userMetaRole);
+      } else if (user) {
+        setRole("contributor");
+      } else {
+        setRole(getCurrentUserRole() || "guest");
+      }
     }
 
     supabase.auth.getUser().then(({ data: { user } }) => {
-      checkAdminRole(user);
+      determineRole(user);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkAdminRole(session?.user ?? null);
+      determineRole(session?.user ?? null);
+    });
+
+    // Also subscribe to local RBAC simulation transitions
+    const unsubscribeRbac = subscribeToRbacUpdates(() => {
+      setRole(getCurrentUserRole());
     });
 
     return () => {
       subscription.unsubscribe();
+      unsubscribeRbac();
     };
   }, []);
 
@@ -52,6 +66,9 @@ export function Header() {
       document.body.style.overflow = "";
     };
   }, [drawerOpen]);
+
+  const isVerifier = role === "verifier";
+  const isAdmin = role === "admin";
 
   return (
     <>
@@ -98,7 +115,19 @@ export function Header() {
               Disclaimers
             </Link>
 
-            {/* Manage Link: Strictly rendered only for authenticated Admins */}
+            {/* Manage Link: Gated strictly for Verifier (/manage) and Admin (/admin). Hidden for Contributors and Guests */}
+            {isVerifier && (
+              <>
+                <span>•</span>
+                <Link
+                  href="/manage"
+                  className="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition flex items-center gap-1 shadow-xs"
+                >
+                  <span>🛡️</span> Manage
+                </Link>
+              </>
+            )}
+
             {isAdmin && (
               <>
                 <span>•</span>
@@ -142,7 +171,7 @@ export function Header() {
         </div>
       </header>
 
-      {/* Slide-Over Mobile Navigation Drawer (from screen recording interaction) */}
+      {/* Slide-Over Mobile Navigation Drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           {/* Darkened Backdrop Overlay */}
@@ -237,6 +266,27 @@ export function Header() {
                   <span>About Developer</span>
                 </Link>
 
+                {/* Verifier Section: Rendered only for Verifiers */}
+                {isVerifier && (
+                  <div className="pt-3 border-t border-border-light dark:border-border-dark mt-2">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
+                      <span>Verification</span>
+                      <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.2 rounded font-mono">
+                        VERIFIER
+                      </span>
+                    </div>
+
+                    <Link
+                      href="/manage"
+                      onClick={() => setDrawerOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition mt-1"
+                    >
+                      <span className="text-base">🛡️</span>
+                      <span>Manage (Verifier Workspace)</span>
+                    </Link>
+                  </div>
+                )}
+
                 {/* Administration Section: Strictly rendered for Admin only */}
                 {isAdmin && (
                   <div className="pt-3 border-t border-border-light dark:border-border-dark mt-2">
@@ -253,7 +303,7 @@ export function Header() {
                       className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-ao3-red dark:text-ao3-lightred bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 transition mt-1"
                     >
                       <span className="text-base">🛡️</span>
-                      <span>Manage Archive</span>
+                      <span>Manage Archive (Admin)</span>
                     </Link>
                   </div>
                 )}

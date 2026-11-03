@@ -6,6 +6,7 @@ import { signOutUser } from "@/lib/services/auth";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
+import { getCurrentUserRole, subscribeToRbacUpdates } from "@/lib/rbacService";
 import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 
@@ -15,13 +16,28 @@ export function UserNav() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAssistedModal, setShowAssistedModal] = useState(false);
+  const [activeRole, setActiveRole] = useState<string>("contributor");
 
   useEffect(() => {
     const supabase = createClient();
 
+    function updateUserInfo(usr: User | null) {
+      setUser(usr);
+      const devRole = typeof window !== "undefined" ? localStorage.getItem("ourarchive_dev_role") : null;
+      if (devRole) {
+        setActiveRole(devRole);
+      } else if (usr?.app_metadata?.role) {
+        setActiveRole(usr.app_metadata.role as string);
+      } else if (usr) {
+        setActiveRole("contributor");
+      } else {
+        setActiveRole(getCurrentUserRole());
+      }
+    }
+
     // Fetch initial user
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
+      updateUserInfo(user);
       setLoading(false);
     });
 
@@ -29,12 +45,17 @@ export function UserNav() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      updateUserInfo(session?.user ?? null);
       setLoading(false);
+    });
+
+    const unsubscribeRbac = subscribeToRbacUpdates(() => {
+      setActiveRole(getCurrentUserRole());
     });
 
     return () => {
       subscription.unsubscribe();
+      unsubscribeRbac();
     };
   }, []);
 
@@ -55,8 +76,8 @@ export function UserNav() {
     );
   }
 
-  const role = user?.app_metadata?.role as string | undefined;
-  const isAdmin = role === "admin";
+  const isAdmin = activeRole === "admin";
+  const isVerifier = activeRole === "verifier";
   const displayName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
@@ -73,6 +94,15 @@ export function UserNav() {
           >
             <span>+</span> Submit Work
           </button>
+
+          {isVerifier && (
+            <Link
+              href="/manage"
+              className="px-2 py-0.5 text-xs bg-emerald-500 text-white font-semibold rounded hover:bg-emerald-600 transition"
+            >
+              Verifier Triage
+            </Link>
+          )}
 
           {isAdmin && (
             <Link
@@ -92,13 +122,13 @@ export function UserNav() {
               {displayName}
             </Link>
             <span className="text-[10px] bg-red-800 text-amber-200 px-1.5 py-0.2 rounded uppercase">
-              {role ?? "user"}
+              {activeRole}
             </span>
           </div>
 
           <button
             onClick={handleSignOut}
-            className="text-xs text-red-200 hover:text-white underline transition"
+            className="text-xs text-red-200 hover:text-white transition"
           >
             Sign Out
           </button>
@@ -106,35 +136,30 @@ export function UserNav() {
       ) : (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowAssistedModal(true)}
-            className="text-xs text-amber-200 hover:text-white underline transition px-1"
-            title="Submit a view-only link without signing in"
-          >
-            Assisted Intake
-          </button>
-          <button
             onClick={() => setShowAuthModal(true)}
-            className="text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 px-3 py-1 rounded shadow-xs transition"
+            className="px-3 py-1 text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 rounded shadow-xs transition"
           >
             Sign In
           </button>
         </div>
       )}
 
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
-
+      {/* Upload Modal with Link Segmenter */}
       <UploadModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-        onSuccess={() => window.location.reload()}
       />
 
+      {/* Assisted Intake Modal */}
       <AssistedIntakeModal
         isOpen={showAssistedModal}
         onClose={() => setShowAssistedModal(false)}
+      />
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
     </div>
   );
