@@ -7,6 +7,7 @@ import { DisplayCard } from "@/components/cards/DisplayCard";
 import { MaskedDriveRevealModal } from "@/components/modals/MaskedDriveRevealModal";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
+import { TakedownModal } from "@/components/takedown/TakedownModal";
 import type { PublicSearchFeedRecord } from "@/types/database";
 
 export default function HomePage() {
@@ -17,6 +18,7 @@ export default function HomePage() {
   const [revealWorkId, setRevealWorkId] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAssistedModal, setShowAssistedModal] = useState(false);
+  const [takedownWork, setTakedownWork] = useState<{ id: string; title: string } | null>(null);
 
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
     q: "",
@@ -185,6 +187,7 @@ export default function HomePage() {
               key={work.work_id}
               work={work}
               onRevealDrive={(id) => setRevealWorkId(id)}
+              onReportTakedown={(id, title) => setTakedownWork({ id, title })}
             />
           ))}
         </div>
@@ -230,6 +233,14 @@ export default function HomePage() {
         isOpen={showAssistedModal}
         onClose={() => setShowAssistedModal(false)}
         onSuccess={() => fetchWorks(currentFilters, 1)}
+      />
+
+      <TakedownModal
+        isOpen={Boolean(takedownWork)}
+        workId={takedownWork?.id}
+        workTitle={takedownWork?.title}
+        onClose={() => setTakedownWork(null)}
+        onSuccess={() => fetchWorks(currentFilters, pagination.page)}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 /**
  * Authenticated Contributor Link Submission Endpoint
- * Backlog Items: [OA-M2-F1], [OA-M2-F6]
+ * Backlog Items: [OA-M2-F1], [OA-M2-F6], [OA-M3-F1], [OA-M3-F3]
  * Specifications: docs/architecture/drive_ingestion_and_search.md
  *                 docs/backlogs/module-2-drive-upload-search/drive_link_processing_spec.md
+ *                 docs/backlogs/module-3-verification-safety/verification_lifecycle_spec.md
  */
 
 import { NextResponse } from "next/server";
@@ -12,6 +13,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validateAndNormalizeDriveUrl } from "@/lib/services/drive-validator";
 import { fetchDriveFileMetadata } from "@/lib/services/drive-api";
 import { verifyTurnstileToken } from "@/lib/services/turnstile";
+import { performFullThreatScan } from "@/lib/security/threat-scanner";
+import { evaluateScanStateMachine } from "@/lib/security/state-machine";
 
 export async function POST(request: NextRequest) {
   const ip =
@@ -122,7 +125,11 @@ export async function POST(request: NextRequest) {
 
     const { metadata } = driveResult;
 
-    // 6. Insert Drive Link Record
+    // 6. Automated Threat Scan & State Machine Evaluation [OA-M3-F1, OA-M3-F3]
+    const scanResult = await performFullThreatScan(metadata, urlValidation.canonicalUrl);
+    const evaluation = evaluateScanStateMachine(scanResult);
+
+    // 7. Insert Drive Link Record
     const { data: newLink, error: linkError } = await adminSupabase
       .from("drive_links")
       .insert({
@@ -130,8 +137,8 @@ export async function POST(request: NextRequest) {
         google_file_id: urlValidation.fileId,
         upload_mode: "authenticated",
         uploader_user_id: user.id,
-        verification_status: "pending_scan",
-        is_hidden: false,
+        verification_status: evaluation.status,
+        is_hidden: evaluation.isHidden,
         is_removed: false,
       })
       .select()
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Insert Link Metadata Record
+    // 8. Insert Link Metadata Record
     const sanitizedTags = Array.isArray(tags)
       ? tags
           .map((t) => (typeof t === "string" ? t.trim() : ""))
@@ -180,19 +187,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Initialize link verification placeholder
+    // 9. Record Link Verification and Risk Evaluation Metrics [OA-M3-F1, OA-M3-F3]
     await adminSupabase.from("link_verifications").insert({
       link_id: newLink.id,
-      automated_risk_score: 0,
-      automated_flags: [],
-      scanner_passed: false,
+      automated_risk_score: scanResult.riskScore,
+      automated_flags: scanResult.flags,
+      scanner_passed: evaluation.scannerPassed,
       admin_verified_by: null,
       admin_verified_at: null,
-      admin_notes: null,
-      verification_badge: "UNVERIFIED",
+      admin_notes: evaluation.quarantineReason || null,
+      verification_badge: evaluation.badge,
     });
 
-    // 9. Increment Contributor Submission Count
+    // 10. Increment Contributor Submission Count
     const { data: currentProfile } = await adminSupabase
       .from("user_profiles")
       .select("submission_count")
@@ -206,11 +213,19 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id);
     }
 
+    const message =
+      evaluation.status === "flagged"
+        ? "Work submitted and quarantined due to safety flags. An administrator will review it before release."
+        : "Fanwork submitted successfully. In queue for automated verification.";
+
     return NextResponse.json(
       {
         success: true,
         workId: newLink.id,
-        message: "Fanwork submitted successfully. In queue for automated verification.",
+        verificationStatus: evaluation.status,
+        verificationBadge: evaluation.badge,
+        riskScore: scanResult.riskScore,
+        message,
       },
       { status: 201 }
     );

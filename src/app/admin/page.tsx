@@ -1,6 +1,8 @@
 import React from "react";
 import { requireAdmin } from "@/lib/auth/rbac";
 import { createClient } from "@/lib/supabase/server";
+import { TriageQueueTable } from "@/components/admin/TriageQueueTable";
+import type { AdminTriageFeedRecord } from "@/types/database";
 
 export default async function AdminDashboardPage() {
   const { user } = await requireAdmin();
@@ -21,20 +23,12 @@ export default async function AdminDashboardPage() {
     supabase.from("drive_links").select("*", { count: "exact", head: true }).eq("verification_status", "flagged"),
   ]);
 
-  // Fetch top 10 pending triage items
-  const { data: triageQueue } = await supabase
-    .from("drive_links")
-    .select(`
-      id,
-      drive_url,
-      google_file_id,
-      upload_mode,
-      verification_status,
-      created_at
-    `)
-    .in("verification_status", ["pending_scan", "pending_review", "flagged"])
-    .order("created_at", { ascending: true })
-    .limit(10);
+  // Fetch triage queue from vw_admin_triage_feed view
+  const { data: triageItems } = await supabase
+    .from("vw_admin_triage_feed")
+    .select("*")
+    .order("submitted_at", { ascending: true })
+    .limit(50);
 
   return (
     <div className="space-y-6">
@@ -73,50 +67,16 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Triage Queue Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      {/* Priority Triage Review Queue with Module 3 6-Action Suite */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
           <h2 className="text-sm font-bold text-gray-900">Priority Triage Review Queue</h2>
-          <span className="text-xs text-gray-500">Module 3 6-Action Suite Integration</span>
+          <span className="text-xs text-gray-500">Administrator 6-Action Suite Active</span>
         </div>
 
-        {triageQueue && triageQueue.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
-                <tr>
-                  <th className="p-3">File ID</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Mode</th>
-                  <th className="p-3">Submitted</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {triageQueue.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50">
-                    <td className="p-3 font-mono text-[11px] text-gray-700">{item.google_file_id}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-100 text-amber-800">
-                        {item.verification_status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-gray-600 capitalize">{item.upload_mode}</td>
-                    <td className="p-3 text-gray-500">{new Date(item.created_at).toLocaleString()}</td>
-                    <td className="p-3 text-right">
-                      <span className="text-gray-400 text-[11px]">Triage Actions in Module 3</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-8 text-center text-xs text-gray-500 space-y-1">
-            <p className="font-semibold text-gray-700">Triage Queue is currently empty.</p>
-            <p>New submissions requiring safety checks or administrative verification will appear here.</p>
-          </div>
-        )}
+        <TriageQueueTable
+          initialItems={(triageItems || []) as AdminTriageFeedRecord[]}
+        />
       </div>
     </div>
   );

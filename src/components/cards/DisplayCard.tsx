@@ -7,10 +7,16 @@ import type { PublicSearchFeedRecord } from "@/types/database";
 interface DisplayCardProps {
   work: PublicSearchFeedRecord;
   onRevealDrive: (workId: string) => void;
+  onReportTakedown?: (workId: string, title: string) => void;
   isAdmin?: boolean;
 }
 
-export function DisplayCard({ work, onRevealDrive, isAdmin }: DisplayCardProps) {
+export function DisplayCard({
+  work,
+  onRevealDrive,
+  onReportTakedown,
+  isAdmin,
+}: DisplayCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [isHiding, setIsHiding] = useState(false);
   const [hiddenLocally, setHiddenLocally] = useState(false);
@@ -117,7 +123,7 @@ export function DisplayCard({ work, onRevealDrive, isAdmin }: DisplayCardProps) 
       </div>
 
       {/* FILE DETAILS & CONTROLS ACCORDION / TOGGLE */}
-      <div className="border-t border-gray-200 bg-gray-50/70 px-4 py-2 flex items-center justify-between text-xs">
+      <div className="border-t border-gray-200 bg-gray-50/70 px-4 py-2 flex items-center justify-between text-xs flex-wrap gap-2">
         <button
           onClick={() => setShowDetails(!showDetails)}
           className="text-[11px] font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1 transition"
@@ -131,15 +137,26 @@ export function DisplayCard({ work, onRevealDrive, isAdmin }: DisplayCardProps) 
             href={`/reader/${work.work_id}`}
             className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
           >
-            <span>👁️</span> Read Work in Clean Viewer
+            <span>👁️</span> Read Work
           </Link>
+
           <button
             onClick={() => onRevealDrive(work.work_id)}
             className="px-3 py-1 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-xs font-medium rounded transition flex items-center gap-1"
             title="Inspect verified Google Drive view-only URL"
           >
-            <span>🔗</span> View Drive Link / Path
+            <span>🔗</span> View Drive Link
           </button>
+
+          {onReportTakedown && (
+            <button
+              onClick={() => onReportTakedown(work.work_id, work.title)}
+              className="px-2.5 py-1 bg-white hover:bg-red-50 border border-gray-200 text-gray-500 hover:text-red-700 text-xs rounded transition flex items-center gap-1"
+              title="Report issue or request immediate removal"
+            >
+              <span>🚨</span> Takedown
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,14 +189,31 @@ export function DisplayCard({ work, onRevealDrive, isAdmin }: DisplayCardProps) 
               <button
                 disabled={isHiding}
                 onClick={async () => {
-                  if (confirm("Hide this fanwork from public index?")) {
+                  if (confirm("Hide this fanwork from the public search index?")) {
                     setIsHiding(true);
-                    setHiddenLocally(true);
+                    try {
+                      const res = await fetch("/api/admin/actions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          linkId: work.work_id,
+                          actionType: "HIDE",
+                          reason: "Admin quick-hide from search card",
+                        }),
+                      });
+                      if (res.ok) {
+                        setHiddenLocally(true);
+                      }
+                    } catch {
+                      // Fallback
+                    } finally {
+                      setIsHiding(false);
+                    }
                   }
                 }}
-                className="px-2 py-0.5 bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 rounded text-[10px] font-sans transition"
+                className="px-2 py-0.5 bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 rounded text-[10px] font-sans transition disabled:opacity-50"
               >
-                🚫 Hide This File (Admin)
+                {isHiding ? "Hiding..." : "🚫 Hide This File (Admin)"}
               </button>
             </div>
           )}

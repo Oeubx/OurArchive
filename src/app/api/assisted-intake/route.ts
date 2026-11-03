@@ -1,7 +1,8 @@
 /**
  * Public Assisted Admin Intake Endpoint (Unauthenticated Pathway)
- * Backlog Items: [OA-M2-F6], [OA-M2-F1]
+ * Backlog Items: [OA-M2-F6], [OA-M2-F1], [OA-M3-F1], [OA-M3-F3]
  * Specifications: docs/architecture/drive_ingestion_and_search.md
+ *                 docs/backlogs/module-3-verification-safety/verification_lifecycle_spec.md
  */
 
 import { NextResponse } from "next/server";
@@ -10,6 +11,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validateAndNormalizeDriveUrl } from "@/lib/services/drive-validator";
 import { fetchDriveFileMetadata } from "@/lib/services/drive-api";
 import { verifyTurnstileToken } from "@/lib/services/turnstile";
+import { performFullThreatScan } from "@/lib/security/threat-scanner";
+import { evaluateScanStateMachine } from "@/lib/security/state-machine";
 
 export async function POST(request: NextRequest) {
   const ip =
@@ -78,7 +81,11 @@ export async function POST(request: NextRequest) {
 
     const { metadata } = driveResult;
 
-    // 5. Insert Record with upload_mode='assisted_admin' and verification_status='pending_review'
+    // 5. Automated Threat Scan & State Machine Evaluation [OA-M3-F1, OA-M3-F3]
+    const scanResult = await performFullThreatScan(metadata, urlValidation.canonicalUrl);
+    const evaluation = evaluateScanStateMachine(scanResult);
+
+    // 6. Insert Record with upload_mode='assisted_admin'
     const { data: newLink, error: linkError } = await adminSupabase
       .from("drive_links")
       .insert({
@@ -86,8 +93,8 @@ export async function POST(request: NextRequest) {
         google_file_id: urlValidation.fileId,
         upload_mode: "assisted_admin",
         uploader_user_id: null,
-        verification_status: "pending_review",
-        is_hidden: false,
+        verification_status: evaluation.status,
+        is_hidden: evaluation.isHidden,
         is_removed: false,
       })
       .select()
@@ -100,7 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Insert Link Metadata
+    // 7. Insert Link Metadata
     const sanitizedTags = Array.isArray(tags)
       ? tags
           .map((t) => (typeof t === "string" ? t.trim() : ""))
@@ -135,21 +142,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Initialize link verification record for Administrator Triage Queue
+    // 8. Initialize link verification record for Administrator Triage Queue
+    const adminNotesCombined = [
+      notes ? `Assisted Note: ${notes}` : null,
+      evaluation.quarantineReason ? `Threat Flag: ${evaluation.quarantineReason}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
     await adminSupabase.from("link_verifications").insert({
       link_id: newLink.id,
-      automated_risk_score: 0,
-      automated_flags: [],
-      scanner_passed: false,
+      automated_risk_score: scanResult.riskScore,
+      automated_flags: scanResult.flags,
+      scanner_passed: evaluation.scannerPassed,
       admin_verified_by: null,
       admin_verified_at: null,
-      admin_notes: notes ? `Assisted Intake Note: ${notes}` : "Submitted via public assisted intake channel.",
-      verification_badge: "UNVERIFIED",
+      admin_notes: adminNotesCombined || "Submitted via public assisted intake channel.",
+      verification_badge: evaluation.badge,
     });
 
     return NextResponse.json(
       {
         success: true,
+        verificationStatus: evaluation.status,
+        verificationBadge: evaluation.badge,
+        riskScore: scanResult.riskScore,
         message: "Assisted submission received. An administrator will review and verify it for the public archive.",
       },
       { status: 201 }
