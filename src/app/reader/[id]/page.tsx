@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
 import { getLinkById } from "@/lib/linkService";
 import { getCurrentUserRole } from "@/lib/rbacService";
+import {
+  getBookmarkForWork,
+  saveReadingProgress,
+  ReaderBookmark,
+} from "@/lib/bookmarkService";
 import type { UserRole } from "@/lib/types";
 
 interface ReaderData {
@@ -22,6 +27,7 @@ interface ReaderData {
   pdfPreviewUrl?: string;
   contentHtml?: string | null;
   rawDriveUrl?: string;
+  uploaderUserId?: string;
 }
 
 type FontFamily = "serif" | "sans" | "mono";
@@ -35,16 +41,26 @@ export default function ReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
+
+  // User RBAC State
   const [role, setRole] = useState<UserRole | "guest">("guest");
+
+  // Bookmark State
+  const [existingBookmark, setExistingBookmark] = useState<ReaderBookmark | null>(null);
+  const [showResumeBanner, setShowResumeBanner] = useState(false);
+  const [bookmarkSavedFeedback, setBookmarkSavedFeedback] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
 
+  // Determine user role and load bookmark
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setRole(getCurrentUserRole());
+      const activeRole = getCurrentUserRole();
+      setRole(activeRole);
     }
   }, []);
 
@@ -86,7 +102,7 @@ export default function ReaderPage() {
                 <hr class="my-4 border-gray-300 dark:border-gray-700" />
                 <p>This fanwork is mirrored in OurArchive's emergency temporary library for community access while main archive servers undergo maintenance.</p>
                 <p>All transformative works remain the 100% intellectual property of <strong>${seedLink.authorName}</strong>. Zero files are stored permanently on OurArchive disks.</p>
-                <p>To read the full raw file directly within Google Drive or download a copy for offline access, please use the <em>Open Original Drive Link</em> button located in the toolbar above.</p>
+                <p>Reading progress is preserved automatically in your private session bookmarks.</p>
               </div>
             `,
           });
@@ -99,12 +115,88 @@ export default function ReaderPage() {
       });
   }, [workId]);
 
-  // URL Privacy Guard: Only Admins and Verifiers can see raw Google Drive links to prevent mass scraping
+  // Check for saved reading bookmark on load
+  useEffect(() => {
+    if (!workId || role === "guest") return;
+    const b = getBookmarkForWork(workId, undefined, false);
+    if (b && b.scrollPercent > 5) {
+      setExistingBookmark(b);
+      setShowResumeBanner(true);
+    }
+  }, [workId, role]);
+
+  // Jump to saved position
+  const handleResumeReading = useCallback(() => {
+    if (!existingBookmark) return;
+    const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+    const targetY = scrollMax * (existingBookmark.scrollPercent / 100);
+    window.scrollTo({ top: targetY, behavior: "smooth" });
+    setShowResumeBanner(false);
+  }, [existingBookmark]);
+
+  // Save bookmark calculation helper
+  const saveCurrentProgress = useCallback(
+    (manual: boolean = false) => {
+      if (!data || role === "guest") return;
+
+      const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent =
+        scrollMax > 0
+          ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100)))
+          : 0;
+
+      // Estimate total pages by standard 350 words per page
+      const totalPages = Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
+      const lastPage = Math.max(1, Math.ceil((scrollPercent / 100) * totalPages));
+
+      const bookmark: ReaderBookmark = {
+        workId: data.workId,
+        workTitle: data.title,
+        authorName: data.authorName,
+        fandom: data.fandom,
+        rating: data.rating,
+        lastPage,
+        totalPages,
+        scrollPercent,
+        lastReadAt: new Date().toISOString(),
+      };
+
+      saveReadingProgress(bookmark, undefined, false);
+
+      if (manual) {
+        setBookmarkSavedFeedback(true);
+        setTimeout(() => setBookmarkSavedFeedback(false), 2000);
+      }
+    },
+    [data, role]
+  );
+
+  // Debounced auto-save on scroll for logged-in users
+  useEffect(() => {
+    if (role === "guest" || !data) return;
+
+    const handleScroll = () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        saveCurrentProgress(false);
+      }, 750);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [role, data, saveCurrentProgress]);
+
+  // URL Privacy check: Only Admin or Verifier can see raw external drive links
   const canRevealDrive = role === "admin" || role === "verifier";
 
   const themeClasses: Record<ThemeMode, { container: string; text: string; header: string; meta: string }> = {
     light: {
-      container: "bg-[#f6f6f4]", // Soft warm off-white (not overly stark white)
+      container: "bg-[#f6f6f4]", // Soft warm off-white
       text: "text-[#1a1a1a]",
       header: "bg-[#ededeb] border-[#e5e5e0] text-[#1a1a1a]",
       meta: "bg-white border-[#e5e5e0] text-[#444440]",
@@ -144,7 +236,7 @@ export default function ReaderPage() {
               <span>&larr;</span> Library Index
             </Link>
             {data && (
-              <span className="truncate max-w-[200px] sm:max-w-[280px] font-medium hidden xs:inline">
+              <span className="truncate max-w-[180px] sm:max-w-[260px] font-medium hidden xs:inline">
                 {data.title}
               </span>
             )}
@@ -152,14 +244,38 @@ export default function ReaderPage() {
 
           {/* Reader Preferences Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Direct Google Drive Redirection Button (Gated to Admin & Verifier for anti-scraping) */}
+            {/* BOOKMARK BUTTON (Authenticated users only) */}
+            {role !== "guest" ? (
+              <button
+                type="button"
+                onClick={() => saveCurrentProgress(true)}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition flex items-center gap-1 shadow-2xs ${
+                  bookmarkSavedFeedback
+                    ? "bg-emerald-600 text-white border-emerald-700"
+                    : "bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark text-gray-700 dark:text-gray-200"
+                }`}
+                title="Save current reading page to your bookmarks"
+              >
+                <span>🔖</span>
+                <span>{bookmarkSavedFeedback ? "Saved!" : "Bookmark"}</span>
+              </button>
+            ) : (
+              <span
+                className="text-[10px] text-gray-500 italic hidden sm:inline"
+                title="Sign in as a contributor to automatically save reading bookmarks"
+              >
+                💡 Sign in to bookmark
+              </span>
+            )}
+
+            {/* Direct Google Drive Redirection Button (Admin & Verifier ONLY - Anti-Scraping Protection) */}
             {canRevealDrive && data?.rawDriveUrl && (
               <a
                 href={data.rawDriveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-2.5 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-[11px] font-semibold rounded shadow-xs transition flex items-center gap-1"
-                title="Open directly in Google Drive"
+                title="Admin/Verifier view: Open directly in Google Drive"
               >
                 <span>🔗</span> Drive File &rarr;
               </a>
@@ -258,6 +374,38 @@ export default function ReaderPage() {
         </div>
       </header>
 
+      {/* RESUME READING FLOATING BANNER */}
+      {showResumeBanner && existingBookmark && (
+        <aside
+          aria-label="Resume reading notification"
+          className="max-w-2xl mx-auto my-3 p-3 bg-ao3-red/10 dark:bg-ao3-red/20 border border-ao3-red/30 rounded-lg flex items-center justify-between gap-3 text-xs shadow-xs animate-in slide-in-from-top-2 duration-200"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">🔖</span>
+            <span>
+              Welcome back! You were reading <strong>Page {existingBookmark.lastPage}</strong> ({existingBookmark.scrollPercent}% completed).
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleResumeReading}
+              className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white font-semibold rounded text-xs transition shadow-2xs"
+            >
+              Resume &rarr;
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowResumeBanner(false)}
+              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs"
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </aside>
+      )}
+
       {/* Main Reader View Container */}
       <main className="max-w-3xl mx-auto py-8 px-4">
         {loading && (
@@ -337,6 +485,7 @@ export default function ReaderPage() {
                 <div>
                   🔒 <em>Ephemeral Read-Only Stream: No files are persisted on server disks.</em>
                 </div>
+                {/* Gated Drive URL for Admins/Verifiers Only */}
                 {canRevealDrive && data.rawDriveUrl && (
                   <div>
                     <a
@@ -345,7 +494,7 @@ export default function ReaderPage() {
                       rel="noopener noreferrer"
                       className="text-ao3-red font-medium hover:underline"
                     >
-                      Open in Google Drive &rarr;
+                      Open in Google Drive (Admin) &rarr;
                     </a>
                   </div>
                 )}
@@ -388,6 +537,7 @@ export default function ReaderPage() {
                 >
                   &larr; Back to Library Search
                 </Link>
+                {/* Gated Drive URL for Admins/Verifiers Only */}
                 {canRevealDrive && data.rawDriveUrl && (
                   <a
                     href={data.rawDriveUrl}
@@ -395,7 +545,7 @@ export default function ReaderPage() {
                     rel="noopener noreferrer"
                     className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded hover:bg-black/5 dark:hover:bg-white/5 transition"
                   >
-                    View Original Drive Link
+                    View Original Drive Link (Admin)
                   </a>
                 )}
               </div>
