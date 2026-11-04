@@ -15,8 +15,10 @@ import {
   removeLink,
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
+import { getAllAuditRecords, exportAuditToCsv } from "@/lib/auditService";
 import { VerifierRequestsModal } from "./VerifierRequestsModal";
 import { AdminDirectUploadModal } from "./AdminDirectUploadModal";
+import { AuditHistoryModal } from "./AuditHistoryModal";
 import { LinkInspectionModal } from "@/components/manage/LinkInspectionModal";
 
 interface AdminDashboardClientProps {
@@ -41,6 +43,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
+  const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
 
   function refresh() {
     setRole(getCurrentUserRole());
@@ -72,6 +75,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     setItemToRemove(null);
   }
 
+  function handleExportAllAudit() {
+    const allRecords = getAllAuditRecords();
+    exportAuditToCsv(allRecords, "ourarchive_system_audit_all");
+  }
+
   return (
     <div className="space-y-6">
       {/* Administrator Status & Control Header */}
@@ -84,7 +92,15 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleExportAllAudit}
+            className="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition shadow-2xs flex items-center gap-1.5"
+            title="Export all system audit logs including deleted tombstones to CSV"
+          >
+            <span>📥</span> Export Audit Log (CSV)
+          </button>
           <button
             type="button"
             onClick={() => setShowDirectUploadModal(true)}
@@ -119,35 +135,29 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             {metrics.underVerificationCount}
           </span>
           <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
-            Awaiting triage review
+            In review / triage queue
           </span>
         </div>
 
-        {/* CLICKABLE CONTAINER: PENDING VERIFIER REQUESTS (N) */}
+        {/* Verifier Role Requests */}
         <div
           onClick={() => setShowVerifierRequestsModal(true)}
-          className="bg-amber-50/80 dark:bg-amber-950/30 border-2 border-dashed border-amber-400 dark:border-amber-600/70 hover:border-amber-500 p-4 rounded-xl shadow-xs cursor-pointer transition hover:scale-[1.01] group relative overflow-hidden"
-          role="button"
-          tabIndex={0}
-          aria-label="Review pending verifier applications"
+          className="bg-surface-light dark:bg-surface-dark border border-purple-200 dark:border-purple-900/60 p-4 rounded-xl shadow-xs cursor-pointer hover:border-purple-400 dark:hover:border-purple-600 transition group"
         >
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-amber-900 dark:text-amber-300 text-[11px] block uppercase font-bold tracking-wider flex items-center gap-1.5">
-                <span>👥</span> Verifier Requests
-              </span>
-              <span className="text-3xl font-extrabold text-amber-700 dark:text-amber-400 mt-1 block">
-                {metrics.pendingApplicationsCount}
-              </span>
-            </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100 uppercase">
-              Action Req.
+          <div className="flex items-center justify-between">
+            <span className="text-purple-800 dark:text-purple-400 text-[11px] block uppercase font-bold tracking-wider">
+              Verifier Applications
+            </span>
+            <span className="text-[10px] bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded font-semibold group-hover:bg-purple-600 group-hover:text-white transition">
+              Review &rarr;
             </span>
           </div>
-          <div className="mt-2 text-[11px] font-semibold text-ao3-red dark:text-ao3-lightred flex items-center gap-1 group-hover:underline">
-            <span>Click to Review Applicants</span>
-            <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
-          </div>
+          <span className="text-3xl font-extrabold text-purple-700 dark:text-purple-400 mt-1 block">
+            {metrics.pendingApplicationsCount}
+          </span>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
+            Contributors requesting verifier role
+          </span>
         </div>
 
         {/* Total Ingested */}
@@ -248,55 +258,59 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                           {item.verificationBadge && (
                             <div className="mt-1">
                               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                                ✓ {item.verificationBadge}
+                                {item.verificationBadge}
                               </span>
                             </div>
                           )}
                         </td>
 
-                        {/* Masked Link */}
-                        <td className="py-3 px-4 font-mono text-[11px] text-gray-600 dark:text-gray-300">
-                          <span className="bg-canvas-light dark:bg-canvas-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">
+                        {/* Masked Link & Privacy (Protected against mass scraping) */}
+                        <td className="py-3 px-4 max-w-[200px] truncate font-mono text-gray-600 dark:text-gray-300">
+                          <span title={item.maskedDriveUrl} className="hover:underline">
                             {item.maskedDriveUrl}
                           </span>
                         </td>
 
                         {/* Submitter */}
-                        <td className="py-3 px-4 text-[11px] text-gray-600 dark:text-gray-400">
-                          <div className="font-medium text-gray-800 dark:text-gray-200">
+                        <td className="py-3 px-4">
+                          <span className="font-medium text-gray-800 dark:text-gray-200">
                             @{item.uploadedBy}
-                          </div>
-                          <div className="text-[10px] text-gray-400">
-                            {new Date(item.uploadedAt).toLocaleDateString()}
-                          </div>
+                          </span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
+                            Role: {item.uploadedByRole}
+                          </span>
                         </td>
 
-                        {/* Status */}
+                        {/* Status Badge */}
                         <td className="py-3 px-4">
-                          {item.status === "approved" ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                              <span>🟢</span> Approved
+                          {item.status === "approved" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 uppercase">
+                              Approved
                             </span>
-                          ) : item.status === "under_verification" ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                              <span>🟡</span> Pending
+                          )}
+                          {item.status === "under_verification" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 uppercase">
+                              Under Review
                             </span>
-                          ) : item.status === "hidden" ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
-                              <span>👁️</span> Hidden (Quarantine)
+                          )}
+                          {item.status === "hidden" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border border-gray-400 uppercase">
+                              Hidden (Quarantine)
                             </span>
-                          ) : item.status === "flagged" || (item.automatedRiskScore ?? 0) >= 70 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800 animate-pulse">
-                              <span>🚨</span> Threat Flagged
+                          )}
+                          {item.status === "rejected" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 uppercase">
+                              Rejected
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-                              <span>❌</span> Rejected
+                          )}
+                          {item.status === "flagged" && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase animate-pulse">
+                              Threat Flagged
                             </span>
                           )}
                         </td>
 
-                        {/* 5-Action Suite */}
+                        {/* Action Buttons */}
                         <td className="py-3 px-4 text-right">
                           <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             {/* Inspect */}
@@ -307,6 +321,16 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-ao3-red hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
                             >
                               🔍 Inspect
+                            </button>
+
+                            {/* AUDIT HISTORY */}
+                            <button
+                              type="button"
+                              onClick={() => setAuditLink({ id: item.id, title: item.title })}
+                              title="View lifecycle audit history and export CSV/PDF report"
+                              className="px-2 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white rounded border border-purple-200 dark:border-purple-800 text-[11px] font-semibold transition"
+                            >
+                              📜 Audit
                             </button>
 
                             {/* VERIFY */}
@@ -434,6 +458,14 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         onSuccess={refresh}
       />
 
+      {/* Audit History & CSV / PDF Export Modal */}
+      <AuditHistoryModal
+        linkId={auditLink?.id || null}
+        workTitle={auditLink?.title}
+        isOpen={!!auditLink}
+        onClose={() => setAuditLink(null)}
+      />
+
       {/* Context-Aware Permanent Deletion Confirmation Modal */}
       {itemToRemove && (
         <div
@@ -458,11 +490,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
               {itemToRemove.status === "flagged" || (itemToRemove.automatedRiskScore ?? 0) >= 70 ? (
                 <>
-                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently erase this hazard from the system and database?
+                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently erase this hazard from the system and database? A permanent tombstone audit log will be retained.
                 </>
               ) : (
                 <>
-                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently expunge &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All records will be erased and this action cannot be undone.
+                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently expunge &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All public records will be erased and a permanent immutable tombstone will be recorded in the audit history.
                 </>
               )}
             </p>

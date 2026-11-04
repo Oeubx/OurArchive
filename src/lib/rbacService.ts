@@ -1,6 +1,7 @@
 import { DriveLink, LinkStatus, UserRole, VerifierApplication } from "./types";
 import { maskDriveUrl } from "./utils";
 import { segmentDriveUrl } from "./urlSegmenter";
+import { recordAuditEvent, recordExpungeTombstone } from "./auditService";
 
 const STORAGE_KEY_COMMUNITY_LINKS = "ourarchive_community_links";
 const STORAGE_KEY_APPLICATIONS = "ourarchive_verifier_applications";
@@ -339,6 +340,21 @@ export function approveLink(
     isPriorVerified,
   };
 
+  recordAuditEvent({
+    linkId,
+    workTitle: links[index].title,
+    authorName: links[index].authorName,
+    fandom: links[index].fandom,
+    maskedDriveUrl: links[index].maskedDriveUrl,
+    actionType: "APPROVED",
+    actorId: reviewerName,
+    actorName: reviewerName,
+    actorRole: reviewerName.includes("admin") ? "admin" : "verifier",
+    notes: isPriorVerified
+      ? "Approved with prior verification override (VERIFIED BY ADMIN badge assigned)."
+      : "Inspected and approved for public emergency catalog.",
+  });
+
   saveCommunityLinks(links);
   return true;
 }
@@ -357,6 +373,19 @@ export function rejectLink(linkId: string, reviewerName: string = "verifier_team
     verifiedBy: reviewerName,
   };
 
+  recordAuditEvent({
+    linkId,
+    workTitle: links[index].title,
+    authorName: links[index].authorName,
+    fandom: links[index].fandom,
+    maskedDriveUrl: links[index].maskedDriveUrl,
+    actionType: "REJECTED",
+    actorId: reviewerName,
+    actorName: reviewerName,
+    actorRole: reviewerName.includes("admin") ? "admin" : "verifier",
+    notes: "Submission rejected by moderator.",
+  });
+
   saveCommunityLinks(links);
   return true;
 }
@@ -374,6 +403,19 @@ export function hideLink(linkId: string): boolean {
     status: "hidden",
   };
 
+  recordAuditEvent({
+    linkId,
+    workTitle: links[index].title,
+    authorName: links[index].authorName,
+    fandom: links[index].fandom,
+    maskedDriveUrl: links[index].maskedDriveUrl,
+    actionType: "HIDDEN",
+    actorId: "biboy_admin",
+    actorName: "biboy_admin",
+    actorRole: "admin",
+    notes: "Work placed in quarantine pending author takedown check.",
+  });
+
   saveCommunityLinks(links);
   return true;
 }
@@ -390,6 +432,19 @@ export function unhideLink(linkId: string): boolean {
     ...links[index],
     status: "approved",
   };
+
+  recordAuditEvent({
+    linkId,
+    workTitle: links[index].title,
+    authorName: links[index].authorName,
+    fandom: links[index].fandom,
+    maskedDriveUrl: links[index].maskedDriveUrl,
+    actionType: "UNHIDDEN",
+    actorId: "biboy_admin",
+    actorName: "biboy_admin",
+    actorRole: "admin",
+    notes: "Quarantine lifted. Work visibility restored in catalog.",
+  });
 
   saveCommunityLinks(links);
   return true;
@@ -412,6 +467,19 @@ export function verifyLink(linkId: string, adminName: string = "biboy_admin"): b
     isPriorVerified: true,
   };
 
+  recordAuditEvent({
+    linkId,
+    workTitle: links[index].title,
+    authorName: links[index].authorName,
+    fandom: links[index].fandom,
+    maskedDriveUrl: links[index].maskedDriveUrl,
+    actionType: "VERIFIED",
+    actorId: adminName,
+    actorName: adminName,
+    actorRole: "admin",
+    notes: "Manually re-scanned and verified permissions by lead admin.",
+  });
+
   saveCommunityLinks(links);
   return true;
 }
@@ -433,6 +501,20 @@ export function removeLink(linkId: string): boolean {
     console.warn("Policy Violation: Cannot remove link unless it is Hidden, Rejected, or deemed Malicious.");
     return false;
   }
+
+  recordExpungeTombstone({
+    linkId: target.id,
+    workTitle: target.title,
+    authorName: target.authorName,
+    fandom: target.fandom,
+    maskedDriveUrl: target.maskedDriveUrl,
+    actorId: "biboy_admin",
+    actorName: "biboy_admin",
+    actorRole: "admin",
+    reason: isMalicious
+      ? "Threat Scanner Emergency Purge: Malicious executable payload eliminated."
+      : "Author Takedown Request: Permanently expunged from database and search index.",
+  });
 
   const filtered = links.filter((l) => l.id !== linkId);
   saveCommunityLinks(filtered);
@@ -483,6 +565,21 @@ export function adminDirectUpload(data: {
     automatedRiskScore: 0,
     isPriorVerified: data.isPriorVerified,
   };
+
+  recordAuditEvent({
+    linkId: newLink.id,
+    workTitle: newLink.title,
+    authorName: newLink.authorName,
+    fandom: newLink.fandom,
+    maskedDriveUrl: newLink.maskedDriveUrl,
+    actionType: "UPLOADED",
+    actorId: "biboy_admin",
+    actorName: "biboy_admin",
+    actorRole: "admin",
+    notes: isApproved
+      ? "Admin direct upload with prior verification (published directly as Approved)."
+      : "Admin direct upload routed to Under Verification queue for community verifiers.",
+  });
 
   saveCommunityLinks([newLink, ...links]);
   return newLink;
