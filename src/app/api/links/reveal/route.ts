@@ -8,6 +8,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +32,7 @@ export async function POST(request: NextRequest) {
         drive_url,
         google_file_id,
         upload_mode,
+        uploader_user_id,
         verification_status,
         is_hidden,
         is_removed,
@@ -66,6 +69,46 @@ export async function POST(request: NextRequest) {
     if (link.is_hidden) {
       return NextResponse.json(
         { error: "This fanwork has been hidden by the author or administrator." },
+        { status: 403 }
+      );
+    }
+
+    // 1. Resolve Authenticated Identity & Role
+    let userRole: string = "guest";
+    let userId: string | null = null;
+
+    try {
+      const cookieStore = cookies();
+      const devRole = cookieStore.get("ourarchive_dev_role")?.value;
+      if (devRole) {
+        userRole = devRole;
+        userId = `dev-${devRole}-user`;
+      }
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        userId = user.id;
+        userRole = (user.app_metadata?.role as string) || userRole;
+      }
+    } catch {
+      // Fallback for unauthenticated guest
+    }
+
+    // 2. Anti-Mass Scraping Access Control Gate:
+    // Only Verifiers, Admins, or the original uploader can reveal the raw Drive URL.
+    const isModerator = userRole === "admin" || userRole === "verifier";
+    const isOriginalUploader = Boolean(userId && link.uploader_user_id && link.uploader_user_id === userId);
+
+    if (!isModerator && !isOriginalUploader) {
+      return NextResponse.json(
+        {
+          error:
+            "Access Denied: Full Google Drive URLs are restricted to Verifiers, Administrators, and the original submitter to protect fanworks against automated mass harvesting.",
+        },
         { status: 403 }
       );
     }

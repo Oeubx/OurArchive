@@ -6,16 +6,18 @@ import type { PublicSearchFeedRecord } from "@/types/database";
 
 interface DisplayCardProps {
   work: PublicSearchFeedRecord;
-  onRevealDrive: (workId: string) => void;
+  onRevealDrive?: (workId: string) => void;
   onReportTakedown?: (workId: string, title: string) => void;
   isAdmin?: boolean;
+  canReveal?: boolean;
 }
 
 export function DisplayCard({
   work,
   onRevealDrive,
   onReportTakedown,
-  isAdmin,
+  isAdmin = false,
+  canReveal = false,
 }: DisplayCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [isHiding, setIsHiding] = useState(false);
@@ -133,6 +135,7 @@ export function DisplayCard({
         </button>
 
         <div className="flex items-center gap-2">
+          {/* PRIMARY READING ACCESS */}
           <Link
             href={`/reader/${work.work_id}`}
             className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
@@ -140,13 +143,16 @@ export function DisplayCard({
             <span>👁️</span> Read Work
           </Link>
 
-          <button
-            onClick={() => onRevealDrive(work.work_id)}
-            className="px-3 py-1 bg-surface-light dark:bg-surface-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 text-xs font-medium rounded transition flex items-center gap-1"
-            title="Inspect verified Google Drive view-only URL"
-          >
-            <span>🔗</span> View Drive Link
-          </button>
+          {/* REVEAL LINK: Restricted exclusively to Admins, Verifiers, and Authorized Uploaders */}
+          {(canReveal || isAdmin) && onRevealDrive && (
+            <button
+              onClick={() => onRevealDrive(work.work_id)}
+              className="px-3 py-1 bg-surface-light dark:bg-surface-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 text-xs font-medium rounded transition flex items-center gap-1"
+              title="Inspect verified Google Drive view-only URL"
+            >
+              <span>🔗</span> View Drive Link
+            </button>
+          )}
 
           {onReportTakedown && (
             <button

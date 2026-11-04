@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
 import { getLinkById } from "@/lib/linkService";
+import { getCurrentUserRole } from "@/lib/rbacService";
+import type { UserRole } from "@/lib/types";
 
 interface ReaderData {
   workId: string;
@@ -33,11 +35,18 @@ export default function ReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
+  const [role, setRole] = useState<UserRole | "guest">("guest");
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setRole(getCurrentUserRole());
+    }
+  }, []);
 
   useEffect(() => {
     if (!workId) return;
@@ -90,6 +99,9 @@ export default function ReaderPage() {
       });
   }, [workId]);
 
+  // URL Privacy Guard: Only Admins and Verifiers can see raw Google Drive links to prevent mass scraping
+  const canRevealDrive = role === "admin" || role === "verifier";
+
   const themeClasses: Record<ThemeMode, { container: string; text: string; header: string; meta: string }> = {
     light: {
       container: "bg-[#f6f6f4]", // Soft warm off-white (not overly stark white)
@@ -140,8 +152,8 @@ export default function ReaderPage() {
 
           {/* Reader Preferences Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Direct Google Drive Redirection Button */}
-            {data?.rawDriveUrl && (
+            {/* Direct Google Drive Redirection Button (Gated to Admin & Verifier for anti-scraping) */}
+            {canRevealDrive && data?.rawDriveUrl && (
               <a
                 href={data.rawDriveUrl}
                 target="_blank"
@@ -325,7 +337,7 @@ export default function ReaderPage() {
                 <div>
                   🔒 <em>Ephemeral Read-Only Stream: No files are persisted on server disks.</em>
                 </div>
-                {data.rawDriveUrl && (
+                {canRevealDrive && data.rawDriveUrl && (
                   <div>
                     <a
                       href={data.rawDriveUrl}
@@ -376,7 +388,7 @@ export default function ReaderPage() {
                 >
                   &larr; Back to Library Search
                 </Link>
-                {data.rawDriveUrl && (
+                {canRevealDrive && data.rawDriveUrl && (
                   <a
                     href={data.rawDriveUrl}
                     target="_blank"
