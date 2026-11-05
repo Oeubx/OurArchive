@@ -30,6 +30,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 -- 1. Policies: public.user_profiles
 -- -----------------------------------------------------------------------------
 -- Anyone can view user profile display names and roles (for contributor attribution)
+DROP POLICY IF EXISTS "Public user profile read access" ON public.user_profiles;
 CREATE POLICY "Public user profile read access"
 ON public.user_profiles
 FOR SELECT
@@ -37,6 +38,7 @@ TO anon, authenticated
 USING (TRUE);
 
 -- Authenticated users can update their own profile (e.g. display name)
+DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile"
 ON public.user_profiles
 FOR UPDATE
@@ -45,6 +47,7 @@ USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
 
 -- Admins retain full operational management over user profiles
+DROP POLICY IF EXISTS "Admins full management of user_profiles" ON public.user_profiles;
 CREATE POLICY "Admins full management of user_profiles"
 ON public.user_profiles
 FOR ALL
@@ -56,6 +59,7 @@ WITH CHECK (public.is_admin());
 -- 2. Policies: public.drive_links
 -- -----------------------------------------------------------------------------
 -- Public readers can query only verified, unhidden, and non-removed works
+DROP POLICY IF EXISTS "Public readers can view verified active works" ON public.drive_links;
 CREATE POLICY "Public readers can view verified active works"
 ON public.drive_links
 FOR SELECT
@@ -67,6 +71,7 @@ USING (
 );
 
 -- Authenticated users (not banned) can submit links as uploader
+DROP POLICY IF EXISTS "Authenticated non-banned users can submit links" ON public.drive_links;
 CREATE POLICY "Authenticated non-banned users can submit links"
 ON public.drive_links
 FOR INSERT
@@ -80,6 +85,7 @@ WITH CHECK (
 );
 
 -- Contributors can update their own submissions (e.g. hide or update metadata)
+DROP POLICY IF EXISTS "Contributors can update own submissions" ON public.drive_links;
 CREATE POLICY "Contributors can update own submissions"
 ON public.drive_links
 FOR UPDATE
@@ -88,6 +94,7 @@ USING (auth.uid() = uploader_user_id)
 WITH CHECK (auth.uid() = uploader_user_id);
 
 -- Admins have full access across all drive links (including triage queue)
+DROP POLICY IF EXISTS "Admins full access to drive_links" ON public.drive_links;
 CREATE POLICY "Admins full access to drive_links"
 ON public.drive_links
 FOR ALL
@@ -99,6 +106,7 @@ WITH CHECK (public.is_admin());
 -- 3. Policies: public.link_metadata
 -- -----------------------------------------------------------------------------
 -- Public readers can read metadata for verified active works
+DROP POLICY IF EXISTS "Public readers can view verified active metadata" ON public.link_metadata;
 CREATE POLICY "Public readers can view verified active metadata"
 ON public.link_metadata
 FOR SELECT
@@ -114,6 +122,7 @@ USING (
 );
 
 -- Contributors can insert metadata for links they uploaded
+DROP POLICY IF EXISTS "Contributors can insert metadata for own links" ON public.link_metadata;
 CREATE POLICY "Contributors can insert metadata for own links"
 ON public.link_metadata
 FOR INSERT
@@ -127,6 +136,7 @@ WITH CHECK (
 );
 
 -- Contributors can update metadata for their own uploads
+DROP POLICY IF EXISTS "Contributors can update metadata for own links" ON public.link_metadata;
 CREATE POLICY "Contributors can update metadata for own links"
 ON public.link_metadata
 FOR UPDATE
@@ -147,6 +157,7 @@ WITH CHECK (
 );
 
 -- Admins have full access to metadata
+DROP POLICY IF EXISTS "Admins full access to link_metadata" ON public.link_metadata;
 CREATE POLICY "Admins full access to link_metadata"
 ON public.link_metadata
 FOR ALL
@@ -158,6 +169,7 @@ WITH CHECK (public.is_admin());
 -- 4. Policies: public.link_verifications
 -- -----------------------------------------------------------------------------
 -- Public readers can view verification badges for verified active works
+DROP POLICY IF EXISTS "Public readers can view verified active badges" ON public.link_verifications;
 CREATE POLICY "Public readers can view verified active badges"
 ON public.link_verifications
 FOR SELECT
@@ -173,6 +185,7 @@ USING (
 );
 
 -- Admins have full access to link verifications
+DROP POLICY IF EXISTS "Admins full access to link_verifications" ON public.link_verifications;
 CREATE POLICY "Admins full access to link_verifications"
 ON public.link_verifications
 FOR ALL
@@ -184,6 +197,7 @@ WITH CHECK (public.is_admin());
 -- 5. Policies: public.admin_actions
 -- -----------------------------------------------------------------------------
 -- Admins can query audit log records
+DROP POLICY IF EXISTS "Admins can view admin_actions audit log" ON public.admin_actions;
 CREATE POLICY "Admins can view admin_actions audit log"
 ON public.admin_actions
 FOR SELECT
@@ -191,8 +205,21 @@ TO authenticated
 USING (public.is_admin());
 
 -- Admins can insert audit log records
+DROP POLICY IF EXISTS "Admins can insert admin_actions audit entries" ON public.admin_actions;
 CREATE POLICY "Admins can insert admin_actions audit entries"
 ON public.admin_actions
 FOR INSERT
 TO authenticated
 WITH CHECK (public.is_admin() AND auth.uid() = admin_id);
+
+-- -----------------------------------------------------------------------------
+-- 6. Grant Privileges to Supabase API Roles
+-- -----------------------------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
