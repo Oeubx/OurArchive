@@ -19,9 +19,10 @@ Use this skill whenever asked to draft, generate, review, or execute a git commi
 
 ## 2. Branching & Delivery Rules
 
-1. **Branch Off `development`**:
+1. **`development` as Core Working Branch**:
+   - **`development`** is the active daily working branch.
    - All feature, bugfix, documentation, and chore branches must branch off the active **`development`** branch.
-   - Never branch directly off `main` for regular feature work.
+   - Never branch directly off `staging` or `production` for regular feature work.
 2. **Branch Naming Standard**:
    - Use the format `<type>/<changes>` or `docs/<type>-<scope>`.
    - Examples:
@@ -31,9 +32,11 @@ Use this skill whenever asked to draft, generate, review, or execute a git commi
      - `docs/feat-skills-cicd`
      - `docs/feat-database`
      - `chore/supabase-setup`
-3. **Mandatory Pull Request Workflow**:
-   - Direct pushing to `development` or `main` is strictly prohibited for standard features.
-   - All changes must be delivered via a Pull Request targeting `development`.
+3. **Mandatory Progressive Promotion Workflow**:
+   - Direct pushing to `development`, `staging`, or `production` is strictly prohibited.
+   - **Stage 1 (Feature -> Working)**: Feature branches submit a Pull Request into `development`.
+   - **Stage 2 (Working -> Staging)**: Once fine on `development`, open a PR into `staging` for local/localhost testing.
+   - **Stage 3 (Staging -> Production)**: Once fine on `staging`, open a PR into `production` for live deployment.
    - Refer to `.agents/skills/github-pr/SKILL.md` for opening and structuring PRs.
 
 ---
