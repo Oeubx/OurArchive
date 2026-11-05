@@ -35,19 +35,20 @@ All system specifications, architecture diagrams, and backlogs are maintained un
   - [Drive Owners & Privacy Notice](docs/disclaimers/drive_owners_and_privacy.md)
   - [Copyright, Fair Use & AO3 Solidarity](docs/disclaimers/copyright_and_ao3_temporary_aid.md)
   - [Immediate Takedown & Removal Procedure](docs/disclaimers/takedown_and_removal_request.md)
-- **Architecture**: [`docs/architecture/`](docs/architecture/) *(In Progress)*
-- **Database Specifications**: [`docs/database/`](docs/database/) *(In Progress)*
-- **Infrastructure Specifications**: [`docs/infrastructure/`](docs/infrastructure/) *(In Progress)*
-- **Sprint Backlogs & Commit Reference**: [`docs/backlogs/`](docs/backlogs/) *(In Progress)*
+- **Architecture**: [`docs/architecture/`](docs/architecture/)
+- **Database Specifications**: [`docs/database/`](docs/database/)
+- **Infrastructure Specifications**: [`docs/infrastructure/`](docs/infrastructure/)
+- **Sprint Backlogs & Commit Reference**: [`docs/backlogs/`](docs/backlogs/)
 
 ---
 
 ## 4. Branching & Delivery Workflow
 
-OurArchive follows a standardized branching model:
-- `main`: Production and baseline documentation.
-- `development`: Core integration branch.
-- Feature/Doc branches: `docs/<type>-<scope>` or `<type>/<changes>` branched off `development` and merged via Pull Requests.
+OurArchive follows a progressive three-tier delivery model:
+- **`development`**: Active daily working branch for all feature and documentation integration.
+- **`staging`**: Local and localhost testing branch. Promoted from `development` via Pull Request once working features are validated.
+- **`production`**: Live production release and deployment branch. Promoted from `staging` via Pull Request once localhost testing passes.
+- **Feature / Doc branches**: `<type>/<changes>` or `docs/<type>-<scope>` branched off `development` and delivered exclusively via Pull Requests. Direct pushes to `development`, `staging`, or `production` are strictly prohibited.
 
 ---
 
