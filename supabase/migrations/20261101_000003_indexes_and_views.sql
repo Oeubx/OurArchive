@@ -54,7 +54,8 @@ ON public.link_verifications (link_id);
 -- -----------------------------------------------------------------------------
 
 -- Public Search Feed Projection View
-CREATE OR REPLACE VIEW public.vw_public_search_feed AS
+CREATE OR REPLACE VIEW public.vw_public_search_feed 
+WITH (security_invoker = true) AS
 SELECT 
     dl.id AS work_id,
     dl.upload_mode,
@@ -93,7 +94,8 @@ WHERE dl.verification_status = 'verified'
   AND dl.is_removed = FALSE;
 
 -- Administrator Triage Queue Projection View
-CREATE OR REPLACE VIEW public.vw_admin_triage_feed AS
+CREATE OR REPLACE VIEW public.vw_admin_triage_feed 
+WITH (security_invoker = true) AS
 SELECT 
     dl.id AS link_id,
     dl.drive_url,
@@ -124,3 +126,16 @@ LEFT JOIN public.link_metadata lm ON dl.id = lm.link_id
 LEFT JOIN public.link_verifications lv ON dl.id = lv.link_id
 WHERE dl.verification_status IN ('pending_scan', 'pending_review', 'flagged')
    OR dl.is_hidden = TRUE;
+
+-- -----------------------------------------------------------------------------
+-- 4. View Permissions & Security Invoker Settings
+-- -----------------------------------------------------------------------------
+ALTER VIEW public.vw_public_search_feed SET (security_invoker = true);
+ALTER VIEW public.vw_admin_triage_feed SET (security_invoker = true);
+
+-- Public search view is accessible to all
+GRANT SELECT ON public.vw_public_search_feed TO anon, authenticated, service_role;
+
+-- Admin triage view is restricted to authenticated and service_role only
+REVOKE SELECT ON public.vw_admin_triage_feed FROM anon, public;
+GRANT SELECT ON public.vw_admin_triage_feed TO authenticated, service_role;
