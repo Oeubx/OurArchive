@@ -3,154 +3,131 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 export default function TakedownPage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const adminEmail =
-    process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me";
+  const adminEmail = TAKEDOWN_EMAIL;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 py-4 text-xs text-gray-800 leading-relaxed">
+    <div className="max-w-4xl mx-auto space-y-8 py-4 text-xs text-gray-800 dark:text-gray-200 leading-relaxed">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-4">
+      <div className="border-b border-border-light dark:border-border-dark pb-4">
         <div className="flex items-center gap-2">
-          <Link href="/" className="text-brand-trunk hover:underline font-medium">
+          <Link href="/" className="text-brand-trunk dark:text-brand-light hover:underline font-medium">
             &larr; Back to Library Index
           </Link>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">
-          Immediate Takedown & Removal Request Portal
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-2">
+          Author Takedown & Removal Request Portal
         </h1>
-        <p className="text-gray-500 mt-1">
-          Zero-Resistance Author & Owner Removal Policy • Module 3 Compliance
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Fast-Track Removal Desk • Unconditional Author Sovereignty Policy
         </p>
       </div>
 
-      {/* Primary Guarantee Banner */}
-      <div className="p-6 bg-red-50 border-2 border-red-300 rounded-lg text-red-950 space-y-3 shadow-xs">
+      {/* Immediate Takedown Guarantee Banner */}
+      <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-600 rounded-r p-5 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🚨</span>
-          <h2 className="text-lg font-bold text-red-900">
-            The Immediate Takedown Guarantee
+          <span className="text-lg">🚨</span>
+          <h2 className="text-base font-bold text-brand-bark dark:text-brand-light">
+            Our Unconditional Removal Guarantee
           </h2>
         </div>
-        <blockquote className="border-l-4 border-brand-trunk pl-4 py-1 text-base font-bold italic text-brand-trunk">
-          &ldquo;You only have to reach out, and the administrator will remove it immediately.&rdquo;
-        </blockquote>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-          <div className="bg-white p-3 rounded border border-red-200">
-            <strong className="block text-red-900 mb-1">Zero Bureaucracy</strong>
-            No legal documentation, notarized forms, or formalities required.
-          </div>
-          <div className="bg-white p-3 rounded border border-red-200">
-            <strong className="block text-red-900 mb-1">Zero Resistance</strong>
-            We will not challenge, debate, or delay your request.
-          </div>
-          <div className="bg-white p-3 rounded border border-red-200">
-            <strong className="block text-red-900 mb-1">Instant Suppression</strong>
-            Content is suppressed immediately while cascade purge completes.
-          </div>
-        </div>
+        <p className="text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+          If you are the author, drive owner, or copyright holder of any fanwork indexed on this platform, you have the right to request its immediate, no-questions-asked removal.
+        </p>
+        <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
+          We require no legal notices, cease-and-desist forms, or bureaucratic delay. Simply submit the story title, Work ID, or cloud drive URL below and the link will be permanently purged or suppressed within minutes.
+        </p>
+      </div>
 
-        <div className="pt-3">
+      {/* Two Intake Pathways */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Pathway 1: Fast-Track Portal */}
+        <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚡</span>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                Method 1: Instant Takedown Form
+              </h2>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+              Use our interactive form to target a specific Work ID or cloud drive URL. This immediately flags the item in our system and initiates suppression from public search.
+            </p>
+          </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="px-5 py-2.5 bg-brand-trunk hover:bg-brand-bark text-white text-sm font-bold rounded shadow transition"
+            className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg font-bold shadow-xs transition text-center"
           >
-            Launch Interactive Takedown Form &rarr;
+            Open Interactive Takedown Form &rarr;
           </button>
-        </div>
-      </div>
+        </section>
 
-      {/* Alternative Submission Channels */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Option A: Direct Email */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-2">
-          <div className="text-xl">✉️</div>
-          <h3 className="text-sm font-bold text-gray-900">Option A: Direct Email</h3>
-          <p className="text-gray-600">
-            Send an email directly to the emergency takedown mailbox:
-          </p>
+        {/* Pathway 2: Direct Email Desk */}
+        <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs flex flex-col justify-between space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📬</span>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                Method 2: Direct Email to Admin
+              </h2>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+              Prefer writing directly? Send an email to our administrator mailbox. Please include the story title or cloud link so we can locate the record.
+            </p>
+            <div className="p-3 bg-canvas-light dark:bg-canvas-dark rounded border border-border-light dark:border-border-dark font-mono text-[11px] text-brand-trunk dark:text-brand-light select-all">
+              {adminEmail}
+            </div>
+          </div>
           <a
-            href={`mailto:${adminEmail}?subject=[TAKEDOWN]%20Removal%20Request`}
-            className="inline-block text-brand-trunk font-mono font-bold hover:underline break-all"
+            href={`mailto:${adminEmail}?subject=[TAKEDOWN]%20Author%20Removal%20Request`}
+            className="w-full py-2.5 px-4 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 rounded-lg font-bold hover:bg-subtle-light dark:hover:bg-subtle-dark transition text-center"
           >
-            {adminEmail}
+            Compose Email in Mail Client &rarr;
           </a>
-          <p className="text-[11px] text-gray-500">
-            Subject: <code>[TAKEDOWN] Story Title or Drive URL</code>
-          </p>
-        </div>
-
-        {/* Option B: Discord Direct Message */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-2">
-          <div className="text-xl">💬</div>
-          <h3 className="text-sm font-bold text-gray-900">Option B: Community Discord</h3>
-          <p className="text-gray-600">
-            Direct message an administrator or ping the support channel in the OurArchive emergency community server.
-          </p>
-          <span className="inline-block bg-gray-100 px-2 py-1 rounded text-[11px] font-mono text-gray-700">
-            Discord Tag: @biboy
-          </span>
-        </div>
-
-        {/* Option C: GitHub Issue */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-2">
-          <div className="text-xl">🐙</div>
-          <h3 className="text-sm font-bold text-gray-900">Option C: GitHub Issue</h3>
-          <p className="text-gray-600">
-            Open an issue in this repository with the label <code>takedown</code> or send a private repository advisory.
-          </p>
-          <span className="inline-block text-gray-500 text-[11px]">
-            Fast-track review within 1 hour.
-          </span>
-        </div>
+        </section>
       </div>
 
-      {/* Detailed Protocol Explanation */}
-      <section className="bg-white border border-gray-200 rounded-lg p-6 shadow-2xs space-y-3">
-        <h2 className="text-base font-bold text-gray-900">
-          What Happens When a Removal Notice is Received?
+      {/* Frequently Asked Questions */}
+      <section className="space-y-4 border-t border-border-light dark:border-border-dark pt-6">
+        <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+          Frequently Asked Questions regarding Takedowns
         </h2>
-        <ol className="list-decimal pl-5 space-y-2 text-gray-700">
-          <li>
-            <strong>Instant Hide (Seconds):</strong> The work&apos;s visibility flag <code>is_hidden</code> is immediately set to <code>true</code>. The story is instantaneously removed from public search results, reader feeds, and API reveal endpoints.
-          </li>
-          <li>
-            <strong>Permanent Database Purge:</strong> The administrator executes a cascade deletion:
-            <ul className="list-disc pl-5 mt-1 space-y-1 text-gray-600">
-              <li>Google Drive URL and File ID are removed from <code>drive_links</code>.</li>
-              <li>Title, author name, pairing, and search tokens in <code>link_metadata</code> are expunged.</li>
-              <li>Verification logs and risk scores in <code>link_verifications</code> are purged.</li>
-            </ul>
-          </li>
-          <li>
-            <strong>Temporary Hiding vs Permanent Deletion:</strong> If you are a Drive owner who simply wants the mirror temporarily paused while updating permissions, specify &ldquo;Temporary Hide&rdquo; and we will retain the record in paused status.
-          </li>
-        </ol>
+
+        <div className="space-y-3">
+          <div className="p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark space-y-1">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">
+              How quickly is a work taken down?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Immediate form submissions suppress the item from search queries instantly. Administrative purge of cached reader state occurs in under 24 hours.
+            </p>
+          </div>
+
+          <div className="p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark space-y-1">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">
+              What if someone uploaded a shared drive with multiple stories?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              OurArchive supports granular work-level takedowns. You can specify a single story to be suppressed without affecting other fanworks sharing that cloud folder.
+            </p>
+          </div>
+
+          <div className="p-4 bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark space-y-1">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">
+              Does OurArchive store copies of my story on disk?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              No. OurArchive operates under a strict <strong>Zero-Download</strong> architecture. No files (`.pdf`, `.html`, `.epub`) are saved permanently on our servers.
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* Footer navigation */}
-      <div className="border-t border-gray-200 pt-4 flex items-center justify-between text-gray-500">
-        <span>OurArchive Emergency Bridge Governance</span>
-        <div className="flex items-center gap-4">
-          <Link href="/" className="hover:underline">
-            Home Index
-          </Link>
-          <Link href="/disclaimers" className="hover:underline">
-            Community Charter
-          </Link>
-          <Link href="/api/health" className="hover:underline" target="_blank">
-            System Telemetry
-          </Link>
-        </div>
-      </div>
-
-      {/* Interactive Modal */}
-      <TakedownModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
+      {/* Modal Container */}
+      <TakedownModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

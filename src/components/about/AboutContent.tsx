@@ -1,33 +1,22 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 export function AboutContent() {
   return (
     <div className="space-y-6">
       {/* Origin Story & Mission */}
       <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden border border-border-light dark:border-border-dark shrink-0 shadow-xs bg-subtle-light dark:bg-subtle-dark relative">
-            <Image
-              src="/images/ourarchive-logo.jpg"
-              alt="OurArchive Emblem"
-              width={112}
-              height={112}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="space-y-3 flex-1">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <span>📖 The Origin Story</span>
-            </h2>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              Hello! I am a software developer and longtime fanfiction reader. When major fanwork repositories experience downtime or outages, millions of readers and writers across the globe suddenly lose access to the stories that offer them comfort, entertainment, and connection.
-            </p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-              In response, readers and authors often organize ad-hoc cloud storage links and spreadsheets across social media. However, discovering specific fanworks across disorganized links is difficult, and accessing raw cloud links poses security and usability challenges.
-            </p>
-          </div>
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <span>📖 The Origin Story</span>
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Hello! I am a software developer and longtime fanfiction reader. When major fanwork repositories experience downtime or outages, millions of readers and writers across the globe suddenly lose access to the stories that offer them comfort, entertainment, and connection.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            In response, readers and authors often organize ad-hoc cloud storage links and spreadsheets across social media. However, discovering specific fanworks across disorganized links is difficult, and accessing raw cloud links poses security and usability challenges.
+          </p>
         </div>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium bg-canvas-light dark:bg-canvas-dark p-3.5 rounded border border-border-light dark:border-border-dark">
           <strong>OurArchive</strong> was conceived to solve this exact problem: compile author-approved cloud drive links into a single searchable index, provide a distraction-free online reader, and protect readers through metadata verification.
@@ -108,10 +97,10 @@ export function AboutContent() {
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <a
-            href="mailto:ourarchive.aid@gmail.com"
+            href={`mailto:${TAKEDOWN_EMAIL}`}
             className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition"
           >
-            Email: ourarchive.aid@gmail.com
+            Email: {TAKEDOWN_EMAIL}
           </a>
           <Link
             href="/takedown"

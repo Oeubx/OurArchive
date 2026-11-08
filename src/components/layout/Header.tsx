@@ -6,7 +6,6 @@ import Image from "next/image";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserNav } from "@/components/auth/UserNav";
 import { createClient } from "@/lib/supabase/client";
-import { getCurrentUserRole, subscribeToRbacUpdates } from "@/lib/rbacService";
 import type { UserRole } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -15,22 +14,18 @@ export function Header() {
   const [role, setRole] = useState<UserRole | "guest">("guest");
 
   useEffect(() => {
-    // Check role from Supabase auth and local dev override
     const supabase = createClient();
 
     function determineRole(user: User | null) {
-      const devRole = typeof window !== "undefined" ? localStorage.getItem("ourarchive_dev_role") : null;
-      if (devRole === "admin" || devRole === "verifier" || devRole === "contributor") {
-        setRole(devRole);
+      if (!user) {
+        setRole("guest");
         return;
       }
-      const userMetaRole = (user?.app_metadata as Record<string, unknown> | undefined)?.role as UserRole | undefined;
+      const userMetaRole = (user.app_metadata as Record<string, unknown> | undefined)?.role as UserRole | undefined;
       if (userMetaRole) {
         setRole(userMetaRole);
-      } else if (user) {
-        setRole("contributor");
       } else {
-        setRole(getCurrentUserRole() || "guest");
+        setRole("contributor");
       }
     }
 
@@ -44,14 +39,8 @@ export function Header() {
       determineRole(session?.user ?? null);
     });
 
-    // Also subscribe to local RBAC simulation transitions
-    const unsubscribeRbac = subscribeToRbacUpdates(() => {
-      setRole(getCurrentUserRole());
-    });
-
     return () => {
       subscription.unsubscribe();
-      unsubscribeRbac();
     };
   }, []);
 
@@ -92,9 +81,6 @@ export function Header() {
               </div>
               <span className="font-bold tracking-tight">OurArchive</span>
             </Link>
-            <span className="hidden sm:inline-block text-[11px] font-medium bg-brand-bark px-2 py-0.5 rounded text-amber-200 border border-brand-amber">
-              Emergency Service
-            </span>
           </div>
 
           {/* Center/Desktop Navigation Links */}
@@ -189,7 +175,6 @@ export function Header() {
                   </div>
                   <div>
                     <div className="font-bold text-sm tracking-tight">OurArchive</div>
-                    <div className="text-[10px] text-amber-200">Emergency Service</div>
                   </div>
                 </div>
 
