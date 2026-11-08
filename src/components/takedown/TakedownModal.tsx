@@ -85,7 +85,7 @@ export function TakedownModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden text-xs">
         {/* Header */}
-        <div className="bg-ao3-red text-white px-5 py-3 flex items-center justify-between">
+        <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold">🚨 Immediate Takedown & Removal Request</span>
           </div>
@@ -145,7 +145,7 @@ export function TakedownModal({
                 onChange={(e) => setTargetQuery(e.target.value)}
                 placeholder="e.g. Story Title, UUID, or https://drive.google.com/file/d/..."
                 required
-                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red text-xs"
+                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk text-xs"
               />
             </div>
 
@@ -156,7 +156,7 @@ export function TakedownModal({
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red text-xs bg-white"
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk text-xs bg-white"
                 >
                   <option value="author">Original Fanfiction Author</option>
                   <option value="drive_owner">Google Drive Link Owner</option>
@@ -174,7 +174,7 @@ export function TakedownModal({
                   value={requesterEmail}
                   onChange={(e) => setRequesterEmail(e.target.value)}
                   placeholder="author@example.com"
-                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red text-xs"
+                  className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk text-xs"
                 />
               </div>
             </div>
@@ -216,7 +216,7 @@ export function TakedownModal({
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Briefly state reason (e.g., 'I am the author and wish to revoke mirror access', or 'Permissions updated to private')."
                 rows={2}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red text-xs"
+                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk text-xs"
               />
             </div>
 
@@ -225,7 +225,7 @@ export function TakedownModal({
               Prefer direct email? Send your link or title to{" "}
               <a
                 href={`mailto:${process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me"}?subject=[TAKEDOWN]%20Removal%20Request`}
-                className="text-ao3-red hover:underline font-semibold"
+                className="text-brand-trunk hover:underline font-semibold"
               >
                 {process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me"}
               </a>
@@ -245,7 +245,7 @@ export function TakedownModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-1.5 bg-ao3-red hover:bg-ao3-darkred text-white font-bold rounded shadow-xs transition disabled:opacity-50"
+                className="px-4 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white font-bold rounded shadow-xs transition disabled:opacity-50"
               >
                 {loading ? "Processing Immediate Hide..." : "Request Immediate Removal"}
               </button>

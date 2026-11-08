@@ -61,14 +61,14 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by title, author name, fandom, or summary keywords..."
-              className="w-full pl-9 pr-3 py-2 border border-border-light dark:border-border-dark rounded focus:ring-2 focus:ring-ao3-red focus:border-ao3-red outline-hidden text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500"
+              className="w-full pl-9 pr-3 py-2 border border-border-light dark:border-border-dark rounded focus:ring-2 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2 bg-ao3-red hover:bg-ao3-darkred text-white font-semibold text-xs rounded transition shadow-xs disabled:opacity-50"
+            className="px-5 py-2 bg-brand-trunk hover:bg-brand-bark text-white font-semibold text-xs rounded transition shadow-xs disabled:opacity-50"
           >
             {loading ? "Searching..." : "Search"}
           </button>
@@ -96,7 +96,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={fandom}
               onChange={(e) => setFandom(e.target.value)}
               placeholder="e.g. Heartstopper, Arcane, Harry Potter"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-ao3-red outline-hidden"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-brand-trunk outline-hidden"
             />
           </div>
 
@@ -109,7 +109,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={tag}
               onChange={(e) => setTag(e.target.value)}
               placeholder="e.g. Fluff, Slow Burn, Mutual Pining"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-ao3-red outline-hidden"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded text-xs bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-brand-trunk outline-hidden"
             />
           </div>
         </div>
@@ -129,7 +129,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
                   onClick={() => handleRatingClick(r)}
                   className={`px-2.5 py-1 text-[11px] rounded transition border ${
                     active
-                      ? "bg-ao3-red text-white border-ao3-red font-semibold shadow-xs"
+                      ? "bg-brand-trunk text-white border-brand-trunk font-semibold shadow-xs"
                       : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
                   }`}
                 >

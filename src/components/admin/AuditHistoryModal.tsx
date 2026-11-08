@@ -116,7 +116,7 @@ export function AuditHistoryModal({
               type="button"
               onClick={() => printAuditReport(linkId)}
               disabled={history.length === 0}
-              className="px-2.5 py-1.5 bg-ao3-red hover:bg-ao3-darkred text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs disabled:opacity-50"
+              className="px-2.5 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs disabled:opacity-50"
               title="Generate printable PDF compliance certificate"
             >
               <span>🖨️</span> Export PDF
@@ -135,7 +135,7 @@ export function AuditHistoryModal({
               {history.map((record) => (
                 <div key={record.id} className="relative group">
                   {/* Timeline Node Icon */}
-                  <div className="absolute -left-[23px] top-0 w-3.5 h-3.5 rounded-full bg-ao3-red border-2 border-surface-light dark:border-surface-dark shadow-xs" />
+                  <div className="absolute -left-[23px] top-0 w-3.5 h-3.5 rounded-full bg-brand-trunk border-2 border-surface-light dark:border-surface-dark shadow-xs" />
 
                   <div className="bg-canvas-light dark:bg-canvas-dark p-3.5 rounded-lg border border-border-light dark:border-border-dark space-y-1.5 text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-1">
