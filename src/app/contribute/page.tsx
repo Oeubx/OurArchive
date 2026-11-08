@@ -2,46 +2,35 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
 import { BecomeVerifierModal } from "@/components/contribute/BecomeVerifierModal";
 import { ContributorTable } from "@/components/contribute/ContributorTable";
 import { UploadModal } from "@/components/upload/UploadModal";
+import { AuthModal } from "@/components/auth/AuthModal";
 import { createClient } from "@/lib/supabase/client";
-import { getMyContributions, addMyContribution } from "@/lib/contributorService";
+import { getMyContributions } from "@/lib/contributorService";
 import { DriveLink } from "@/lib/types";
 
 export default function ContributePage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userEmail, setUserEmail] = useState<string>("contributor@example.com");
-  const [userName, setUserName] = useState<string>("Community Contributor");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
 
   const [contributions, setContributions] = useState<DriveLink[]>([]);
-  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showVerifierModal, setShowVerifierModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Check auth state on mount
+  // Check authentic Supabase auth state on mount
   useEffect(() => {
     const supabase = createClient();
 
     function evaluateAuth(user: { email?: string; user_metadata?: { full_name?: string } } | null) {
-      const devAuth = typeof window !== "undefined" ? localStorage.getItem("ourarchive_dev_auth") : null;
-      if (devAuth === "authenticated") {
-        setIsAuthenticated(true);
-        setUserEmail(localStorage.getItem("ourarchive_dev_email") || "contributor@example.com");
-        setUserName(localStorage.getItem("ourarchive_dev_name") || "Demo Contributor");
-        setShowAuthGate(false);
-        return;
-      }
-
       if (user) {
         setIsAuthenticated(true);
-        setUserEmail(user.email || "contributor@example.com");
+        setUserEmail(user.email || "");
         setUserName(user.user_metadata?.full_name || user.email?.split("@")[0] || "Contributor");
-        setShowAuthGate(false);
       } else {
         setIsAuthenticated(false);
-        setShowAuthGate(true);
       }
     }
 
@@ -62,32 +51,62 @@ export default function ContributePage() {
     };
   }, []);
 
-  function handleSimulateLogin() {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("ourarchive_dev_auth", "authenticated");
-      localStorage.setItem("ourarchive_dev_email", "reader_charlie@example.com");
-      localStorage.setItem("ourarchive_dev_name", "reader_charlie");
-    }
-    setIsAuthenticated(true);
-    setUserEmail("reader_charlie@example.com");
-    setUserName("reader_charlie");
-    setShowAuthGate(false);
-    setContributions(getMyContributions());
-  }
-
-  function handleSignOut() {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("ourarchive_dev_auth");
-      localStorage.removeItem("ourarchive_dev_email");
-      localStorage.removeItem("ourarchive_dev_name");
-    }
-    setIsAuthenticated(false);
-    setShowAuthGate(true);
-  }
-
   function handleUploadSuccess() {
     setContributions(getMyContributions());
     setShowUploadModal(false);
+  }
+
+  // Loading state
+  if (isAuthenticated === null) {
+    return (
+      <div className="py-12 max-w-xl mx-auto text-center space-y-3">
+        <div className="h-8 bg-subtle-light dark:bg-subtle-dark animate-pulse rounded-lg w-1/2 mx-auto" />
+        <div className="h-4 bg-subtle-light dark:bg-subtle-dark animate-pulse rounded w-3/4 mx-auto" />
+      </div>
+    );
+  }
+
+  // Unauthenticated Strict Gate: Blocks access completely
+  if (!isAuthenticated) {
+    return (
+      <div className="py-12 max-w-lg mx-auto">
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl p-8 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 flex items-center justify-center text-3xl">
+            🔑
+          </div>
+
+          <div className="space-y-1.5">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              Contributor Sign-In Required
+            </h1>
+            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed max-w-sm mx-auto">
+              To maintain reader safety and prevent unverified link injections, you must sign in with your email account to contribute fanworks.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="w-full sm:w-auto px-5 py-2.5 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-xl shadow-xs transition"
+            >
+              Sign In to Contribute &rarr;
+            </button>
+            <Link
+              href="/"
+              className="w-full sm:w-auto px-4 py-2.5 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 text-xs font-medium rounded-xl transition text-center"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          redirectTo="/contribute"
+        />
+      </div>
+    );
   }
 
   return (
@@ -100,22 +119,14 @@ export default function ContributePage() {
           <span className="text-gray-900 dark:text-gray-100 font-medium">Contribute Portal</span>
         </div>
 
-        {isAuthenticated && (
-          <div className="flex items-center gap-3">
-            <span className="text-gray-600 dark:text-gray-400">
-              Signed in as <strong className="text-gray-900 dark:text-gray-100">{userName}</strong>
-            </span>
-            <button
-              onClick={handleSignOut}
-              className="text-ao3-red dark:text-ao3-lightred hover:underline text-[11px]"
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-gray-600 dark:text-gray-400">
+            Signed in as <strong className="text-gray-900 dark:text-gray-100">{userName}</strong>
+          </span>
+        </div>
       </div>
 
-      {/* TOP MOST CONTENT: Warning Sign & Become a Verifier Button */}
+      {/* Warning Sign & Become a Verifier Button */}
       <section className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-xs transition-colors duration-150">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -140,7 +151,7 @@ export default function ContributePage() {
         </div>
       </section>
 
-      {/* MAIN CONTENT: Contributor Uploads Display Table */}
+      {/* Contributor Uploads Display Table */}
       <section>
         <ContributorTable
           contributions={contributions}
@@ -149,12 +160,6 @@ export default function ContributePage() {
       </section>
 
       {/* Modals */}
-      <ContributorAuthGateModal
-        isOpen={showAuthGate && !isAuthenticated}
-        onClose={() => setShowAuthGate(false)}
-        onSimulateLogin={handleSimulateLogin}
-      />
-
       <BecomeVerifierModal
         isOpen={showVerifierModal}
         onClose={() => setShowVerifierModal(false)}

@@ -68,7 +68,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden">
-        <div className="bg-ao3-red text-white px-5 py-3 flex items-center justify-between">
+        <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold">🔗 View Verified Google Drive Link</span>
           </div>
@@ -84,7 +84,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
         <div className="p-5 text-xs text-gray-800 space-y-4">
           {loading && (
             <div className="py-8 text-center text-gray-500 space-y-2">
-              <div className="inline-block w-6 h-6 border-2 border-ao3-red border-t-transparent rounded-full animate-spin" />
+              <div className="inline-block w-6 h-6 border-2 border-brand-trunk border-t-transparent rounded-full animate-spin" />
               <p>Verifying anti-bot token and resolving Drive path...</p>
             </div>
           )}
@@ -150,7 +150,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
                     href={data.driveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-1.5 text-xs font-semibold bg-ao3-red hover:bg-ao3-darkred text-white rounded shadow-xs transition"
+                    className="px-4 py-1.5 text-xs font-semibold bg-brand-trunk hover:bg-brand-bark text-white rounded shadow-xs transition"
                   >
                     Open in Google Drive (Read-Only) &rarr;
                   </a>

@@ -78,7 +78,7 @@ export default function ProfilePage() {
         </p>
         <Link
           href="/"
-          className="inline-block px-4 py-2 bg-ao3-red text-white text-xs font-semibold rounded hover:bg-ao3-darkred transition"
+          className="inline-block px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded hover:bg-brand-bark transition"
         >
           Return to Portal
         </Link>
@@ -95,7 +95,7 @@ export default function ProfilePage() {
             Manage your contributor identity, reading bookmarks, and submission metrics.
           </p>
         </div>
-        <span className="text-xs bg-red-100 text-ao3-red px-2.5 py-1 rounded font-semibold uppercase tracking-wider">
+        <span className="text-xs bg-red-100 text-brand-trunk px-2.5 py-1 rounded font-semibold uppercase tracking-wider">
           {profile.role}
         </span>
       </div>
@@ -157,14 +157,14 @@ export default function ProfilePage() {
               maxLength={50}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full sm:w-80 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red focus:border-ao3-red outline-none"
+              className="w-full sm:w-80 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={saving || displayName.trim() === profile.display_name}
-            className="px-4 py-2 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded transition disabled:opacity-50"
+            className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded transition disabled:opacity-50"
           >
             {saving ? "Saving Changes..." : "Save Display Name"}
           </button>
@@ -200,7 +200,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link
                       href={`/reader/${b.workId}`}
-                      className="font-bold text-ao3-red hover:underline text-sm"
+                      className="font-bold text-brand-trunk hover:underline text-sm"
                     >
                       {b.workTitle}
                     </Link>
@@ -211,13 +211,13 @@ export default function ProfilePage() {
                     <span>•</span>
                     <span>Page {b.lastPage} {b.totalPages ? `of ${b.totalPages}` : ""}</span>
                     <span>•</span>
-                    <span className="text-ao3-red font-semibold">{b.scrollPercent}% read</span>
+                    <span className="text-brand-trunk font-semibold">{b.scrollPercent}% read</span>
                   </div>
 
                   {/* Progress Bar */}
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
                     <div
-                      className="bg-ao3-red h-1.5 rounded-full transition-all duration-300"
+                      className="bg-brand-trunk h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${b.scrollPercent}%` }}
                     />
                   </div>
@@ -226,7 +226,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
                     href={`/reader/${b.workId}`}
-                    className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white font-semibold rounded text-xs transition shadow-2xs"
+                    className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded text-xs transition shadow-2xs"
                   >
                     Resume &rarr;
                   </Link>

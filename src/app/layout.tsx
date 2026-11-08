@@ -6,9 +6,9 @@ import { EmergencyNoticeBanner } from "@/components/disclaimers/EmergencyNoticeB
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "OurArchive — Emergency Read-Only Platform for AO3 Users",
+  title: "OurArchive — Cloud Fanwork Directory & Read-Only Archive",
   description:
-    "An emergency, non-commercial temporary bridge for the fanfiction community during Archive of Our Own (AO3) outages. Zero-download, read-only streaming.",
+    "An emergency, non-commercial reading directory and cloud mirror index for the fanfiction community. Zero-download, read-only streaming.",
 };
 
 export default function RootLayout({

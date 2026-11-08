@@ -64,7 +64,7 @@ export function DisplayCard({
       <div className="p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-bold text-ao3-red dark:text-ao3-lightred hover:underline">
+            <h3 className="text-base font-bold text-brand-trunk dark:text-brand-light hover:underline">
               <Link href={`/reader/${work.work_id}`}>{work.title}</Link>
             </h3>
             <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -104,7 +104,7 @@ export function DisplayCard({
 
         {/* Summary */}
         {work.summary && (
-          <div className="bg-canvas-light dark:bg-canvas-dark border-l-2 border-ao3-red p-2.5 rounded-r text-xs text-gray-700 dark:text-gray-300 leading-relaxed italic">
+          <div className="bg-canvas-light dark:bg-canvas-dark border-l-2 border-brand-trunk p-2.5 rounded-r text-xs text-gray-700 dark:text-gray-300 leading-relaxed italic">
             &ldquo;{work.summary}&rdquo;
           </div>
         )}
@@ -138,7 +138,7 @@ export function DisplayCard({
           {/* PRIMARY READING ACCESS */}
           <Link
             href={`/reader/${work.work_id}`}
-            className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
+            className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
           >
             <span>👁️</span> Read Work
           </Link>

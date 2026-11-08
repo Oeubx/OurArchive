@@ -2,21 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { DriveLink, LinkStatus, UserRole } from "@/lib/types";
+import { DriveLink, UserRole } from "@/lib/types";
 import {
   getAllCommunityLinks,
   getArchiveMetrics,
-  getCurrentUserRole,
-  setSimulatedRole,
   approveLink,
   rejectLink,
   hideLink,
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { LinkInspectionModal } from "@/components/manage/LinkInspectionModal";
+import { AdminTakedownContainer } from "@/components/admin/AdminTakedownContainer";
+import { createClient } from "@/lib/supabase/client";
 
 export default function VerifierManagePage() {
-  const [role, setRole] = useState<UserRole>("contributor");
+  const [role, setRole] = useState<UserRole | "guest">("guest");
+  const [loading, setLoading] = useState(true);
   const [links, setLinks] = useState<DriveLink[]>([]);
   const [metrics, setMetrics] = useState({
     approvedCount: 0,
@@ -30,18 +31,44 @@ export default function VerifierManagePage() {
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
 
   function refreshState() {
-    const currentRole = getCurrentUserRole();
-    setRole(currentRole);
     setLinks(getAllCommunityLinks());
     setMetrics(getArchiveMetrics());
   }
 
   useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const userMetaRole = (user.app_metadata as Record<string, unknown> | undefined)?.role as UserRole | undefined;
+        setRole(userMetaRole || "contributor");
+      } else {
+        setRole("guest");
+      }
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      if (user) {
+        const userMetaRole = (user.app_metadata as Record<string, unknown> | undefined)?.role as UserRole | undefined;
+        setRole(userMetaRole || "contributor");
+      } else {
+        setRole("guest");
+      }
+    });
+
     refreshState();
     const unsubscribe = subscribeToRbacUpdates(() => {
       refreshState();
     });
-    return unsubscribe;
+
+    return () => {
+      subscription.unsubscribe();
+      unsubscribe();
+    };
   }, []);
 
   // Filtered links
@@ -52,9 +79,18 @@ export default function VerifierManagePage() {
 
   const isAuthorized = role === "verifier" || role === "admin";
 
+  if (loading) {
+    return (
+      <div className="py-12 max-w-xl mx-auto text-center space-y-3">
+        <div className="h-8 bg-subtle-light dark:bg-subtle-dark animate-pulse rounded-lg w-1/2 mx-auto" />
+        <div className="h-4 bg-subtle-light dark:bg-subtle-dark animate-pulse rounded w-3/4 mx-auto" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-150">
-      {/* Breadcrumb & Role Switcher Bar */}
+      {/* Breadcrumb & Role Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -67,11 +103,11 @@ export default function VerifierManagePage() {
           </h1>
         </div>
 
-        {/* Role Status and Quick Dev Switcher */}
+        {/* Role Status */}
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-gray-500 dark:text-gray-400">Current Role:</span>
+          <span className="text-gray-500 dark:text-gray-400">Role:</span>
           <span
-            className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] uppercase border ${
+            className={`px-2.5 py-0.5 rounded font-mono font-bold text-[11px] uppercase border ${
               role === "admin"
                 ? "bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700"
                 : role === "verifier"
@@ -81,31 +117,6 @@ export default function VerifierManagePage() {
           >
             {role}
           </span>
-
-          <div className="flex items-center gap-1 ml-2">
-            <button
-              type="button"
-              onClick={() => setSimulatedRole("verifier")}
-              className={`px-2 py-1 rounded text-[11px] font-medium border transition ${
-                role === "verifier"
-                  ? "bg-ao3-red text-white border-ao3-red"
-                  : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
-              }`}
-            >
-              Simulate Verifier
-            </button>
-            <button
-              type="button"
-              onClick={() => setSimulatedRole("admin")}
-              className={`px-2 py-1 rounded text-[11px] font-medium border transition ${
-                role === "admin"
-                  ? "bg-amber-500 text-black border-amber-500 font-bold"
-                  : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
-              }`}
-            >
-              Simulate Admin
-            </button>
-          </div>
         </div>
       </div>
 
@@ -126,17 +137,16 @@ export default function VerifierManagePage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               href="/contribute"
-              className="px-4 py-2 bg-ao3-red text-white text-xs font-semibold rounded-lg hover:bg-ao3-darkred transition shadow-xs"
+              className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded-lg hover:bg-brand-bark transition shadow-xs"
             >
               Apply to Become a Verifier
             </Link>
-            <button
-              type="button"
-              onClick={() => setSimulatedRole("verifier")}
+            <Link
+              href="/"
               className="px-4 py-2 border border-border-light dark:border-border-dark text-xs font-semibold rounded-lg hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
             >
-              Switch to Verifier Role
-            </button>
+              Back to Home
+            </Link>
           </div>
         </div>
       ) : (
@@ -179,21 +189,21 @@ export default function VerifierManagePage() {
               </div>
             </div>
 
-            {/* Hidden Links Counter */}
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark p-4 rounded-xl shadow-xs flex items-center justify-between">
+            {/* Hidden / Quarantined Links Counter */}
+            <div className="bg-surface-light dark:bg-surface-dark border border-red-200 dark:border-red-900/60 p-4 rounded-xl shadow-xs flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400 block uppercase tracking-wider">
-                  Hidden / Quarantine
+                <span className="text-[11px] font-bold text-red-800 dark:text-red-400 block uppercase tracking-wider">
+                  Hidden / Quarantined
                 </span>
-                <span className="text-3xl font-extrabold text-gray-700 dark:text-gray-300 mt-1 block">
+                <span className="text-3xl font-extrabold text-red-700 dark:text-red-400 mt-1 block">
                   {metrics.hiddenCount}
                 </span>
                 <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
-                  Temporarily delisted
+                  Suppressed from public search
                 </span>
               </div>
-              <div className="w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center text-xl text-gray-500">
-                👁️
+              <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/60 flex items-center justify-center text-xl text-brand-trunk">
+                🔴
               </div>
             </div>
 
@@ -210,11 +220,16 @@ export default function VerifierManagePage() {
                   Combined community queue
                 </span>
               </div>
-              <div className="w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center text-xl text-ao3-red">
+              <div className="w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center text-xl text-brand-trunk">
                 📚
               </div>
             </div>
           </div>
+
+          {/* Admin Takedown Container */}
+          {role === "admin" && (
+            <AdminTakedownContainer links={links} onRefresh={refreshState} />
+          )}
 
           {/* Main Community Submissions Triage Table */}
           <div className="space-y-3">
@@ -238,12 +253,11 @@ export default function VerifierManagePage() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    type="button"
                     onClick={() => setSelectedStatusFilter(tab.id)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition ${
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
                       selectedStatusFilter === tab.id
-                        ? "bg-ao3-red text-white shadow-2xs"
-                        : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                        ? "bg-brand-trunk text-white shadow-2xs"
+                        : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
                     }`}
                   >
                     {tab.label}
@@ -252,131 +266,157 @@ export default function VerifierManagePage() {
               </div>
             </div>
 
-            {/* Table Container */}
-            <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-border-light dark:border-border-dark bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-4">Work & Author</th>
-                      <th className="py-3 px-4">Drive Link (Masked)</th>
-                      <th className="py-3 px-4">Submitted By</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                    {filteredLinks.length === 0 ? (
+            {/* Submission Records Table */}
+            <div className="border border-border-light dark:border-border-dark rounded-xl bg-surface-light dark:bg-surface-dark overflow-hidden shadow-xs">
+              {filteredLinks.length === 0 ? (
+                <div className="p-12 text-center text-xs text-gray-500 dark:text-gray-400 space-y-2">
+                  <div className="text-2xl">📋</div>
+                  <div className="font-semibold text-gray-700 dark:text-gray-300">No submissions in this filter</div>
+                  <p>Check other tabs or submit a new drive link from the contribute portal.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-canvas-light dark:bg-canvas-dark text-gray-600 dark:text-gray-400 border-b border-border-light dark:border-border-dark select-none">
                       <tr>
-                        <td colSpan={5} className="py-10 text-center text-gray-500 dark:text-gray-400">
-                          No submissions found for the selected filter.
-                        </td>
+                        <th className="p-3">Work Details</th>
+                        <th className="p-3">Drive Uploader</th>
+                        <th className="p-3">Safety Risk</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Triage Actions</th>
                       </tr>
-                    ) : (
-                      filteredLinks.map((item) => (
+                    </thead>
+                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                      {filteredLinks.map((link) => (
                         <tr
-                          key={item.id}
-                          onClick={() => setInspectingLink(item)}
-                          className="hover:bg-subtle-light dark:hover:bg-subtle-dark/60 cursor-pointer transition"
+                          key={link.id}
+                          className="hover:bg-subtle-light dark:hover:bg-subtle-dark transition group"
                         >
-                          {/* Work & Author */}
-                          <td className="py-3 px-4 max-w-xs">
-                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-ao3-red dark:hover:text-ao3-lightred transition">
-                              {item.title}
+                          <td className="p-3">
+                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
+                              {link.title}
                             </div>
-                            <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-                              <span>by {item.authorName}</span>
-                              <span>•</span>
-                              <span>{item.fandom}</span>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                              by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
                             </div>
                           </td>
-
-                          {/* Drive Link Masked */}
-                          <td className="py-3 px-4 font-mono text-[11px] text-gray-600 dark:text-gray-300">
-                            <span className="bg-canvas-light dark:bg-canvas-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">
-                              {item.maskedDriveUrl}
+                          <td className="p-3 text-gray-700 dark:text-gray-300">
+                            <div>{link.driveOwnerName || "Anonymous Contributor"}</div>
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">{link.uploadedBy}</div>
+                          </td>
+                          <td className="p-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                link.automatedRiskScore === 0
+                                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                                  : link.automatedRiskScore < 70
+                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
+                                  : "bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300"
+                              }`}
+                            >
+                              Risk Score: {link.automatedRiskScore}/100
                             </span>
                           </td>
-
-                          {/* Submitted By */}
-                          <td className="py-3 px-4 text-[11px] text-gray-600 dark:text-gray-400">
-                            <div className="font-medium text-gray-800 dark:text-gray-200">
-                              @{item.uploadedBy}
-                            </div>
-                            <div className="text-[10px] text-gray-400">
-                              {new Date(item.uploadedAt).toLocaleDateString()}
-                            </div>
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-3 px-4">
-                            {item.status === "approved" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                <span>🟢</span> Approved
-                              </span>
-                            ) : item.status === "under_verification" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                                <span>🟡</span> Under Verification
-                              </span>
-                            ) : item.status === "hidden" ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700">
-                                <span>👁️</span> Hidden
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-950/80 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
-                                <span>❌</span> Rejected
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Action Button */}
-                          <td className="py-3 px-4 text-right">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setInspectingLink(item);
-                              }}
-                              className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-ao3-red hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs"
+                          <td className="p-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
+                                link.status === "approved"
+                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                                  : link.status === "under_verification"
+                                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                                  : link.status === "hidden"
+                                  ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
+                                  : "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800"
+                              }`}
                             >
-                              <span>👁️</span> Inspect
-                            </button>
+                              {link.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setInspectingLink(link)}
+                                className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs"
+                              >
+                                <span>🔍</span> Inspect
+                              </button>
+
+                              {link.status !== "approved" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    approveLink(link.id);
+                                    refreshState();
+                                  }}
+                                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold transition shadow-2xs"
+                                  title="Approve and mark verified"
+                                >
+                                  Approve
+                                </button>
+                              )}
+
+                              {link.status !== "hidden" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    hideLink(link.id);
+                                    refreshState();
+                                  }}
+                                  className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-semibold transition shadow-2xs"
+                                  title="Hide work from public directory"
+                                >
+                                  Hide
+                                </button>
+                              )}
+
+                              {link.status !== "rejected" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    rejectLink(link.id);
+                                    refreshState();
+                                  }}
+                                  className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition shadow-2xs"
+                                  title="Reject submission"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Link Inspection Modal */}
-          <LinkInspectionModal
-            link={inspectingLink}
-            isOpen={!!inspectingLink}
-            isAdmin={role === "admin"}
-            onClose={() => setInspectingLink(null)}
-            onApprove={(id, isPriorVerified) => {
-              approveLink(
-                id,
-                role === "admin" ? "biboy_admin" : "community_verifier",
-                isPriorVerified
-              );
-            }}
-            onReject={(id) => {
-              rejectLink(id, role === "admin" ? "biboy_admin" : "community_verifier");
-            }}
-            onHide={
-              role === "admin"
-                ? (id) => {
-                    hideLink(id);
-                  }
-                : undefined
-            }
-          />
         </>
       )}
+
+      {/* Inspect Link Modal */}
+      <LinkInspectionModal
+        link={inspectingLink}
+        isOpen={Boolean(inspectingLink)}
+        onClose={() => setInspectingLink(null)}
+        onApprove={(id) => {
+          approveLink(id);
+          refreshState();
+          setInspectingLink(null);
+        }}
+        onReject={(id) => {
+          rejectLink(id);
+          refreshState();
+          setInspectingLink(null);
+        }}
+        onHide={(id) => {
+          hideLink(id);
+          refreshState();
+          setInspectingLink(null);
+        }}
+      />
     </div>
   );
 }

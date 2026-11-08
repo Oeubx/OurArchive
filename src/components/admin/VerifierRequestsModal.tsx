@@ -79,7 +79,7 @@ export function VerifierRequestsModal({
             onClick={() => setActiveTab("pending")}
             className={`pb-2.5 font-semibold transition border-b-2 ${
               activeTab === "pending"
-                ? "border-ao3-red text-ao3-red dark:text-ao3-lightred"
+                ? "border-brand-trunk text-brand-trunk dark:text-brand-light"
                 : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300"
             }`}
           >
@@ -90,7 +90,7 @@ export function VerifierRequestsModal({
             onClick={() => setActiveTab("all")}
             className={`pb-2.5 font-semibold transition border-b-2 ${
               activeTab === "all"
-                ? "border-ao3-red text-ao3-red dark:text-ao3-lightred"
+                ? "border-brand-trunk text-brand-trunk dark:text-brand-light"
                 : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-gray-300"
             }`}
           >

@@ -124,7 +124,7 @@ export function LinkInspectionModal({
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 dark:bg-red-950/50 text-ao3-darkred dark:text-ao3-lightred border border-red-200 dark:border-red-900/60">
+                <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 dark:bg-red-950/50 text-brand-bark dark:text-brand-light border border-red-200 dark:border-red-900/60">
                   {link.rating}
                 </span>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -224,7 +224,7 @@ export function LinkInspectionModal({
                 type="checkbox"
                 checked={isPriorVerified}
                 onChange={(e) => setIsPriorVerified(e.target.checked)}
-                className="mt-0.5 rounded border-amber-400 text-ao3-red focus:ring-ao3-red"
+                className="mt-0.5 rounded border-amber-400 text-brand-trunk focus:ring-brand-trunk"
               />
               <div>
                 <span className="font-semibold text-gray-900 dark:text-gray-100 block">
@@ -255,7 +255,7 @@ export function LinkInspectionModal({
                   type="checkbox"
                   checked={safetyAcknowledged}
                   onChange={(e) => setSafetyAcknowledged(e.target.checked)}
-                  className="mt-0.5 rounded border-amber-400 text-ao3-red focus:ring-ao3-red dark:bg-gray-800 dark:border-amber-700"
+                  className="mt-0.5 rounded border-amber-400 text-brand-trunk focus:ring-brand-trunk dark:bg-gray-800 dark:border-amber-700"
                 />
                 <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
                   I have judged the link credibility, will exercise caution, and understand safety precautions before manually opening this link.
