@@ -3,17 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 interface ContributorAuthGateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSimulateLogin: () => void;
+  onSimulateLogin?: () => void;
 }
 
 export function ContributorAuthGateModal({
   isOpen,
   onClose,
-  onSimulateLogin,
 }: ContributorAuthGateModalProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -49,40 +49,32 @@ export function ContributorAuthGateModal({
 
           {/* Reason notice */}
           <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-            To maintain reader safety and prevent malicious link injection, contributors must be signed in to submit and track cloud drive links.
+            To maintain reader safety and prevent malicious link injection, contributors must be signed in with their email account to submit and track cloud drive links.
           </p>
 
           {/* Sign In Options */}
           <div className="space-y-2.5 pt-1">
             <button
               onClick={() => setShowAuthModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold shadow-xs transition"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold shadow-xs transition"
             >
               <span>✉️</span>
-              <span>Sign In with Email & Password</span>
-            </button>
-
-            <button
-              onClick={onSimulateLogin}
-              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs font-medium transition"
-            >
-              <span>⚡</span>
-              <span>Fast Contributor Sign-In (Instant Demo)</span>
+              <span>Sign In / Sign Up with Email</span>
             </button>
           </div>
 
           {/* Email Fallback Option */}
           <div className="border-t border-border-light dark:border-border-dark pt-4 space-y-2">
             <div className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-              Prefer not to sign in or create an account?
+              Prefer not to create an account?
             </div>
             <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-              Send us an email directly at{" "}
+              Send an email to our administration team at{" "}
               <a
-                href="mailto:ourarchive.aid@gmail.com"
+                href={`mailto:${TAKEDOWN_EMAIL}`}
                 className="text-brand-trunk dark:text-brand-light font-mono font-medium underline"
               >
-                ourarchive.aid@gmail.com
+                {TAKEDOWN_EMAIL}
               </a>{" "}
               with your view-only cloud drive link and title, and our volunteers will verify and upload it for you upon inspection.
             </p>
@@ -109,7 +101,10 @@ export function ContributorAuthGateModal({
 
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        onClose={() => {
+          setShowAuthModal(false);
+          onClose();
+        }}
       />
     </>
   );
