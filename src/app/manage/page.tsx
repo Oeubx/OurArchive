@@ -14,6 +14,7 @@ import {
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { LinkInspectionModal } from "@/components/manage/LinkInspectionModal";
+import { AdminTakedownContainer } from "@/components/admin/AdminTakedownContainer";
 
 export default function VerifierManagePage() {
   const [role, setRole] = useState<UserRole>("contributor");
@@ -88,7 +89,7 @@ export default function VerifierManagePage() {
               onClick={() => setSimulatedRole("verifier")}
               className={`px-2 py-1 rounded text-[11px] font-medium border transition ${
                 role === "verifier"
-                  ? "bg-ao3-red text-white border-ao3-red"
+                  ? "bg-brand-trunk text-white border-brand-trunk"
                   : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
               }`}
             >
@@ -126,7 +127,7 @@ export default function VerifierManagePage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
               href="/contribute"
-              className="px-4 py-2 bg-ao3-red text-white text-xs font-semibold rounded-lg hover:bg-ao3-darkred transition shadow-xs"
+              className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded-lg hover:bg-brand-bark transition shadow-xs"
             >
               Apply to Become a Verifier
             </Link>
@@ -210,11 +211,16 @@ export default function VerifierManagePage() {
                   Combined community queue
                 </span>
               </div>
-              <div className="w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center text-xl text-ao3-red">
+              <div className="w-10 h-10 rounded-full bg-subtle-light dark:bg-subtle-dark flex items-center justify-center text-xl text-brand-trunk">
                 📚
               </div>
             </div>
           </div>
+
+          {/* Admin Takedown Container */}
+          {role === "admin" && (
+            <AdminTakedownContainer links={links} onRefresh={refreshState} />
+          )}
 
           {/* Main Community Submissions Triage Table */}
           <div className="space-y-3">
@@ -242,7 +248,7 @@ export default function VerifierManagePage() {
                     onClick={() => setSelectedStatusFilter(tab.id)}
                     className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition ${
                       selectedStatusFilter === tab.id
-                        ? "bg-ao3-red text-white shadow-2xs"
+                        ? "bg-brand-trunk text-white shadow-2xs"
                         : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
                     }`}
                   >
@@ -281,7 +287,7 @@ export default function VerifierManagePage() {
                         >
                           {/* Work & Author */}
                           <td className="py-3 px-4 max-w-xs">
-                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-ao3-red dark:hover:text-ao3-lightred transition">
+                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
                               {item.title}
                             </div>
                             <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
@@ -337,7 +343,7 @@ export default function VerifierManagePage() {
                                 e.stopPropagation();
                                 setInspectingLink(item);
                               }}
-                              className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-ao3-red hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs"
+                              className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs"
                             >
                               <span>👁️</span> Inspect
                             </button>

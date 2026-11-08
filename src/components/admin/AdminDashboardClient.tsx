@@ -20,6 +20,7 @@ import { VerifierRequestsModal } from "./VerifierRequestsModal";
 import { AdminDirectUploadModal } from "./AdminDirectUploadModal";
 import { AuditHistoryModal } from "./AuditHistoryModal";
 import { LinkInspectionModal } from "@/components/manage/LinkInspectionModal";
+import { AdminTakedownContainer } from "./AdminTakedownContainer";
 
 interface AdminDashboardClientProps {
   adminEmail: string;
@@ -104,7 +105,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           <button
             type="button"
             onClick={() => setShowDirectUploadModal(true)}
-            className="px-3.5 py-1.5 bg-ao3-red hover:bg-ao3-darkred text-white rounded-lg font-bold transition shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg font-bold transition shadow-xs flex items-center gap-1.5"
           >
             <span>+</span> Admin Direct Upload
           </button>
@@ -173,6 +174,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           </span>
         </div>
       </div>
+
+      {/* Admin Takedown & Multi-Fic Cloud Drive Suppression Desk */}
+      <AdminTakedownContainer links={links} onRefresh={refresh} />
 
       {/* Administrative 5-Action Triage Suite */}
       <div className="space-y-3">
@@ -247,7 +251,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                       >
                         {/* Work & Author */}
                         <td className="py-3 px-4 max-w-xs">
-                          <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-ao3-red transition">
+                          <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk transition">
                             {item.title}
                           </div>
                           <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
@@ -318,7 +322,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               type="button"
                               onClick={() => setInspectingLink(item)}
                               title="Inspect metadata, run scanner, and triage"
-                              className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-ao3-red hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
+                              className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
                             >
                               🔍 Inspect
                             </button>
