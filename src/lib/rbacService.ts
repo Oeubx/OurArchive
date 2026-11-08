@@ -166,7 +166,7 @@ const DEFAULT_VERIFIER_APPLICATIONS: VerifierApplication[] = [
     userId: "user-charlie-01",
     userName: "Charlie (@reader_charlie)",
     userEmail: "reader_charlie@gmail.com",
-    reason: "I read daily on AO3 and want to help fellow readers safely access Heartstopper and Arcane works during the server downtime.",
+    reason: "I read daily and want to help fellow readers safely access fanworks during service downtime.",
     trustPledge: "I have experience configuring view-only Google Drive permissions and know how to spot executable .exe files or macro-enabled documents.",
     status: "pending",
     submittedAt: "2026-11-03T10:15:00Z",

@@ -14,12 +14,12 @@ export function Footer() {
               Emergency Disclaimers
             </h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-[11px]">
-              OurArchive is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of AO3 or the OTW.
+              OurArchive is an emergency, temporary measure to aid fanfiction readers and authors during service disruptions. It operates under strict zero-download, read-only principles.
             </p>
             <div>
               <Link
                 href="/disclaimers"
-                className="text-ao3-red dark:text-ao3-lightred hover:underline font-medium text-[11px]"
+                className="text-brand-trunk dark:text-brand-light hover:underline font-medium text-[11px]"
               >
                 Read full community disclaimers & creator charter &rarr;
               </Link>
@@ -58,7 +58,7 @@ export function Footer() {
                 <span className="text-gray-500 dark:text-gray-400">Email: </span>
                 <a
                   href="mailto:ourarchive.aid@gmail.com"
-                  className="text-ao3-red dark:text-ao3-lightred hover:underline font-mono"
+                  className="text-brand-trunk dark:text-brand-light hover:underline font-mono"
                 >
                   ourarchive.aid@gmail.com
                 </a>
@@ -66,7 +66,7 @@ export function Footer() {
               <div>
                 <Link
                   href="/takedown"
-                  className="text-ao3-red dark:text-ao3-lightred hover:underline font-semibold"
+                  className="text-brand-trunk dark:text-brand-light hover:underline font-semibold"
                 >
                   Fast-Track Takedown Portal &rarr;
                 </Link>
@@ -104,7 +104,7 @@ export function Footer() {
               Disclaimers
             </Link>
             <span>•</span>
-            <Link href="/takedown" className="hover:underline text-ao3-red dark:text-ao3-lightred font-medium">
+            <Link href="/takedown" className="hover:underline text-brand-trunk dark:text-brand-light font-medium">
               Takedown
             </Link>
           </div>

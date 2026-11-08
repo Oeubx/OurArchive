@@ -61,7 +61,7 @@ const DEFAULT_MY_CONTRIBUTIONS: DriveLink[] = [
     fandom: "Good Omens",
     rating: "General Audiences",
     wordCount: 8200,
-    summary: "Temporary private mirror backup created prior to scheduled AO3 server maintenance.",
+    summary: "Temporary private mirror backup created prior to scheduled server maintenance.",
     tags: ["Alternate Universe", "Work in Progress"],
     rawDriveUrl: "https://drive.google.com/file/d/1DfgH3iJ4KlM5NoP6QrS7TuV8WxY9ZaB0/view?usp=sharing",
     maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1DfgH3iJ4KlM5NoP6QrS7TuV8WxY9ZaB0/view?usp=sharing"),
