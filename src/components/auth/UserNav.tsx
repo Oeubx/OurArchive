@@ -71,12 +71,11 @@ export function UserNav() {
   if (loading) {
     return (
       <div className="flex items-center gap-2">
-        <div className="h-6 w-16 bg-red-800/40 animate-pulse rounded text-xs" />
+        <div className="h-6 w-16 bg-brand-bark/40 animate-pulse rounded text-xs" />
       </div>
     );
   }
 
-  const isAdmin = activeRole === "admin";
   const isVerifier = activeRole === "verifier";
   const displayName =
     user?.user_metadata?.full_name ||
@@ -90,7 +89,7 @@ export function UserNav() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-2.5 py-1 text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 rounded shadow-xs transition flex items-center gap-1"
+            className="px-2.5 py-1 text-xs font-semibold bg-white text-brand-trunk hover:bg-amber-50 rounded shadow-xs transition flex items-center gap-1"
           >
             <span>+</span> Submit Work
           </button>
@@ -98,37 +97,28 @@ export function UserNav() {
           {isVerifier && (
             <Link
               href="/manage"
-              className="px-2 py-0.5 text-xs bg-emerald-500 text-white font-semibold rounded hover:bg-emerald-600 transition"
+              className="text-xs text-amber-200 hover:text-white transition flex items-center gap-1 font-medium"
             >
-              Verifier Triage
+              <span>🛡️</span> Manage
             </Link>
           )}
 
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="px-2 py-0.5 text-xs bg-amber-400 text-amber-950 font-semibold rounded hover:bg-amber-300 transition"
-            >
-              Admin Triage
-            </Link>
-          )}
-
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-2">
             <Link
               href="/profile"
-              className="font-medium text-white hover:underline"
+              className="text-xs font-semibold text-white hover:text-amber-200 transition"
               title="View your archivist profile"
             >
               {displayName}
             </Link>
-            <span className="text-[10px] bg-red-800 text-amber-200 px-1.5 py-0.2 rounded uppercase">
+            <span className="text-[10px] bg-brand-bark text-amber-200 px-1.5 py-0.2 rounded uppercase border border-brand-amber">
               {activeRole}
             </span>
           </div>
 
           <button
             onClick={handleSignOut}
-            className="text-xs text-red-200 hover:text-white transition"
+            className="text-xs text-amber-100 hover:text-white transition"
           >
             Sign Out
           </button>
@@ -137,7 +127,7 @@ export function UserNav() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAuthModal(true)}
-            className="px-3 py-1 text-xs font-semibold bg-white text-ao3-red hover:bg-amber-50 rounded shadow-xs transition"
+            className="px-3 py-1 text-xs font-semibold bg-white text-brand-trunk hover:bg-amber-50 rounded shadow-xs transition"
           >
             Sign In
           </button>

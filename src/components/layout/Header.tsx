@@ -72,7 +72,7 @@ export function Header() {
 
   return (
     <>
-      <header className="bg-ao3-red text-white py-2.5 px-4 shadow-sm sticky top-0 z-40">
+      <header className="bg-brand-trunk text-white py-2.5 px-4 shadow-sm sticky top-0 z-40 transition-colors duration-150">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           {/* Left: Brand Logo & Title */}
           <div className="flex items-center gap-3">
@@ -92,18 +92,18 @@ export function Header() {
               </div>
               <span className="font-bold tracking-tight">OurArchive</span>
             </Link>
-            <span className="hidden sm:inline-block text-[11px] font-medium bg-ao3-darkred px-2 py-0.5 rounded text-amber-200 border border-red-800">
+            <span className="hidden sm:inline-block text-[11px] font-medium bg-brand-bark px-2 py-0.5 rounded text-amber-200 border border-brand-amber">
               Emergency Service
             </span>
           </div>
 
           {/* Center/Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-4 text-xs font-medium text-red-100">
+          <nav className="hidden md:flex items-center gap-4 text-xs font-medium text-amber-100/90">
             <Link href="/" className="hover:text-white transition py-1">
               Home
             </Link>
             <span>•</span>
-            <Link href="/#search" className="hover:text-white transition py-1">
+            <Link href="/search" className="hover:text-white transition py-1">
               Search
             </Link>
             <span>•</span>
@@ -121,7 +121,7 @@ export function Header() {
                 <span>•</span>
                 <Link
                   href="/manage"
-                  className="px-2 py-0.5 rounded bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition flex items-center gap-1 shadow-xs"
+                  className="px-2 py-0.5 rounded bg-emerald-700 text-white font-bold hover:bg-emerald-600 transition flex items-center gap-1 shadow-xs"
                 >
                   <span>🛡️</span> Manage
                 </Link>
@@ -133,7 +133,7 @@ export function Header() {
                 <span>•</span>
                 <Link
                   href="/admin"
-                  className="px-2 py-0.5 rounded bg-amber-400 text-ao3-darkred font-bold hover:bg-amber-300 transition flex items-center gap-1 shadow-xs"
+                  className="px-2 py-0.5 rounded bg-amber-200 text-brand-bark font-bold hover:bg-amber-100 transition flex items-center gap-1 shadow-xs"
                 >
                   <span>🛡️</span> Manage
                 </Link>
@@ -150,47 +150,38 @@ export function Header() {
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="md:hidden p-1.5 rounded-md text-red-100 hover:text-white hover:bg-ao3-darkred transition flex items-center justify-center"
-              aria-label="Open mobile navigation drawer"
+              className="md:hidden p-1.5 rounded-lg text-white hover:bg-brand-bark transition"
+              aria-label="Open mobile navigation"
+              aria-expanded={drawerOpen}
             >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Slide-Over Mobile Navigation Drawer */}
+      {/* Mobile Off-Canvas Navigation Drawer */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Darkened Backdrop Overlay */}
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+          {/* Backdrop Overlay */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
 
-          {/* Left Slide-Over Drawer Container */}
-          <div className="relative w-72 max-w-[85vw] bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark text-gray-900 dark:text-gray-100 h-full shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-200">
-            {/* Drawer Header */}
+          {/* Drawer Content Panel */}
+          <div className="fixed inset-y-0 right-0 max-w-xs w-full bg-surface-light dark:bg-surface-dark shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
             <div>
-              <div className="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between bg-ao3-red text-white">
+              {/* Drawer Header */}
+              <div className="bg-brand-trunk text-white p-4 flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded overflow-hidden bg-white/10 ring-1 ring-white/30 shrink-0 relative">
+                  <div className="w-7 h-7 rounded overflow-hidden bg-white/20 shrink-0 relative">
                     <Image
                       src="/images/ourarchive-logo.jpg"
-                      alt="OurArchive Logo"
+                      alt="OurArchive Emblem"
                       width={28}
                       height={28}
                       className="w-full h-full object-cover"
@@ -206,7 +197,7 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="p-1 rounded text-red-100 hover:text-white hover:bg-ao3-darkred transition"
+                  className="p-1 rounded text-amber-100 hover:text-white hover:bg-brand-bark transition"
                   aria-label="Close navigation drawer"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,7 +222,7 @@ export function Header() {
                 </Link>
 
                 <Link
-                  href="/#search"
+                  href="/search"
                   onClick={() => setDrawerOpen(false)}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
                 >
@@ -300,7 +291,7 @@ export function Header() {
                     <Link
                       href="/admin"
                       onClick={() => setDrawerOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-ao3-red dark:text-ao3-lightred bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 transition mt-1"
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-brand-trunk dark:text-brand-light bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition mt-1"
                     >
                       <span className="text-base">🛡️</span>
                       <span>Manage Archive (Admin)</span>
@@ -317,7 +308,7 @@ export function Header() {
                 <ThemeToggle />
               </div>
               <div className="text-[10px] leading-tight opacity-75">
-                OurArchive is a temporary emergency reading aid during AO3 downtime.
+                OurArchive is a non-commercial, zero-download community reading directory.
               </div>
             </div>
           </div>
