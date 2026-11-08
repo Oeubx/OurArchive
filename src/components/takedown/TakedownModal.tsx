@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 interface TakedownModalProps {
   isOpen: boolean;
@@ -224,10 +225,10 @@ export function TakedownModal({
             <div className="text-[11px] text-gray-500 pt-1 border-t border-gray-100">
               Prefer direct email? Send your link or title to{" "}
               <a
-                href={`mailto:${process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me"}?subject=[TAKEDOWN]%20Removal%20Request`}
+                href={`mailto:${TAKEDOWN_EMAIL}?subject=[TAKEDOWN]%20Removal%20Request`}
                 className="text-brand-trunk hover:underline font-semibold"
               >
-                {process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me"}
+                {TAKEDOWN_EMAIL}
               </a>
               .
             </div>

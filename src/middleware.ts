@@ -199,7 +199,44 @@ export async function middleware(request: NextRequest) {
   // Refresh Supabase auth session cookies
   const { supabaseResponse, user } = await updateSession(request);
 
-  // Admin Route Protection Rule: Enforce RBAC on /admin/* (except /admin/unauthorized)
+  // Production RBAC Rule 1: /contribute requires authenticated user
+  if (pathname.startsWith("/contribute")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "contributor_login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // Production RBAC Rule 2: /manage requires role 'verifier' or 'admin'
+  if (pathname.startsWith("/manage")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "verifier_login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const role = user.app_metadata?.role as string | undefined;
+    if (role !== "verifier" && role !== "admin") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/admin/unauthorized";
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // Production RBAC Rule 3: /profile requires authenticated user
+  if (pathname.startsWith("/profile")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // Production RBAC Rule 4: /admin/* requires role 'admin'
   if (pathname.startsWith("/admin") && pathname !== "/admin/unauthorized") {
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
@@ -216,8 +253,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Apply emergency platform headers
-  supabaseResponse.headers.set("X-Platform-Scope", "OurArchive-Emergency-Bridge");
+  // Apply platform headers
+  supabaseResponse.headers.set("X-Platform-Scope", "OurArchive-Directory");
   supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
   supabaseResponse.headers.set("X-Frame-Options", "DENY");
 

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 export function Footer() {
   return (
@@ -57,10 +58,10 @@ export function Footer() {
               <div>
                 <span className="text-gray-500 dark:text-gray-400">Email: </span>
                 <a
-                  href="mailto:ourarchive.aid@gmail.com"
+                  href={`mailto:${TAKEDOWN_EMAIL}`}
                   className="text-brand-trunk dark:text-brand-light hover:underline font-mono"
                 >
-                  ourarchive.aid@gmail.com
+                  {TAKEDOWN_EMAIL}
                 </a>
               </div>
               <div>
