@@ -145,7 +145,7 @@ export function AdminDirectUploadModal({
               value={driveUrl}
               onChange={(e) => setDriveUrl(e.target.value)}
               placeholder="https://drive.google.com/file/d/1BxyZ9qK8LmN0.../view?usp=sharing"
-              className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red font-mono text-xs"
+              className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk font-mono text-xs"
             />
 
             {/* Segmented Safety Visualizer */}
@@ -181,7 +181,7 @@ export function AdminDirectUploadModal({
               required
               checked={confirmedViewOnly}
               onChange={(e) => setConfirmedViewOnly(e.target.checked)}
-              className="mt-0.5 rounded border-border-light dark:border-border-dark text-ao3-red focus:ring-ao3-red"
+              className="mt-0.5 rounded border-border-light dark:border-border-dark text-brand-trunk focus:ring-brand-trunk"
             />
             <span className="text-[11px] text-gray-700 dark:text-gray-300">
               I certify that this external Google Drive document is configured for public view-only access without edit/macro execution capabilities.
@@ -204,7 +204,7 @@ export function AdminDirectUploadModal({
                 type="checkbox"
                 checked={isPriorVerified}
                 onChange={(e) => setIsPriorVerified(e.target.checked)}
-                className="mt-0.5 rounded border-amber-500 text-ao3-red focus:ring-ao3-red"
+                className="mt-0.5 rounded border-amber-500 text-brand-trunk focus:ring-brand-trunk"
               />
               <div>
                 <span className="font-semibold text-gray-900 dark:text-gray-100 block">
@@ -355,7 +355,7 @@ export function AdminDirectUploadModal({
               className={`px-5 py-2 rounded-lg font-bold text-white transition shadow-xs flex items-center gap-2 ${
                 isPriorVerified
                   ? "bg-emerald-600 hover:bg-emerald-700"
-                  : "bg-ao3-red hover:bg-ao3-darkred"
+                  : "bg-brand-trunk hover:bg-brand-bark"
               }`}
             >
               {loading ? (

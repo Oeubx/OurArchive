@@ -55,7 +55,7 @@ export function ContributorTable({
 
         <button
           onClick={onUploadClick}
-          className="px-4 py-2 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 shrink-0"
+          className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 shrink-0"
         >
           <span>➕</span>
           <span>Upload New Drive Link</span>
@@ -75,7 +75,7 @@ export function ContributorTable({
           <div className="pt-2">
             <button
               onClick={onUploadClick}
-              className="px-4 py-2 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded-lg shadow-xs transition"
+              className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg shadow-xs transition"
             >
               + Submit Your First Link
             </button>
@@ -152,7 +152,7 @@ export function ContributorTable({
                       {link.status === "approved" ? (
                         <Link
                           href={`/reader/${link.id}`}
-                          className="px-2.5 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-[11px] font-semibold rounded shadow-2xs transition inline-flex items-center gap-1"
+                          className="px-2.5 py-1 bg-brand-trunk hover:bg-brand-bark text-white text-[11px] font-semibold rounded shadow-2xs transition inline-flex items-center gap-1"
                         >
                           <span>👁️</span> Read
                         </Link>

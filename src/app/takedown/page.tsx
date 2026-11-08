@@ -14,7 +14,7 @@ export default function TakedownPage() {
       {/* Header */}
       <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
-          <Link href="/" className="text-ao3-red hover:underline font-medium">
+          <Link href="/" className="text-brand-trunk hover:underline font-medium">
             &larr; Back to Library Index
           </Link>
         </div>
@@ -34,7 +34,7 @@ export default function TakedownPage() {
             The Immediate Takedown Guarantee
           </h2>
         </div>
-        <blockquote className="border-l-4 border-ao3-red pl-4 py-1 text-base font-bold italic text-ao3-red">
+        <blockquote className="border-l-4 border-brand-trunk pl-4 py-1 text-base font-bold italic text-brand-trunk">
           &ldquo;You only have to reach out, and the administrator will remove it immediately.&rdquo;
         </blockquote>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
@@ -55,7 +55,7 @@ export default function TakedownPage() {
         <div className="pt-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="px-5 py-2.5 bg-ao3-red hover:bg-ao3-darkred text-white text-sm font-bold rounded shadow transition"
+            className="px-5 py-2.5 bg-brand-trunk hover:bg-brand-bark text-white text-sm font-bold rounded shadow transition"
           >
             Launch Interactive Takedown Form &rarr;
           </button>
@@ -73,7 +73,7 @@ export default function TakedownPage() {
           </p>
           <a
             href={`mailto:${adminEmail}?subject=[TAKEDOWN]%20Removal%20Request`}
-            className="inline-block text-ao3-red font-mono font-bold hover:underline break-all"
+            className="inline-block text-brand-trunk font-mono font-bold hover:underline break-all"
           >
             {adminEmail}
           </a>

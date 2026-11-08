@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
-import { getLinkById } from "@/lib/linkService";
+
 import { getCurrentUserRole } from "@/lib/rbacService";
 import {
   getBookmarkForWork,
@@ -78,37 +78,8 @@ export default function ReaderPage() {
         }
         setData(json);
       })
-      .catch(() => {
-        // Fallback to local verified seed records so works can be read immediately
-        const seedLink = getLinkById(workId);
-        if (seedLink) {
-          setData({
-            workId: seedLink.id,
-            title: seedLink.title,
-            authorName: seedLink.authorName,
-            fandom: seedLink.fandom,
-            pairing: seedLink.pairing || null,
-            rating: seedLink.rating,
-            wordCount: seedLink.wordCount,
-            summary: seedLink.summary,
-            tags: seedLink.tags,
-            isPdf: seedLink.mimeType.includes("pdf"),
-            pdfPreviewUrl: seedLink.rawDriveUrl,
-            rawDriveUrl: seedLink.rawDriveUrl,
-            contentHtml: `
-              <div class="space-y-4">
-                <p><strong>Emergency Read-Only Reader Mode</strong></p>
-                <p class="italic text-gray-600 dark:text-gray-400">&ldquo;${seedLink.summary}&rdquo;</p>
-                <hr class="my-4 border-gray-300 dark:border-gray-700" />
-                <p>This fanwork is mirrored in OurArchive's emergency temporary library for community access while main archive servers undergo maintenance.</p>
-                <p>All transformative works remain the 100% intellectual property of <strong>${seedLink.authorName}</strong>. Zero files are stored permanently on OurArchive disks.</p>
-                <p>Reading progress is preserved automatically in your private session bookmarks.</p>
-              </div>
-            `,
-          });
-        } else {
-          setError("Error connecting to reader stream.");
-        }
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Work not found or unavailable in archive.");
       })
       .finally(() => {
         setLoading(false);
@@ -231,7 +202,7 @@ export default function ReaderPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="font-semibold text-ao3-red hover:underline flex items-center gap-1"
+              className="font-semibold text-brand-trunk hover:underline flex items-center gap-1"
             >
               <span>&larr;</span> Library Index
             </Link>
@@ -274,7 +245,7 @@ export default function ReaderPage() {
                 href={data.rawDriveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2.5 py-1 bg-ao3-red hover:bg-ao3-darkred text-white text-[11px] font-semibold rounded shadow-xs transition flex items-center gap-1"
+                className="px-2.5 py-1 bg-brand-trunk hover:bg-brand-bark text-white text-[11px] font-semibold rounded shadow-xs transition flex items-center gap-1"
                 title="Admin/Verifier view: Open directly in Google Drive"
               >
                 <span>🔗</span> Drive File &rarr;
@@ -286,7 +257,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setFontFamily("serif")}
                 className={`px-2 py-1 font-serif text-[11px] ${
-                  fontFamily === "serif" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  fontFamily === "serif" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Serif font (Book style)"
               >
@@ -295,7 +266,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setFontFamily("sans")}
                 className={`px-2 py-1 font-sans text-[11px] border-l border-gray-400/40 ${
-                  fontFamily === "sans" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  fontFamily === "sans" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Sans font (Modern)"
               >
@@ -304,7 +275,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setFontFamily("mono")}
                 className={`px-2 py-1 font-mono text-[11px] border-l border-gray-400/40 ${
-                  fontFamily === "mono" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  fontFamily === "mono" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Mono font (Code/Draft)"
               >
@@ -336,7 +307,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setTheme("light")}
                 className={`px-2 py-1 text-[11px] ${
-                  theme === "light" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  theme === "light" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Warm Parchment mode"
               >
@@ -345,7 +316,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setTheme("sepia")}
                 className={`px-2 py-1 text-[11px] border-l border-gray-400/40 ${
-                  theme === "sepia" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  theme === "sepia" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Sepia mode"
               >
@@ -354,7 +325,7 @@ export default function ReaderPage() {
               <button
                 onClick={() => setTheme("dark")}
                 className={`px-2 py-1 text-[11px] border-l border-gray-400/40 ${
-                  theme === "dark" ? "bg-ao3-red text-white" : "hover:bg-black/10"
+                  theme === "dark" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
                 }`}
                 title="Obsidian Dark mode"
               >
@@ -378,7 +349,7 @@ export default function ReaderPage() {
       {showResumeBanner && existingBookmark && (
         <aside
           aria-label="Resume reading notification"
-          className="max-w-2xl mx-auto my-3 p-3 bg-ao3-red/10 dark:bg-ao3-red/20 border border-ao3-red/30 rounded-lg flex items-center justify-between gap-3 text-xs shadow-xs animate-in slide-in-from-top-2 duration-200"
+          className="max-w-2xl mx-auto my-3 p-3 bg-brand-trunk/10 dark:bg-brand-trunk/20 border border-brand-trunk/30 rounded-lg flex items-center justify-between gap-3 text-xs shadow-xs animate-in slide-in-from-top-2 duration-200"
         >
           <div className="flex items-center gap-2">
             <span className="text-base">🔖</span>
@@ -390,7 +361,7 @@ export default function ReaderPage() {
             <button
               type="button"
               onClick={handleResumeReading}
-              className="px-3 py-1 bg-ao3-red hover:bg-ao3-darkred text-white font-semibold rounded text-xs transition shadow-2xs"
+              className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded text-xs transition shadow-2xs"
             >
               Resume &rarr;
             </button>
@@ -424,7 +395,7 @@ export default function ReaderPage() {
             <div className="pt-2">
               <Link
                 href="/"
-                className="px-4 py-2 bg-ao3-red text-white text-xs font-semibold rounded hover:bg-ao3-darkred transition"
+                className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded hover:bg-brand-bark transition"
               >
                 Return to Library Search
               </Link>
@@ -492,7 +463,7 @@ export default function ReaderPage() {
                       href={data.rawDriveUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-ao3-red font-medium hover:underline"
+                      className="text-brand-trunk font-medium hover:underline"
                     >
                       Open in Google Drive (Admin) &rarr;
                     </a>
@@ -533,7 +504,7 @@ export default function ReaderPage() {
               <div className="flex justify-center gap-3">
                 <Link
                   href="/"
-                  className="px-4 py-2 bg-ao3-red hover:bg-ao3-darkred text-white font-semibold rounded shadow-xs transition"
+                  className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded shadow-xs transition"
                 >
                   &larr; Back to Library Search
                 </Link>

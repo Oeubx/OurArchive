@@ -171,7 +171,7 @@ export function TriageQueueTable({ initialItems }: TriageQueueTableProps) {
                             href={item.drive_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-ao3-red hover:underline"
+                            className="text-brand-trunk hover:underline"
                             title="Open direct Google Drive link"
                           >
                             🔗

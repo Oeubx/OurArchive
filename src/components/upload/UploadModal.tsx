@@ -24,7 +24,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [wordCount, setWordCount] = useState<number | "">("");
   const [summary, setSummary] = useState("");
   const [tagsInput, setTagsInput] = useState("");
-  const [canonicalAo3Url, setCanonicalAo3Url] = useState("");
+  const [canonicalSourceUrl, setCanonicalSourceUrl] = useState("");
   const [isOwnerMasked, setIsOwnerMasked] = useState(true);
 
   const [loading, setLoading] = useState(false);
@@ -94,7 +94,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             wordCount: parsedWordCount,
             summary: summary.trim() || undefined,
             tags,
-            canonicalAo3Url: canonicalAo3Url.trim() || undefined,
+            canonicalAo3Url: canonicalSourceUrl.trim() || undefined,
             isOwnerMasked,
           }),
         });
@@ -118,7 +118,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
-        <div className="bg-ao3-red text-white px-5 py-3 flex items-center justify-between">
+        <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
           <button
             onClick={onClose}
@@ -161,7 +161,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               value={driveUrl}
               onChange={(e) => setDriveUrl(e.target.value)}
               placeholder="Paste raw link: e.g. https://drive.google.com/file/d/1BxyZ9qK8.../view?usp=sharing"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs font-mono"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs font-mono"
             />
 
             {/* Sliced Segments Display */}
@@ -193,7 +193,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                     <span className="text-gray-400 block text-[9px] uppercase font-mono">
                       3. Resource File ID ({segments.fileId.length} chars)
                     </span>
-                    <span className="font-mono text-ao3-red dark:text-ao3-lightred font-bold select-all break-all">
+                    <span className="font-mono text-brand-trunk dark:text-brand-light font-bold select-all break-all">
                       {segments.fileId || "(missing ID)"}
                     </span>
                   </div>
@@ -230,7 +230,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 id="confirmViewOnly"
                 checked={confirmedViewOnly}
                 onChange={(e) => setConfirmedViewOnly(e.target.checked)}
-                className="mt-0.5 rounded text-ao3-red focus:ring-ao3-red"
+                className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk"
               />
               <label htmlFor="confirmViewOnly" className="text-gray-700 dark:text-gray-300 text-[11px] leading-tight cursor-pointer">
                 I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
@@ -248,7 +248,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. To Build a Home"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               />
             </div>
             <div>
@@ -261,7 +261,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="e.g. starlight_scribe"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               />
             </div>
           </div>
@@ -277,7 +277,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 value={fandom}
                 onChange={(e) => setFandom(e.target.value)}
                 placeholder="e.g. Heartstopper, Arcane"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               />
             </div>
             <div>
@@ -287,7 +287,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 value={pairing}
                 onChange={(e) => setPairing(e.target.value)}
                 placeholder="e.g. Nick Nelson/Charlie Spring"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               />
             </div>
           </div>
@@ -302,7 +302,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                     e.target.value as "General Audiences" | "Teen And Up Audiences" | "Mature" | "Explicit" | "Not Rated"
                   )
                 }
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               >
                 <option value="General Audiences">General Audiences</option>
                 <option value="Teen And Up Audiences">Teen And Up Audiences</option>
@@ -319,7 +319,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 value={wordCount}
                 onChange={(e) => setWordCount(e.target.value ? parseInt(e.target.value, 10) : "")}
                 placeholder="e.g. 15000"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
               />
             </div>
           </div>
@@ -331,7 +331,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
               placeholder="Fluff, Mutual Pining, Vacation, Found Family"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
             />
           </div>
 
@@ -342,18 +342,18 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Short description of the work..."
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
             />
           </div>
 
           <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Original AO3 Work Link (Optional)</label>
+            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Original Source Work Link (Optional)</label>
             <input
               type="url"
-              value={canonicalAo3Url}
-              onChange={(e) => setCanonicalAo3Url(e.target.value)}
-              placeholder="https://archiveofourown.org/works/..."
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-ao3-red outline-hidden text-xs"
+              value={canonicalSourceUrl}
+              onChange={(e) => setCanonicalSourceUrl(e.target.value)}
+              placeholder="https://example.com/works/..."
+              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
             />
           </div>
 
@@ -363,7 +363,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               id="maskOwner"
               checked={isOwnerMasked}
               onChange={(e) => setIsOwnerMasked(e.target.checked)}
-              className="rounded text-ao3-red focus:ring-ao3-red"
+              className="rounded text-brand-trunk focus:ring-brand-trunk"
             />
             <label htmlFor="maskOwner" className="text-gray-700 dark:text-gray-300 text-xs cursor-pointer">
               Mask Google Drive owner email address in public directory for privacy (e.g. vol***@gmail.com)
@@ -382,7 +382,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             <button
               type="submit"
               disabled={loading || !segments.isValid || !confirmedViewOnly}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-ao3-red hover:bg-ao3-darkred rounded transition disabled:opacity-40"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-brand-trunk hover:bg-brand-bark rounded transition disabled:opacity-40"
             >
               {loading ? "Verifying & Submitting..." : "Submit Work"}
             </button>

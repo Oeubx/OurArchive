@@ -23,14 +23,14 @@ export function EmergencyNoticeBanner() {
       <div className="bg-amber-100/70 border-b border-amber-200 text-amber-950 px-4 py-1 text-[11px] flex items-center justify-between">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-2">
           <span>
-            <strong>Emergency Temporary Service:</strong> Respecting creator sovereignty & solidarity with AO3 / OTW.
+            <strong>Emergency Temporary Service:</strong> Respecting creator sovereignty under zero-download guidelines.
           </span>
           <div className="flex items-center gap-3 font-medium">
             <Link href="/disclaimers" className="hover:underline">
               Governance Charter
             </Link>
             <span>•</span>
-            <Link href="/takedown" className="hover:underline text-ao3-red font-semibold">
+            <Link href="/takedown" className="hover:underline text-brand-trunk font-semibold">
               Immediate Takedown
             </Link>
           </div>
@@ -50,7 +50,7 @@ export function EmergencyNoticeBanner() {
             </span>
           </div>
           <p className="text-amber-900/90 leading-relaxed text-[11px]">
-            <strong>OurArchive</strong> is a temporary emergency measure to aid Archive of Our Own (AO3) users during service outages. It is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+            <strong>OurArchive</strong> is a temporary emergency reading aid during service disruptions. It operates under strict zero-download, read-only principles with author-sovereign takedowns.
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export function EmergencyNoticeBanner() {
           </Link>
           <Link
             href="/takedown"
-            className="px-2.5 py-1 bg-ao3-red hover:bg-ao3-darkred text-white rounded font-medium transition"
+            className="px-2.5 py-1 bg-brand-trunk hover:bg-brand-bark text-white rounded font-medium transition"
           >
             Takedown Policy
           </Link>

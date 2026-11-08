@@ -108,7 +108,7 @@ export function BecomeVerifierModal({
             <div className="pt-2">
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition"
+                className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition"
               >
                 Done
               </button>
@@ -187,7 +187,7 @@ export function BecomeVerifierModal({
                 id="trust-checkbox"
                 checked={acceptedPolicy}
                 onChange={(e) => setAcceptedPolicy(e.target.checked)}
-                className="mt-0.5 rounded border-gray-300 text-ao3-red focus:ring-ao3-red"
+                className="mt-0.5 rounded border-gray-300 text-brand-trunk focus:ring-brand-trunk"
               />
               <label
                 htmlFor="trust-checkbox"
@@ -209,7 +209,7 @@ export function BecomeVerifierModal({
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-4 py-1.5 bg-ao3-red hover:bg-ao3-darkred text-white text-xs font-semibold rounded shadow-xs transition disabled:opacity-50"
+                className="px-4 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition disabled:opacity-50"
               >
                 {submitting ? "Submitting..." : "Submit Application"}
               </button>

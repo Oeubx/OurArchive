@@ -107,7 +107,7 @@ export default function ContributePage() {
             </span>
             <button
               onClick={handleSignOut}
-              className="text-ao3-red dark:text-ao3-lightred hover:underline text-[11px]"
+              className="text-brand-trunk dark:text-brand-light hover:underline text-[11px]"
             >
               Sign Out
             </button>

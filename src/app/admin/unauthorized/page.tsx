@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function AdminUnauthorizedPage() {
   return (
     <div className="py-16 max-w-lg mx-auto text-center space-y-6">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 text-ao3-red mb-2">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-100 text-brand-trunk mb-2">
         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             strokeLinecap="round"
@@ -33,7 +33,7 @@ export default function AdminUnauthorizedPage() {
       <div className="pt-2 flex items-center justify-center gap-3">
         <Link
           href="/"
-          className="px-4 py-2 bg-ao3-red text-white text-xs font-semibold rounded hover:bg-ao3-darkred transition"
+          className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded hover:bg-brand-bark transition"
         >
           Return to Library
         </Link>

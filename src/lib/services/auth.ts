@@ -1,20 +1,37 @@
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Initiates frictionless OAuth sign-in with Discord.
- * Redirects user to Discord authorization prompt, then returns to /auth/callback.
+ * Signs in a user using Email and Password.
  */
-export async function signInWithDiscord(redirectTo?: string) {
+export async function signInWithEmailPassword(email: string, password: string) {
   const supabase = createClient();
-  const origin = window.location.origin;
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Registers a new user with Email and Password.
+ */
+export async function signUpWithEmailPassword(email: string, password: string, redirectTo?: string) {
+  const supabase = createClient();
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const targetUrl = redirectTo
     ? `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
     : `${origin}/auth/callback`;
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "discord",
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
     options: {
-      redirectTo: targetUrl,
+      emailRedirectTo: targetUrl,
     },
   });
 
@@ -26,18 +43,18 @@ export async function signInWithDiscord(redirectTo?: string) {
 }
 
 /**
- * Initiates passwordless Email Magic Link sign-in.
- * Sends a single-use login link to the user's email address.
+ * Resends signup confirmation email.
  */
-export async function signInWithMagicLink(email: string, redirectTo?: string) {
+export async function resendConfirmationEmail(email: string, redirectTo?: string) {
   const supabase = createClient();
-  const origin = window.location.origin;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const targetUrl = redirectTo
     ? `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
     : `${origin}/auth/callback`;
 
-  const { data, error } = await supabase.auth.signInWithOtp({
-    email,
+  const { data, error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim(),
     options: {
       emailRedirectTo: targetUrl,
     },

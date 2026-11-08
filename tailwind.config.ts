@@ -12,27 +12,36 @@ const config: Config = {
     extend: {
       colors: {
         canvas: {
-          light: "#f6f6f4", // Warm non-glare off-white/parchment
-          dark: "#121214",  // Deep obsidian graphite
+          light: "#f7f5f0", // Warm non-glare off-white/wood parchment
+          dark: "#141210",  // Deep obsidian charcoal timber
         },
         surface: {
           light: "#ffffff",
-          dark: "#1a1a1e",
+          dark: "#1c1917",
         },
         subtle: {
-          light: "#ededeb",
-          dark: "#222228",
+          light: "#efeae3",
+          dark: "#26221f",
         },
         border: {
-          light: "#e5e5e0",
-          dark: "#2a2a30",
+          light: "#e2dacd",
+          dark: "#332d27",
         },
+        brand: {
+          trunk: "#5c3a21",     // Primary tree trunk brown
+          bark: "#3d2314",      // Deep bark
+          amber: "#8c5a2b",     // Warm amber cedar
+          light: "#d4a373",     // Sanded birch light accent
+          parchment: "#faf7f2", // Wood pulp surface
+          border: "#d8cbbe",
+        },
+        // Mapped to tree trunk palette for instant uniform theme styling
         ao3: {
-          red: "#990000",
-          darkred: "#700000",
-          lightred: "#c93b3b",
-          light: "#f7f7f7",
-          border: "#dcdcdc",
+          red: "#5c3a21",
+          darkred: "#3d2314",
+          lightred: "#d4a373",
+          light: "#faf7f2",
+          border: "#d8cbbe",
         },
       },
     },

@@ -1,49 +1,121 @@
 "use client";
 
 import React, { useState } from "react";
-import { signInWithDiscord, signInWithMagicLink } from "@/lib/services/auth";
+import Link from "next/link";
+import {
+  signInWithEmailPassword,
+  signUpWithEmailPassword,
+  resendConfirmationEmail,
+} from "@/lib/services/auth";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   redirectTo?: string;
+  initialMode?: "signin" | "signup";
 }
 
-export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
+export function AuthModal({
+  isOpen,
+  onClose,
+  redirectTo,
+  initialMode = "signin",
+}: AuthModalProps) {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState<"discord" | "magic-link" | null>(null);
+  const [password, setPassword] = useState("");
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+
+  // Interstitial Confirmation Screen State
+  const [showConfirmationScreen, setShowConfirmationScreen] = useState(false);
+
+  // Email Confirmation Sent Screen State (Option B)
+  const [confirmationPendingEmail, setConfirmationPendingEmail] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  async function handleDiscordLogin() {
-    try {
-      setLoading("discord");
-      setErrorMsg(null);
-      await signInWithDiscord(redirectTo);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to initiate Discord login");
-      setLoading(null);
-    }
+  function resetState() {
+    setEmail("");
+    setPassword("");
+    setDisclaimerAccepted(false);
+    setErrorMsg(null);
+    setShowResend(false);
+    setResendStatus(null);
+    setShowConfirmationScreen(false);
+    setConfirmationPendingEmail(null);
+    onClose();
   }
 
-  async function handleMagicLinkSubmit(e: React.FormEvent) {
+  function handleFormValidation(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg(null);
+    setShowResend(false);
+
     if (!email || !email.includes("@")) {
-      setErrorMsg("Please provide a valid email address.");
+      setErrorMsg("Please enter a valid email address.");
       return;
     }
 
+    if (!password || password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters in length.");
+      return;
+    }
+
+    if (!disclaimerAccepted) {
+      setErrorMsg("You must check the box confirming you have read the community disclaimers.");
+      return;
+    }
+
+    // Form inputs and disclaimer checkbox are valid -> show interstitial confirmation view
+    setShowConfirmationScreen(true);
+  }
+
+  async function handleProceedWithAuth() {
+    setLoading(true);
+    setErrorMsg(null);
+
     try {
-      setLoading("magic-link");
-      setErrorMsg(null);
-      await signInWithMagicLink(email.trim(), redirectTo);
-      setMagicLinkSent(true);
+      if (mode === "signin") {
+        await signInWithEmailPassword(email, password);
+        resetState();
+        window.location.reload();
+      } else {
+        const { session } = await signUpWithEmailPassword(email, password, redirectTo);
+        if (!session) {
+          // Supabase has 'Confirm email' enabled (Option B) -> Confirmation email sent
+          setConfirmationPendingEmail(email);
+          setShowConfirmationScreen(false);
+        } else {
+          // Instant sign-in occurred
+          resetState();
+          window.location.reload();
+        }
+      }
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to send magic link");
+      const msg = err instanceof Error ? err.message : "Authentication failed";
+      setErrorMsg(msg);
+      setShowConfirmationScreen(false); // Return to form so user sees error and can correct
+
+      if (msg.toLowerCase().includes("email not confirmed")) {
+        setShowResend(true);
+      }
     } finally {
-      setLoading(null);
+      setLoading(false);
+    }
+  }
+
+  async function handleResendEmail() {
+    if (!email) return;
+    try {
+      setResendStatus("Resending confirmation email...");
+      await resendConfirmationEmail(email, redirectTo);
+      setResendStatus("Confirmation email resent! Please check your inbox and spam folder.");
+    } catch (err: unknown) {
+      setResendStatus(err instanceof Error ? err.message : "Failed to resend confirmation email.");
     }
   }
 
@@ -54,11 +126,11 @@ export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
       aria-modal="true"
       aria-labelledby="auth-modal-title"
     >
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl border border-gray-200 p-6 space-y-6">
+      <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-border-light dark:border-border-dark p-6 space-y-6 text-gray-900 dark:text-gray-100 animate-in fade-in zoom-in-95 duration-150">
         {/* Close Button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition"
+          onClick={resetState}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
           aria-label="Close modal"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,91 +138,225 @@ export function AuthModal({ isOpen, onClose, redirectTo }: AuthModalProps) {
           </svg>
         </button>
 
-        {/* Modal Header */}
-        <div className="space-y-1">
-          <h2 id="auth-modal-title" className="text-xl font-bold text-gray-900">
-            Sign In to OurArchive
-          </h2>
-          <p className="text-xs text-gray-600">
-            Sign in to submit and manage verified fanwork Google Drive mirrors during archive maintenance.
-          </p>
-        </div>
-
-        {errorMsg && (
-          <div className="p-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded">
-            {errorMsg}
-          </div>
-        )}
-
-        {magicLinkSent ? (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded text-center space-y-2">
-            <div className="text-emerald-700 font-semibold text-sm">Magic Link Dispatched!</div>
-            <p className="text-xs text-emerald-800">
-              Check <strong>{email}</strong> for your secure login link. You can close this window.
+        {/* View 1: Option B - Confirmation Email Dispatched Screen */}
+        {confirmationPendingEmail ? (
+          <div className="py-4 text-center space-y-4">
+            <div className="text-4xl">📬</div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              Check Your Inbox to Confirm
+            </h2>
+            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+              We have sent a verification link to <strong>{confirmationPendingEmail}</strong>. Please confirm your email address to unlock reading bookmarks and submissions.
             </p>
-            <button
-              onClick={() => {
-                setMagicLinkSent(false);
-                setEmail("");
-              }}
-              className="mt-2 text-xs text-ao3-red hover:underline"
-            >
-              Use a different email
-            </button>
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                onClick={handleResendEmail}
+                className="text-xs text-brand-trunk dark:text-brand-light font-semibold hover:underline"
+              >
+                Didn&apos;t receive an email? Resend verification
+              </button>
+              {resendStatus && (
+                <div className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900">
+                  {resendStatus}
+                </div>
+              )}
+              <button
+                onClick={resetState}
+                className="mt-3 px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition"
+              >
+                Close & Return to Library
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Option A: Discord OAuth */}
-            <button
-              onClick={handleDiscordLogin}
-              disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-medium rounded transition disabled:opacity-50"
-            >
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-              </svg>
-              <span>{loading === "discord" ? "Connecting..." : "Continue with Discord"}</span>
-            </button>
-
-            <div className="relative flex items-center justify-center my-4">
-              <div className="border-t border-gray-200 w-full" />
-              <span className="bg-white px-2 text-[11px] uppercase tracking-wider text-gray-500">
-                Or with Email
-              </span>
-              <div className="border-t border-gray-200 w-full" />
+        ) : showConfirmationScreen ? (
+          /* View 2: Interstitial Confirmation Dialog */
+          <div className="space-y-5 py-2">
+            <div className="space-y-2 text-center">
+              <div className="text-3xl">⚖️</div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                Are you sure you&apos;ve checked out the disclaimer?
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed text-left bg-canvas-light dark:bg-canvas-dark p-3.5 rounded-lg border border-border-light dark:border-border-dark">
+                OurArchive operates as an emergency reading directory under strict <strong>Zero-Download</strong> and <strong>Creator Sovereignty</strong> principles. Authors retain 100% intellectual rights and immediate removal rights.
+              </p>
             </div>
 
-            {/* Option B: Email Magic Link */}
-            <form onSubmit={handleMagicLinkSubmit} className="space-y-3">
-              <div>
-                <label htmlFor="auth-email-input" className="block text-xs font-medium text-gray-700">
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleProceedWithAuth}
+                disabled={loading}
+                className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg shadow-xs transition disabled:opacity-50"
+              >
+                {loading
+                  ? "Processing..."
+                  : mode === "signin"
+                  ? "Yes, Proceed to Sign In"
+                  : "Yes, Proceed to Create Account"}
+              </button>
+
+              <a
+                href="/disclaimers"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs font-medium rounded-lg transition"
+              >
+                <span>Re-open Disclaimers Page in New Tab</span>
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmationScreen(false)}
+                className="w-full py-1.5 text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition"
+              >
+                &larr; Back to edit details
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* View 3: Primary Credentials Form */
+          <div className="space-y-5">
+            {/* Modal Header */}
+            <div className="space-y-1">
+              <h2 id="auth-modal-title" className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {mode === "signin" ? "Sign In to OurArchive" : "Create an Account"}
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                {mode === "signin"
+                  ? "Sign in to submit fanwork mirrors and sync your reading progress."
+                  : "Sign up to unlock reading bookmarks and participate in library moderation."}
+              </p>
+            </div>
+
+            {errorMsg && (
+              <div className="p-3 text-xs text-red-800 dark:text-red-300 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg">
+                <div>{errorMsg}</div>
+                {showResend && (
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    className="mt-2 text-xs font-bold text-brand-trunk dark:text-brand-light underline block"
+                  >
+                    Click here to resend the confirmation email &rarr;
+                  </button>
+                )}
+              </div>
+            )}
+
+            {resendStatus && (
+              <div className="p-3 text-xs text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg">
+                {resendStatus}
+              </div>
+            )}
+
+            <form onSubmit={handleFormValidation} className="space-y-4">
+              {/* Email Input */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="auth-email-input"
+                  className="block text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
                   Email Address
                 </label>
                 <input
                   id="auth-email-input"
                   type="email"
                   required
-                  placeholder="archivist@fandom.org"
+                  placeholder="archivist@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-ao3-red focus:border-ao3-red outline-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-950 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden shadow-2xs transition"
                 />
               </div>
 
+              {/* Password Input */}
+              <div className="space-y-1">
+                <label
+                  htmlFor="auth-password-input"
+                  className="block text-xs font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Password
+                </label>
+                <input
+                  id="auth-password-input"
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-950 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden shadow-2xs transition"
+                />
+              </div>
+
+              {/* Disclaimer Checkbox & Link */}
+              <div className="pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={disclaimerAccepted}
+                    onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-zinc-700 text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                  />
+                  <span className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
+                    I have read and agree to the{" "}
+                    <Link
+                      href="/disclaimers"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-trunk dark:text-brand-light font-semibold underline hover:opacity-80"
+                    >
+                      Community Disclaimers & Charter
+                    </Link>
+                  </span>
+                </label>
+              </div>
+
+              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading !== null || !email}
-                className="w-full py-2 px-4 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded transition disabled:opacity-50"
+                disabled={loading}
+                className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg shadow-xs transition disabled:opacity-50"
               >
-                {loading === "magic-link" ? "Sending Link..." : "Send Magic Link"}
+                {mode === "signin" ? "Sign In" : "Sign Up"}
               </button>
             </form>
+
+            {/* Mode Switcher */}
+            <div className="pt-2 text-center text-xs text-gray-600 dark:text-gray-400 border-t border-border-light dark:border-border-dark">
+              {mode === "signin" ? (
+                <div>
+                  Don&apos;t have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("signup");
+                      setErrorMsg(null);
+                    }}
+                    className="text-brand-trunk dark:text-brand-light font-semibold hover:underline"
+                  >
+                    Sign up to unlock bookmarks
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("signin");
+                      setErrorMsg(null);
+                    }}
+                    className="text-brand-trunk dark:text-brand-light font-semibold hover:underline"
+                  >
+                    Sign in with email
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
-
-        <div className="text-[11px] text-gray-500 text-center leading-relaxed">
-          By signing in, you agree to our strictly read-only archive terms and zero-download emergency operational policy.
-        </div>
       </div>
     </div>
   );
