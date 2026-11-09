@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface MaskedDriveRevealModalProps {
   isOpen: boolean;
@@ -24,6 +25,11 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<RevealData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !workId) {
@@ -55,7 +61,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
       });
   }, [isOpen, workId]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   function handleCopy() {
     if (data?.driveUrl) {
@@ -65,8 +71,8 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -160,6 +166,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

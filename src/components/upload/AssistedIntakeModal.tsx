@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface AssistedIntakeModalProps {
   isOpen: boolean;
@@ -21,8 +22,13 @@ export function AssistedIntakeModal({ isOpen, onClose, onSuccess }: AssistedInta
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,8 +73,8 @@ export function AssistedIntakeModal({ isOpen, onClose, onSuccess }: AssistedInta
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full border border-gray-200 overflow-hidden my-8">
         <div className="bg-gray-800 text-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -197,6 +203,7 @@ export function AssistedIntakeModal({ isOpen, onClose, onSuccess }: AssistedInta
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

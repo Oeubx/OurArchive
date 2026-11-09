@@ -9,11 +9,13 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { createClient } from "@/lib/supabase/client";
 import { getMyContributions } from "@/lib/contributorService";
 import { DriveLink } from "@/lib/types";
+import type { User } from "@supabase/supabase-js";
 
 export default function ContributePage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("contributor");
 
   const [contributions, setContributions] = useState<DriveLink[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -24,11 +26,19 @@ export default function ContributePage() {
   useEffect(() => {
     const supabase = createClient();
 
-    function evaluateAuth(user: { email?: string; user_metadata?: { full_name?: string } } | null) {
+    function evaluateAuth(user: User | null) {
       if (user) {
         setIsAuthenticated(true);
         setUserEmail(user.email || "");
-        setUserName(user.user_metadata?.full_name || user.email?.split("@")[0] || "Contributor");
+        const role = ((user.app_metadata as Record<string, unknown> | undefined)?.role as string) || "contributor";
+        setUserRole(role);
+        setUserName(
+          user.user_metadata?.display_name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "Contributor"
+        );
       } else {
         setIsAuthenticated(false);
       }
@@ -126,30 +136,32 @@ export default function ContributePage() {
         </div>
       </div>
 
-      {/* Warning Sign & Become a Verifier Button */}
-      <section className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-xs transition-colors duration-150">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200 text-sm">
-              <span className="text-base">⚠️</span>
-              <span>Reader Safety & Verification Notice</span>
+      {/* Warning Sign & Become a Verifier Button (Hidden for Admins and Verifiers) */}
+      {userRole !== "admin" && userRole !== "verifier" && (
+        <section className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-xs transition-colors duration-150">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200 text-sm">
+                <span className="text-base">⚠️</span>
+                <span>Reader Safety & Verification Notice</span>
+              </div>
+              <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed max-w-2xl">
+                All contributed and uploaded links shall go through strict verification to avoid malicious hacking, dangerous executable downloads, or broken permissions, for the safety and peace of mind of our fellow readers.
+              </p>
             </div>
-            <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed max-w-2xl">
-              All contributed and uploaded links shall go through strict verification to avoid malicious hacking, dangerous executable downloads, or broken permissions, for the safety and peace of mind of our fellow readers.
-            </p>
-          </div>
 
-          <div className="shrink-0">
-            <button
-              onClick={() => setShowVerifierModal(true)}
-              className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-1.5"
-            >
-              <span>🛡️</span>
-              <span>Become a Verifier</span>
-            </button>
+            <div className="shrink-0">
+              <button
+                onClick={() => setShowVerifierModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-1.5"
+              >
+                <span>🛡️</span>
+                <span>Become a Verifier</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Contributor Uploads Display Table */}
       <section>

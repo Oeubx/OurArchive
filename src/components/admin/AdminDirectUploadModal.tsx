@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { adminDirectUpload } from "@/lib/rbacService";
 import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
 interface AdminDirectUploadModalProps {
   isOpen: boolean;
+  adminDisplayName?: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
 export function AdminDirectUploadModal({
   isOpen,
+  adminDisplayName,
   onClose,
   onSuccess,
 }: AdminDirectUploadModalProps) {
@@ -35,8 +38,13 @@ export function AdminDirectUploadModal({
   const [error, setError] = useState<string | null>(null);
 
   const segments = segmentDriveUrl(driveUrl);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +89,8 @@ export function AdminDirectUploadModal({
         rawDriveUrl: canonicalUrl,
         driveOwnerEmail: driveOwnerEmail.trim() || undefined,
         isPriorVerified, // If true => Approved immediately; If false => Under Verification
+        uploadedBy: adminDisplayName || "admin",
+        uploadedByRole: "admin",
       });
 
       setLoading(false);
@@ -92,9 +102,9 @@ export function AdminDirectUploadModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-upload-title"
@@ -373,6 +383,7 @@ export function AdminDirectUploadModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

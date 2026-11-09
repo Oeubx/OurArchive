@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { addMyContribution } from "@/lib/contributorService";
 import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
@@ -13,6 +14,8 @@ interface UploadModalProps {
 export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [driveUrl, setDriveUrl] = useState("");
   const [confirmedViewOnly, setConfirmedViewOnly] = useState(false);
+  const [isFolder, setIsFolder] = useState(true); // Default to folder grouping
+  const [detailsExpanded, setDetailsExpanded] = useState(false); // Collapsed by default
 
   const [title, setTitle] = useState("");
   const [authorName, setAuthorName] = useState("");
@@ -32,8 +35,13 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const segments = segmentDriveUrl(driveUrl);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +50,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
     // Enforce link segmentation and view-only safety check
     if (!segments.isValid) {
-      setError(segments.errorMessage || "Please enter a valid Google Drive or Docs link.");
+      setError(segments.errorMessage || "Please enter a valid Google Drive or OneDrive link.");
       return;
     }
 
@@ -61,48 +69,54 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
       const parsedWordCount = typeof wordCount === "number" ? wordCount : 0;
       const canonicalUrl = segments.canonicalUrl;
+      const resolvedTitle = title.trim() || (isFolder ? "Curated Fanwork Folder" : "Untitled Fanwork");
+      const resolvedAuthor = authorName.trim() || "Anonymous Contributor";
+      const resolvedFandom = fandom.trim() || "General / Multi-Fandom";
+
+      // Dispatch to API endpoint with response validation
+      const res = await fetch("/api/links/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driveUrl: canonicalUrl,
+          isFolder,
+          title: title.trim() || undefined,
+          authorName: resolvedAuthor,
+          fandom: resolvedFandom,
+          pairing: pairing.trim() || undefined,
+          rating,
+          wordCount: parsedWordCount || undefined,
+          summary: summary.trim() || undefined,
+          tags,
+          canonicalAo3Url: canonicalSourceUrl.trim() || undefined,
+          isOwnerMasked,
+        }),
+      });
+
+      const resData = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(resData.error || "Submission failed. Please check permissions or try again.");
+      }
 
       // Add to local contributor store so it appears immediately on user's dashboard
       addMyContribution({
-        title: title.trim() || "Untitled Fanwork",
-        authorName: authorName.trim(),
-        fandom: fandom.trim(),
+        title: resolvedTitle,
+        authorName: resolvedAuthor,
+        fandom: resolvedFandom,
         pairing: pairing.trim() || undefined,
         rating,
         wordCount: parsedWordCount,
         summary: summary.trim(),
         tags,
         rawDriveUrl: canonicalUrl,
-        mimeType: "application/pdf",
+        mimeType: isFolder ? "application/vnd.google-apps.folder" : "application/pdf",
         isOwnerMasked,
         uploadedBy: "current_contributor",
         uploadedByRole: "contributor",
       });
 
-      // Also dispatch to API endpoint if available
-      try {
-        await fetch("/api/links/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            driveUrl: canonicalUrl,
-            title: title.trim() || undefined,
-            authorName: authorName.trim(),
-            fandom: fandom.trim(),
-            pairing: pairing.trim() || undefined,
-            rating,
-            wordCount: parsedWordCount,
-            summary: summary.trim() || undefined,
-            tags,
-            canonicalAo3Url: canonicalSourceUrl.trim() || undefined,
-            isOwnerMasked,
-          }),
-        });
-      } catch {
-        // API offline fallback handled gracefully
-      }
-
-      setSuccessMessage("Work submitted successfully! The segmented link is now pending automated verification.");
+      setSuccessMessage("Work submitted successfully! The link is now live and recorded in the library.");
       setTimeout(() => {
         onSuccess?.();
         onClose();
@@ -115,8 +129,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
@@ -223,6 +237,27 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               </div>
             )}
 
+            {/* Folder Grouping Checkbox (Defaults to Folder) */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="folderGroupingCheckbox"
+                  checked={isFolder}
+                  onChange={(e) => setIsFolder(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-xs">
+                    This link is a Folder grouping (e.g. series, multi-chapter work, or collection)
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                    Recommended: Enables indexing multiple related fanwork files, chapter collections, or entire series under a single view-only link. Uncheck only if uploading an isolated individual file.
+                  </p>
+                </div>
+              </label>
+            </div>
+
             {/* Confirmation Checkbox */}
             <div className="flex items-start gap-2 pt-1 border-t border-border-light dark:border-border-dark">
               <input
@@ -230,7 +265,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 id="confirmViewOnly"
                 checked={confirmedViewOnly}
                 onChange={(e) => setConfirmedViewOnly(e.target.checked)}
-                className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk"
+                className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
               />
               <label htmlFor="confirmViewOnly" className="text-gray-700 dark:text-gray-300 text-[11px] leading-tight cursor-pointer">
                 I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
@@ -238,123 +273,146 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                Work Title <span className="text-gray-400 font-normal">(Optional, uses file name if blank)</span>
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. To Build a Home"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                Original Author <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="e.g. starlight_scribe"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              />
-            </div>
-          </div>
+          {/* Expandable Sub-Details Section (Default Closed) */}
+          <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-canvas-light/50 dark:bg-canvas-dark/50">
+            <button
+              type="button"
+              onClick={() => setDetailsExpanded(!detailsExpanded)}
+              className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-brand-trunk dark:text-brand-light font-mono text-sm">
+                  {detailsExpanded ? "▼" : "▶"}
+                </span>
+                <span>PROVIDE DETAILS (OPTIONAL)</span>
+              </div>
+              <span className="text-[10px] text-gray-400 font-normal">
+                {detailsExpanded ? "Click to collapse" : "Click to specify title, author, fandom, or tags"}
+              </span>
+            </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                Fandom <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={fandom}
-                onChange={(e) => setFandom(e.target.value)}
-                placeholder="e.g. Heartstopper, Arcane"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Pairing / Relationship</label>
-              <input
-                type="text"
-                value={pairing}
-                onChange={(e) => setPairing(e.target.value)}
-                placeholder="e.g. Nick Nelson/Charlie Spring"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              />
-            </div>
-          </div>
+            {detailsExpanded && (
+              <div className="p-4 space-y-3.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Work Title <span className="text-gray-400 font-normal">(Optional, uses folder/file name if blank)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. To Build a Home"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Original Author <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      placeholder="e.g. starlight_scribe"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Content Rating</label>
-              <select
-                value={rating}
-                onChange={(e) =>
-                  setRating(
-                    e.target.value as "General Audiences" | "Teen And Up Audiences" | "Mature" | "Explicit" | "Not Rated"
-                  )
-                }
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              >
-                <option value="General Audiences">General Audiences</option>
-                <option value="Teen And Up Audiences">Teen And Up Audiences</option>
-                <option value="Mature">Mature</option>
-                <option value="Explicit">Explicit</option>
-                <option value="Not Rated">Not Rated</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Approximate Word Count</label>
-              <input
-                type="number"
-                min={0}
-                value={wordCount}
-                onChange={(e) => setWordCount(e.target.value ? parseInt(e.target.value, 10) : "")}
-                placeholder="e.g. 15000"
-                className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-              />
-            </div>
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Fandom <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={fandom}
+                      onChange={(e) => setFandom(e.target.value)}
+                      placeholder="e.g. Heartstopper, Arcane"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Pairing / Relationship <span className="text-gray-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={pairing}
+                      onChange={(e) => setPairing(e.target.value)}
+                      placeholder="e.g. Nick Nelson/Charlie Spring"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                </div>
 
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Tags (Comma-separated)</label>
-            <input
-              type="text"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="Fluff, Mutual Pining, Vacation, Found Family"
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-            />
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Content Rating</label>
+                    <select
+                      value={rating}
+                      onChange={(e) =>
+                        setRating(
+                          e.target.value as "General Audiences" | "Teen And Up Audiences" | "Mature" | "Explicit" | "Not Rated"
+                        )
+                      }
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    >
+                      <option value="General Audiences">General Audiences</option>
+                      <option value="Teen And Up Audiences">Teen And Up Audiences</option>
+                      <option value="Mature">Mature</option>
+                      <option value="Explicit">Explicit</option>
+                      <option value="Not Rated">Not Rated</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Approximate Word Count</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={wordCount}
+                      onChange={(e) => setWordCount(e.target.value ? parseInt(e.target.value, 10) : "")}
+                      placeholder="e.g. 15000"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                </div>
 
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Summary / Notes</label>
-            <textarea
-              rows={3}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Short description of the work..."
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-            />
-          </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Tags (Comma-separated)</label>
+                  <input
+                    type="text"
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="Fluff, Mutual Pining, Vacation, Found Family"
+                    className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                  />
+                </div>
 
-          <div>
-            <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Original Source Work Link (Optional)</label>
-            <input
-              type="url"
-              value={canonicalSourceUrl}
-              onChange={(e) => setCanonicalSourceUrl(e.target.value)}
-              placeholder="https://example.com/works/..."
-              className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
-            />
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Summary / Notes</label>
+                  <textarea
+                    rows={3}
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Short description of the work or folder contents..."
+                    className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Original Source Work Link (Optional)</label>
+                  <input
+                    type="url"
+                    value={canonicalSourceUrl}
+                    onChange={(e) => setCanonicalSourceUrl(e.target.value)}
+                    placeholder="https://example.com/works/..."
+                    className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 pt-1">
@@ -389,6 +447,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

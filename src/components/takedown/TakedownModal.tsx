@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 interface TakedownModalProps {
@@ -26,6 +27,11 @@ export function TakedownModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,7 +45,7 @@ export function TakedownModal({
     }
   }, [isOpen, workId, workTitle]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,8 +88,8 @@ export function TakedownModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden text-xs">
         {/* Header */}
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
@@ -254,6 +260,7 @@ export function TakedownModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

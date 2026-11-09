@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { createClient } from "@/lib/supabase/client";
 import { DriveLink, UserRole } from "@/lib/types";
 import {
   getAllCommunityLinks,
@@ -29,6 +31,9 @@ interface AdminDashboardClientProps {
 export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) {
   const [links, setLinks] = useState<DriveLink[]>([]);
   const [role, setRole] = useState<UserRole>("admin");
+  const [adminDisplayName, setAdminDisplayName] = useState<string>(
+    adminEmail.split("@")[0] || "admin"
+  );
   const [metrics, setMetrics] = useState({
     approvedCount: 0,
     underVerificationCount: 0,
@@ -54,6 +59,19 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
 
   useEffect(() => {
     refresh();
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const name =
+          user.user_metadata?.display_name ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "admin";
+        setAdminDisplayName(name);
+      }
+    });
+
     const unsubscribe = subscribeToRbacUpdates(() => {
       refresh();
     });
@@ -340,7 +358,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             {/* VERIFY */}
                             <button
                               type="button"
-                              onClick={() => verifyLink(item.id)}
+                              onClick={() => verifyLink(item.id, adminDisplayName)}
                               title="Verify and certify link"
                               className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition"
                             >
@@ -350,7 +368,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             {/* APPROVE */}
                             <button
                               type="button"
-                              onClick={() => approveLink(item.id, "biboy_admin", item.isPriorVerified)}
+                              onClick={() => approveLink(item.id, adminDisplayName, item.isPriorVerified)}
                               title="Approve and publish"
                               className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition"
                             >
@@ -360,7 +378,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             {/* REJECT */}
                             <button
                               type="button"
-                              onClick={() => rejectLink(item.id, "biboy_admin")}
+                              onClick={() => rejectLink(item.id, adminDisplayName)}
                               title="Reject submission"
                               className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition"
                             >
@@ -371,7 +389,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             {item.status === "hidden" ? (
                               <button
                                 type="button"
-                                onClick={() => unhideLink(item.id)}
+                                onClick={() => unhideLink(item.id, adminDisplayName)}
                                 title="Restore visibility"
                                 className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
                               >
@@ -380,7 +398,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => hideLink(item.id)}
+                                onClick={() => hideLink(item.id, adminDisplayName)}
                                 title="Quarantine work for author takedown checking"
                                 className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
                               >
@@ -435,13 +453,13 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         isAdmin={true}
         onClose={() => setInspectingLink(null)}
         onApprove={(id, isPriorVerified) => {
-          approveLink(id, "biboy_admin", isPriorVerified);
+          approveLink(id, adminDisplayName, isPriorVerified);
         }}
         onReject={(id) => {
-          rejectLink(id, "biboy_admin");
+          rejectLink(id, adminDisplayName);
         }}
         onHide={(id) => {
-          hideLink(id);
+          hideLink(id, adminDisplayName);
         }}
         onRemove={(id) => {
           const target = links.find((l) => l.id === id);
@@ -458,6 +476,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
       {/* Admin Direct Upload Modal */}
       <AdminDirectUploadModal
         isOpen={showDirectUploadModal}
+        adminDisplayName={adminDisplayName}
         onClose={() => setShowDirectUploadModal(false)}
         onSuccess={refresh}
       />
@@ -471,9 +490,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
       />
 
       {/* Context-Aware Permanent Deletion Confirmation Modal */}
-      {itemToRemove && (
+      {itemToRemove && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
           role="dialog"
           aria-modal="true"
         >
@@ -520,7 +539,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

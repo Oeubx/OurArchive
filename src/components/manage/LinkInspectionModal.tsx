@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { DriveLink } from "@/lib/types";
 import { runSystemLinkScan, SystemScanReport } from "@/lib/rbacService";
 import { AuditHistoryModal } from "@/components/admin/AuditHistoryModal";
@@ -31,6 +32,11 @@ export function LinkInspectionModal({
   const [scanReport, setScanReport] = useState<SystemScanReport | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -42,7 +48,7 @@ export function LinkInspectionModal({
     }
   }, [isOpen, link]);
 
-  if (!isOpen || !link) return null;
+  if (!isOpen || !link || !mounted) return null;
 
   function handleRunScan() {
     if (!link) return;
@@ -62,10 +68,10 @@ export function LinkInspectionModal({
   const isQuarantined = link.status === "hidden" || link.status === "rejected";
   const canPermanentDelete = isAdmin && (isQuarantined || isMalicious);
 
-  return (
+  return createPortal(
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="inspection-modal-title"
@@ -373,6 +379,7 @@ export function LinkInspectionModal({
         isOpen={showAuditModal}
         onClose={() => setShowAuditModal(false)}
       />
-    </>
+    </>,
+    document.body
   );
 }

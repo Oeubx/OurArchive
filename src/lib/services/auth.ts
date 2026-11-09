@@ -20,23 +20,50 @@ export async function signInWithEmailPassword(email: string, password: string) {
 /**
  * Registers a new user with Email and Password.
  */
-export async function signUpWithEmailPassword(email: string, password: string, redirectTo?: string) {
+export async function signUpWithEmailPassword(
+  email: string,
+  password: string,
+  redirectTo?: string,
+  displayName?: string
+) {
   const supabase = createClient();
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const targetUrl = redirectTo
     ? `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
     : `${origin}/auth/callback`;
 
+  const trimmedName = displayName?.trim();
+
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
     options: {
       emailRedirectTo: targetUrl,
+      data: trimmedName
+        ? {
+            display_name: trimmedName,
+            full_name: trimmedName,
+            name: trimmedName,
+            user_name: trimmedName,
+          }
+        : undefined,
     },
   });
 
   if (error) {
     throw error;
+  }
+
+  // If user was created immediately, ensure user_profiles display_name is updated
+  if (data?.user?.id && trimmedName) {
+    try {
+      await supabase
+        .from("user_profiles")
+        .update({ display_name: trimmedName })
+        .eq("id", data.user.id);
+    } catch {
+      // Non-blocking fallback if RLS or trigger already handled it
+    }
   }
 
   return data;

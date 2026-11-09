@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   signInWithEmailPassword,
@@ -22,6 +23,7 @@ export function AuthModal({
   initialMode = "signin",
 }: AuthModalProps) {
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
@@ -35,10 +37,16 @@ export function AuthModal({
 
   // Email Confirmation Sent Screen State (Option B)
   const [confirmationPendingEmail, setConfirmationPendingEmail] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   function resetState() {
+    setDisplayName("");
     setEmail("");
     setPassword("");
     setDisclaimerAccepted(false);
@@ -54,6 +62,11 @@ export function AuthModal({
     e.preventDefault();
     setErrorMsg(null);
     setShowResend(false);
+
+    if (mode === "signup" && !displayName.trim()) {
+      setErrorMsg("Please enter a display name or pen name.");
+      return;
+    }
 
     if (!email || !email.includes("@")) {
       setErrorMsg("Please enter a valid email address.");
@@ -84,7 +97,7 @@ export function AuthModal({
         resetState();
         window.location.reload();
       } else {
-        const { session } = await signUpWithEmailPassword(email, password, redirectTo);
+        const { session } = await signUpWithEmailPassword(email, password, redirectTo, displayName.trim());
         if (!session) {
           // Supabase has 'Confirm email' enabled (Option B) -> Confirmation email sent
           setConfirmationPendingEmail(email);
@@ -119,9 +132,9 @@ export function AuthModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -251,6 +264,27 @@ export function AuthModal({
             )}
 
             <form onSubmit={handleFormValidation} className="space-y-4">
+              {/* Display Name Input (Signup only) */}
+              {mode === "signup" && (
+                <div className="space-y-1">
+                  <label
+                    htmlFor="auth-display-name-input"
+                    className="block text-xs font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    Display Name / Pen Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="auth-display-name-input"
+                    type="text"
+                    required
+                    placeholder="e.g. Bram Vance or Starlight Scribe"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-950 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden shadow-2xs transition"
+                  />
+                </div>
+              )}
+
               {/* Email Input */}
               <div className="space-y-1">
                 <label
@@ -358,6 +392,7 @@ export function AuthModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

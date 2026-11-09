@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   getAuditHistoryForLink,
   exportAuditToCsv,
@@ -23,6 +24,11 @@ export function AuditHistoryModal({
   onClose,
 }: AuditHistoryModalProps) {
   const [history, setHistory] = useState<LinkAuditRecord[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen && linkId) {
@@ -39,7 +45,7 @@ export function AuditHistoryModal({
     return unsubscribe;
   }, [linkId]);
 
-  if (!isOpen || !linkId) return null;
+  if (!isOpen || !linkId || !mounted) return null;
 
   const primary = history[history.length - 1] || history[0];
   const displayTitle = workTitle || primary?.workTitle || "Fanwork Submission";
@@ -55,9 +61,9 @@ export function AuditHistoryModal({
     EXPUNGED: "bg-red-600 text-white border-red-700 font-bold animate-pulse",
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="audit-modal-title"
@@ -192,6 +198,7 @@ export function AuditHistoryModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -56,6 +56,29 @@ export default function ReaderPage() {
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
 
+  // Synchronize document body background with reader theme to eliminate black contrast margins on wide laptop screens
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prevBg = document.body.style.backgroundColor;
+    const prevColor = document.body.style.color;
+
+    if (theme === "sepia") {
+      document.body.style.backgroundColor = "#fbf0d9";
+      document.body.style.color = "#3d2b1f";
+    } else if (theme === "dark") {
+      document.body.style.backgroundColor = "#121212";
+      document.body.style.color = "#e5e5e5";
+    } else {
+      document.body.style.backgroundColor = "#ffffff";
+      document.body.style.color = "#1f2937";
+    }
+
+    return () => {
+      document.body.style.backgroundColor = prevBg;
+      document.body.style.color = prevColor;
+    };
+  }, [theme]);
+
   // Determine user role and load bookmark
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -72,6 +95,14 @@ export default function ReaderPage() {
 
     fetch(`/api/reader/${workId}`)
       .then(async (res) => {
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          throw new Error(
+            res.status === 404
+              ? "This fanwork could not be found or has not been verified yet."
+              : `Reader service unavailable (Status ${res.status}). Please try again later.`
+          );
+        }
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json.error || "Failed to load reader stream.");

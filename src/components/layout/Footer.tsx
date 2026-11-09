@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { TAKEDOWN_EMAIL, DEV_CONNECT } from "@/lib/config";
+import { TAKEDOWN_EMAIL, DEV_CONNECT, isLiveUrl } from "@/lib/config";
 
 export function Footer() {
   return (
@@ -118,7 +118,7 @@ export function Footer() {
 
               {/* Portfolio Link / Under Development Status */}
               <div className="pt-0.5">
-                {DEV_CONNECT.portfolio && DEV_CONNECT.portfolio !== "under-development" ? (
+                {isLiveUrl(DEV_CONNECT.portfolio) ? (
                   <a
                     href={DEV_CONNECT.portfolio.startsWith("http") ? DEV_CONNECT.portfolio : `https://${DEV_CONNECT.portfolio}`}
                     target="_blank"
