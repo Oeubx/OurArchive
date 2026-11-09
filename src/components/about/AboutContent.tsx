@@ -12,14 +12,20 @@ export function AboutContent() {
             <span>📖 The Origin Story</span>
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Hello! I am a software developer and longtime fanfiction reader. When major fanwork repositories experience downtime or outages, millions of readers and writers across the globe suddenly lose access to the stories that offer them comfort, entertainment, and connection.
+            Hello! I am an on-call data encoder, a software developer, and a fellow fanfiction reader.
           </p>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            In response, readers and authors often organize ad-hoc cloud storage links and spreadsheets across social media. However, discovering specific fanworks across disorganized links is difficult, and accessing raw cloud links poses security and usability challenges.
+            The idea behind OurArchive started quite simply: I was lazing around one afternoon while my girlfriend was whining about major fanfic platforms experiencing downtime and being completely unable to read her comfort stories.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            To cheer her up and solve her immediate dilemma, I sat down and started planning a lightweight system just for her—a safe, organized way to discover and read cloud drive mirrors without the clutter of spreadsheets or the risks of downloading raw files.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Since this seemed like a genuinely good idea and an exciting technical challenge, I decided to take the leap and turn it into a full-blown system for the entire reading community: <strong>OurArchive</strong>.
           </p>
         </div>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium bg-canvas-light dark:bg-canvas-dark p-3.5 rounded border border-border-light dark:border-border-dark">
-          <strong>OurArchive</strong> was conceived to solve this exact problem: compile author-approved cloud drive links into a single searchable index, provide a distraction-free online reader, and protect readers through metadata verification.
+          <strong>OurArchive</strong> solves this exact problem: compile author-approved cloud drive links into a single searchable index, provide a distraction-free online reader, and protect readers through metadata verification.
         </p>
       </section>
 
