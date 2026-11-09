@@ -1,13 +1,13 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { TAKEDOWN_EMAIL } from "@/lib/config";
+import { TAKEDOWN_EMAIL, DEV_CONNECT } from "@/lib/config";
 
 export function Footer() {
   return (
     <footer className="border-t border-border-light dark:border-border-dark py-8 px-4 text-xs bg-surface-light dark:bg-surface-dark transition-colors duration-150">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Main Grid: Disclaimers, About Dev, Contact */}
+        {/* Main Grid: Disclaimers, About Dev & Socials, Contact & Takedowns */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Section 1: Disclaimers */}
           <div className="space-y-2">
@@ -27,13 +27,13 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Section 2: About Developer */}
-          <div className="space-y-2">
+          {/* Section 2: About Developer & Reach-out Socials */}
+          <div className="space-y-2.5">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px]">
               About The Developer
             </h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-[11px]">
-              Built with open-source care by a fanfiction enthusiast and developer to keep community stories readable when main servers are offline.
+              Built with open-source care by an on-call data encoder, developer, and fellow reader to keep stories readable when major servers are down.
             </p>
             <div>
               <Link
@@ -44,9 +44,102 @@ export function Footer() {
                 <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
+
+            {/* Socials & Connect */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1.5">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Reach Out & Connect
+              </span>
+
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
+                {/* GitHub */}
+                {DEV_CONNECT.github && (
+                  <a
+                    href={DEV_CONNECT.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                    title="Developer GitHub Profile"
+                  >
+                    <span>🐙</span>
+                    <span>GitHub</span>
+                  </a>
+                )}
+
+                {/* X (Twitter) */}
+                {DEV_CONNECT.twitterX && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <a
+                      href={DEV_CONNECT.twitterX.startsWith("http") ? DEV_CONNECT.twitterX : `https://x.com/${DEV_CONNECT.twitterX.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                      title="Developer X Profile"
+                    >
+                      <span>𝕏</span>
+                      <span>X</span>
+                    </a>
+                  </>
+                )}
+
+                {/* LinkedIn */}
+                {DEV_CONNECT.linkedIn && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <a
+                      href={DEV_CONNECT.linkedIn.startsWith("http") ? DEV_CONNECT.linkedIn : `https://linkedin.com/in/${DEV_CONNECT.linkedIn}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                      title="Developer LinkedIn Profile"
+                    >
+                      <span>💼</span>
+                      <span>LinkedIn</span>
+                    </a>
+                  </>
+                )}
+
+                {/* Personal Email */}
+                {DEV_CONNECT.personalEmail && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <a
+                      href={`mailto:${DEV_CONNECT.personalEmail}`}
+                      className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                      title="Send Personal Email"
+                    >
+                      <span>✉️</span>
+                      <span>Email</span>
+                    </a>
+                  </>
+                )}
+              </div>
+
+              {/* Portfolio Link / Under Development Status */}
+              <div className="pt-0.5">
+                {DEV_CONNECT.portfolio && DEV_CONNECT.portfolio !== "under-development" ? (
+                  <a
+                    href={DEV_CONNECT.portfolio.startsWith("http") ? DEV_CONNECT.portfolio : `https://${DEV_CONNECT.portfolio}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-brand-trunk dark:text-brand-light hover:underline font-medium text-[11px]"
+                  >
+                    <span>🌐</span>
+                    <span>Developer Portfolio &rarr;</span>
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400 bg-canvas-light dark:bg-canvas-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark text-[10px]">
+                    <span>🌐</span>
+                    <span>Portfolio:</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Under Development</span>
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Section 3: Contact & Takedowns */}
+          {/* Section 3: Contact & Immediate Takedowns */}
           <div className="space-y-2">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px]">
               Contact & Immediate Takedowns
