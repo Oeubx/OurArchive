@@ -32,79 +32,8 @@ export interface LinkAuditRecord {
 
 const STORAGE_KEY_AUDIT = "ourarchive_link_audit_logs";
 
-// Initial seed audit logs for existing community works
-const DEFAULT_AUDIT_LOGS: LinkAuditRecord[] = [
-  {
-    id: "audit-001",
-    linkId: "comm-001",
-    workTitle: "The Constellation Theory (Part 1)",
-    authorName: "astral_wanderer",
-    fandom: "Genshin Impact",
-    maskedDriveUrl: "drive.google.com/file/d/1CdeF0gH...[omitted]",
-    actionType: "UPLOADED",
-    actorId: "user-astral-01",
-    actorName: "astral_scribe",
-    actorRole: "contributor",
-    notes: "Submitted via view-only Drive link contribution portal.",
-    timestamp: "2026-11-02T15:20:00Z",
-  },
-  {
-    id: "audit-002",
-    linkId: "comm-001",
-    workTitle: "The Constellation Theory (Part 1)",
-    authorName: "astral_wanderer",
-    fandom: "Genshin Impact",
-    maskedDriveUrl: "drive.google.com/file/d/1CdeF0gH...[omitted]",
-    actionType: "SCANNED",
-    actorId: "system-threat-checker",
-    actorName: "System Threat Scanner",
-    actorRole: "system",
-    notes: "Automated scan completed: 0% risk score. View-only document permissions confirmed.",
-    timestamp: "2026-11-02T15:21:00Z",
-  },
-  {
-    id: "audit-003",
-    linkId: "comm-003",
-    workTitle: "Tea Leaves & Transfiguration",
-    authorName: "marauder_fan",
-    fandom: "Harry Potter",
-    maskedDriveUrl: "drive.google.com/file/d/1FjkL7mN...[omitted]",
-    actionType: "UPLOADED",
-    actorId: "user-padfoot-01",
-    actorName: "padfoot_devotee",
-    actorRole: "contributor",
-    notes: "Submitted community link.",
-    timestamp: "2026-10-31T20:45:00Z",
-  },
-  {
-    id: "audit-004",
-    linkId: "comm-003",
-    workTitle: "Tea Leaves & Transfiguration",
-    authorName: "marauder_fan",
-    fandom: "Harry Potter",
-    maskedDriveUrl: "drive.google.com/file/d/1FjkL7mN...[omitted]",
-    actionType: "APPROVED",
-    actorId: "admin-biboy",
-    actorName: "biboy_admin",
-    actorRole: "admin",
-    notes: "Verified view-only status and approved for public search catalog. Prior verification override confirmed.",
-    timestamp: "2026-11-01T09:00:00Z",
-  },
-  {
-    id: "audit-005",
-    linkId: "comm-006",
-    workTitle: "Suspicious Payload Archive (Executable Hazard)",
-    authorName: "unknown_threat_actor",
-    fandom: "Original Work",
-    maskedDriveUrl: "drive.google.com/file/d/1Zxy9999...[omitted]",
-    actionType: "SCANNED",
-    actorId: "system-threat-checker",
-    actorName: "System Threat Scanner",
-    actorRole: "system",
-    notes: "Threat flag triggered: Executable binary payload pattern detected. Automated risk score: 90/100.",
-    timestamp: "2026-11-03T12:00:00Z",
-  },
-];
+// Initial seed audit logs (empty by default)
+const DEFAULT_AUDIT_LOGS: LinkAuditRecord[] = [];
 
 type AuditListener = () => void;
 const listeners = new Set<AuditListener>();
@@ -135,12 +64,16 @@ export function getAllAuditRecords(): LinkAuditRecord[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_AUDIT);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(DEFAULT_AUDIT_LOGS));
-      return DEFAULT_AUDIT_LOGS;
+      return [];
     }
-    return JSON.parse(raw);
+    const parsed: LinkAuditRecord[] = JSON.parse(raw);
+    const cleaned = parsed.filter((r) => !r.id.startsWith("audit-00") && !r.linkId.startsWith("comm-00"));
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
-    return DEFAULT_AUDIT_LOGS;
+    return [];
   }
 }
 

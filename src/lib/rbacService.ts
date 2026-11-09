@@ -18,170 +18,11 @@ export interface SystemScanReport {
   verdict: "CLEAN" | "CAUTION" | "MALICIOUS";
 }
 
-// Initial seed data for community submissions in the triage and verifier queues
-const DEFAULT_COMMUNITY_LINKS: DriveLink[] = [
-  {
-    id: "comm-001",
-    title: "The Constellation Theory (Part 1)",
-    authorName: "astral_wanderer",
-    fandom: "Genshin Impact",
-    pairing: "Zhongli/Tartaglia",
-    rating: "Teen And Up Audiences",
-    wordCount: 18500,
-    summary: "When the ancient celestial charting instruments in Liyue harbor begin pointing towards Snezhnaya, an astronomer must decipher celestial anomalies before winter solstice.",
-    tags: ["Action/Adventure", "Lore Exploration", "Slow Burn", "Astronomy AU"],
-    rawDriveUrl: "https://drive.google.com/file/d/1CdeF0gH1IjK2LmN3OpQ4RsT5UvW6XyZ7/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1CdeF0gH1IjK2LmN3OpQ4RsT5UvW6XyZ7/view?usp=sharing"),
-    mimeType: "application/pdf",
-    driveOwnerName: "astral_wanderer",
-    driveOwnerEmail: "astral@example.com",
-    isOwnerMasked: true,
-    uploadedBy: "astral_scribe",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-11-02T15:20:00Z",
-    status: "under_verification",
-    automatedRiskScore: 0,
-  },
-  {
-    id: "comm-002",
-    title: "Before the Dawn Patrol",
-    authorName: "wing_pilot",
-    fandom: "Top Gun",
-    pairing: "Pete 'Maverick' Mitchell/Tom 'Iceman' Kazansky",
-    rating: "Teen And Up Audiences",
-    wordCount: 12400,
-    summary: "Early morning debriefs in Miramar during the heat of July. Ice discovers Maverick's notebook full of undocumented flight patterns.",
-    tags: ["Military Fiction", "Pining", "Aviation Detail"],
-    rawDriveUrl: "https://drive.google.com/file/d/1EhiJ5kL6MnO7PqR8StU9VwX0ZaB1CdE2/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1EhiJ5kL6MnO7PqR8StU9VwX0ZaB1CdE2/view?usp=sharing"),
-    mimeType: "application/pdf",
-    driveOwnerName: "wing_pilot",
-    driveOwnerEmail: "wingpilot@example.com",
-    isOwnerMasked: true,
-    uploadedBy: "flight_cadet",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-11-03T08:10:00Z",
-    status: "under_verification",
-    automatedRiskScore: 0,
-  },
-  {
-    id: "comm-003",
-    title: "Tea Leaves & Transfiguration",
-    authorName: "marauder_fan",
-    fandom: "Harry Potter",
-    pairing: "Remus Lupin/Sirius Black",
-    rating: "General Audiences",
-    wordCount: 31000,
-    summary: "Sixth year at Hogwarts. Remus attempts to tutor Sirius in Divination with catastrophic and delightfully chaotic results.",
-    tags: ["Hogwarts Era", "Fluff", "Friendship to Romance"],
-    rawDriveUrl: "https://drive.google.com/file/d/1FjkL7mN8OpQ9RsT0UvW1XyZ2AbC3DeF4/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1FjkL7mN8OpQ9RsT0UvW1XyZ2AbC3DeF4/view?usp=sharing"),
-    mimeType: "application/pdf",
-    driveOwnerName: "marauder_fan",
-    driveOwnerEmail: "marauder@example.com",
-    isOwnerMasked: true,
-    uploadedBy: "padfoot_devotee",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-10-31T20:45:00Z",
-    status: "approved",
-    verificationBadge: "VERIFIED BY ADMIN",
-    adminVerifiedAt: "2026-11-01T09:00:00Z",
-    verifiedBy: "biboy_admin",
-    automatedRiskScore: 0,
-    isPriorVerified: true,
-  },
-  {
-    id: "comm-004",
-    title: "To Build a Home (Chapters 1 - 5)",
-    authorName: "starlight_scribe",
-    fandom: "Heartstopper",
-    pairing: "Nick Nelson/Charlie Spring",
-    rating: "General Audiences",
-    wordCount: 24180,
-    summary: "A quiet seaside getaway during the late summer break. Nick learns how to navigate university applications while keeping Charlie grounded.",
-    tags: ["Fluff", "Mutual Pining", "Beach Days"],
-    rawDriveUrl: "https://drive.google.com/file/d/1BxyZ9qK8LmN0OpQrStUvWxYz12345678/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1BxyZ9qK8LmN0OpQrStUvWxYz12345678/view?usp=sharing"),
-    mimeType: "application/pdf",
-    driveOwnerName: "archive_volunteer",
-    driveOwnerEmail: "volunteer@example.com",
-    isOwnerMasked: true,
-    uploadedBy: "current_contributor",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-11-01T13:45:00Z",
-    status: "approved",
-    verificationBadge: "VERIFIED BY ADMIN",
-    adminVerifiedAt: "2026-11-01T14:10:00Z",
-    verifiedBy: "biboy_admin",
-    automatedRiskScore: 0,
-    isPriorVerified: true,
-  },
-  {
-    id: "comm-005",
-    title: "Midnight Oil and Espresso Shots",
-    authorName: "cyber_bard",
-    fandom: "Arcane: League of Legends",
-    pairing: "Caitlyn Kiramman/Vi",
-    rating: "Teen And Up Audiences",
-    wordCount: 15600,
-    summary: "Piltover Enforcers graveyard shift investigation of chemtech shipments entering the Upper City docks.",
-    tags: ["Detective Work", "Action", "Slow Burn"],
-    rawDriveUrl: "https://drive.google.com/file/d/1GhiJ8kL9MnO0PqR1StU2VwX3ZaB4CdE5/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1GhiJ8kL9MnO0PqR1StU2VwX3ZaB4CdE5/view?usp=sharing"),
-    mimeType: "application/pdf",
-    driveOwnerName: "cyber_bard",
-    driveOwnerEmail: "cyberbard@example.com",
-    isOwnerMasked: true,
-    uploadedBy: "enforcer_fan",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-11-03T11:00:00Z",
-    status: "under_verification",
-    automatedRiskScore: 0,
-  },
-  {
-    id: "comm-006",
-    title: "Suspicious Payload Archive (Executable Hazard)",
-    authorName: "unknown_threat_actor",
-    fandom: "Original Work",
-    rating: "Not Rated",
-    wordCount: 0,
-    summary: "Automated scan flagged executable payload embedded in link parameters. Quarantined automatically by system threat scanner.",
-    tags: ["Quarantined", "Hazard Detected"],
-    rawDriveUrl: "https://drive.google.com/file/d/1Zxy9999ThreatPayloadMacroSetup/view?usp=sharing",
-    maskedDriveUrl: maskDriveUrl("https://drive.google.com/file/d/1Zxy9999ThreatPayloadMacroSetup/view?usp=sharing"),
-    mimeType: "application/x-msdownload",
-    isOwnerMasked: true,
-    uploadedBy: "spambot_user",
-    uploadedByRole: "contributor",
-    uploadedAt: "2026-11-03T12:00:00Z",
-    status: "flagged",
-    automatedRiskScore: 90,
-  },
-];
+// Initial community submissions list (empty by default; populated via Supabase / user submissions)
+const DEFAULT_COMMUNITY_LINKS: DriveLink[] = [];
 
-// Initial seed applications for testing verifier review
-const DEFAULT_VERIFIER_APPLICATIONS: VerifierApplication[] = [
-  {
-    id: "vapp-seed-001",
-    userId: "user-charlie-01",
-    userName: "Charlie (@reader_charlie)",
-    userEmail: "reader_charlie@gmail.com",
-    reason: "I read daily and want to help fellow readers safely access fanworks during service downtime.",
-    trustPledge: "I have experience configuring view-only Google Drive permissions and know how to spot executable .exe files or macro-enabled documents.",
-    status: "pending",
-    submittedAt: "2026-11-03T10:15:00Z",
-  },
-  {
-    id: "vapp-seed-002",
-    userId: "user-elena-02",
-    userName: "Elena M. (@archive_scribe)",
-    userEmail: "elena.m@example.org",
-    reason: "Longtime fanfiction reader and digital archivist. I want to assist in keeping fanworks accessible with accurate tagging.",
-    trustPledge: "I pledge to inspect every link thoroughly for viewer-only safety before giving approval, and immediately flag suspicious downloads.",
-    status: "pending",
-    submittedAt: "2026-11-03T12:30:00Z",
-  },
-];
+// Initial verifier applications list (empty by default)
+const DEFAULT_VERIFIER_APPLICATIONS: VerifierApplication[] = [];
 
 // In-memory event listeners for reactive updates
 type Listener = () => void;
@@ -296,12 +137,17 @@ export function getAllCommunityLinks(): DriveLink[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_COMMUNITY_LINKS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_COMMUNITY_LINKS, JSON.stringify(DEFAULT_COMMUNITY_LINKS));
-      return DEFAULT_COMMUNITY_LINKS;
+      return [];
     }
-    return JSON.parse(raw);
+    const parsed: DriveLink[] = JSON.parse(raw);
+    // Sanitize any legacy mock seeds starting with comm-
+    const cleaned = parsed.filter((l) => !l.id.startsWith("comm-"));
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(STORAGE_KEY_COMMUNITY_LINKS, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch {
-    return DEFAULT_COMMUNITY_LINKS;
+    return [];
   }
 }
 
@@ -593,17 +439,17 @@ export function getAllVerifierApplications(): VerifierApplication[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(DEFAULT_VERIFIER_APPLICATIONS));
-      return DEFAULT_VERIFIER_APPLICATIONS;
+      return [];
     }
     const apps: VerifierApplication[] = JSON.parse(raw);
-    if (apps.length === 0) {
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(DEFAULT_VERIFIER_APPLICATIONS));
-      return DEFAULT_VERIFIER_APPLICATIONS;
+    // Sanitize any legacy mock seeds starting with vapp-seed-
+    const cleaned = apps.filter((a) => !a.id.startsWith("vapp-seed-"));
+    if (cleaned.length !== apps.length) {
+      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(cleaned));
     }
-    return apps;
+    return cleaned;
   } catch {
-    return DEFAULT_VERIFIER_APPLICATIONS;
+    return [];
   }
 }
 
