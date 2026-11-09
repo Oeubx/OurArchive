@@ -5,14 +5,14 @@
  *                 docs/architecture/drive_ingestion_and_search.md
  */
 
-// Canonical regex matching Google Drive and Google Docs URLs
+// Canonical regex matching Google Drive files, folders, and Google Docs URLs
 const CANONICAL_DRIVE_REGEX =
-  /^https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive\/folders\/|open\?id=)|docs\.google\.com\/(?:document\/d\/|presentation\/d\/))([a-zA-Z0-9_-]{25,})(?:\/view|\/preview|\/edit|\?.*)?$/i;
+  /^https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive(?:\/u\/\d+)?\/folders\/|folders\/|folder\/d\/|open\?id=)|docs\.google\.com\/(?:document\/d\/|presentation\/d\/|spreadsheets\/d\/))([a-zA-Z0-9_-]{15,})(?:\/view|\/preview|\/edit|\?.*)?$/i;
 
-// Regex for extracting file ID from various valid Google formats
-const FILE_ID_REGEX = /(?:\/d\/|id=)([a-zA-Z0-9_-]{25,})/;
+// Regex for extracting file or folder ID from various valid Google formats
+const DRIVE_RESOURCE_REGEX = /(?:\/d\/|id=|\/folders\/)([a-zA-Z0-9_-]{15,})/;
 
-// Known URL shortener hosts and cloud storage competitors that are strictly rejected
+// Known URL shortener hosts and competitor hosts that are strictly rejected (OneDrive permitted)
 const PROHIBITED_HOSTS = [
   "bit.ly",
   "tinyurl.com",
@@ -22,27 +22,27 @@ const PROHIBITED_HOSTS = [
   "mega.nz",
   "mediafire.com",
   "dropbox.com",
-  "onedrive.live.com",
 ];
 
 export interface UrlValidationResult {
   isValid: boolean;
   fileId: string | null;
   canonicalUrl: string | null;
+  isFolder?: boolean;
   error?: string;
 }
 
 /**
- * Extracts Google Drive or Docs file ID from an arbitrary URL.
+ * Extracts Google Drive file or folder ID from an arbitrary URL.
  */
 export function extractGoogleDriveId(url: string): string | null {
   if (!url || typeof url !== "string") return null;
-  const match = url.trim().match(FILE_ID_REGEX);
+  const match = url.trim().match(DRIVE_RESOURCE_REGEX);
   return match ? match[1] : null;
 }
 
 /**
- * Validates, normalizes, and reconstructs a canonical Google Drive view link.
+ * Validates, normalizes, and reconstructs a canonical Google Drive or cloud drive link.
  */
 export function validateAndNormalizeDriveUrl(rawUrl: string): UrlValidationResult {
   if (!rawUrl || typeof rawUrl !== "string") {
@@ -92,36 +92,43 @@ export function validateAndNormalizeDriveUrl(rawUrl: string): UrlValidationResul
     };
   }
 
-  // Reject prohibited URL shorteners or competitor cloud hosts
+  // Reject prohibited URL shorteners or dangerous hosts
   const hostname = parsed.hostname.toLowerCase();
   if (PROHIBITED_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))) {
     return {
       isValid: false,
       fileId: null,
       canonicalUrl: null,
-      error: "URL shorteners and non-Google Drive cloud links are prohibited.",
+      error: "Prohibited cloud host or URL shortener detected.",
     };
   }
 
-  // Validate canonical domain
+  // Support OneDrive links
+  if (hostname === "onedrive.live.com" || hostname === "1drv.ms") {
+    const isFolder = trimmed.includes("resid=") || trimmed.includes("cid=") || trimmed.toLowerCase().includes("folder");
+    return {
+      isValid: true,
+      fileId: `onedrive_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      canonicalUrl: trimmed,
+      isFolder,
+    };
+  }
+
+  // Validate canonical domain for Google Drive
   if (hostname !== "drive.google.com" && hostname !== "docs.google.com") {
     return {
       isValid: false,
       fileId: null,
       canonicalUrl: null,
-      error: "Link must originate from drive.google.com or docs.google.com.",
+      error: "Link must originate from drive.google.com, docs.google.com, or OneDrive.",
     };
   }
 
-  // Validate against canonical Google Drive structure
-  if (!CANONICAL_DRIVE_REGEX.test(trimmed)) {
-    return {
-      isValid: false,
-      fileId: null,
-      canonicalUrl: null,
-      error: "URL does not match canonical Google Drive file or document patterns.",
-    };
-  }
+  // Check if it's a folder link
+  const isFolder =
+    parsed.pathname.includes("/folders/") ||
+    parsed.pathname.includes("drive/folders") ||
+    parsed.searchParams.get("folder") !== null;
 
   const fileId = extractGoogleDriveId(trimmed);
   if (!fileId) {
@@ -129,15 +136,18 @@ export function validateAndNormalizeDriveUrl(rawUrl: string): UrlValidationResul
       isValid: false,
       fileId: null,
       canonicalUrl: null,
-      error: "Could not extract a valid Google Drive file ID.",
+      error: "Could not extract a valid Google Drive file or folder ID.",
     };
   }
 
-  const canonicalUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+  const canonicalUrl = isFolder
+    ? `https://drive.google.com/drive/folders/${fileId}`
+    : `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
 
   return {
     isValid: true,
     fileId,
     canonicalUrl,
+    isFolder,
   };
 }
