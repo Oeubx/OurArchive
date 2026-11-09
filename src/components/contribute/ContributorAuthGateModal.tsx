@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { TAKEDOWN_EMAIL } from "@/lib/config";
@@ -16,12 +17,17 @@ export function ContributorAuthGateModal({
   onClose,
 }: ContributorAuthGateModalProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl max-w-md w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div className="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark pb-3">
@@ -106,6 +112,7 @@ export function ContributorAuthGateModal({
           onClose();
         }}
       />
-    </>
+    </>,
+    document.body
   );
 }

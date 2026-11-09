@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { DriveLink, UserRole } from "@/lib/types";
 import {
@@ -489,9 +490,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
       />
 
       {/* Context-Aware Permanent Deletion Confirmation Modal */}
-      {itemToRemove && (
+      {itemToRemove && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150"
           role="dialog"
           aria-modal="true"
         >
@@ -538,7 +539,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

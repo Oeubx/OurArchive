@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { AdminActionType, AdminTriageFeedRecord } from "@/types/database";
 
 interface TriageActionModalProps {
@@ -27,6 +28,11 @@ export function TriageActionModal({
     ownerName?: string | null;
     mailtoUrl?: string;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,7 +43,7 @@ export function TriageActionModal({
     }
   }, [isOpen, action]);
 
-  if (!isOpen || !action || !item) return null;
+  if (!isOpen || !action || !item || !mounted) return null;
 
   const actionTitles: Record<AdminActionType, string> = {
     VERIFY: "Re-scan & Verify Drive Link",
@@ -123,8 +129,8 @@ export function TriageActionModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden text-xs">
         {/* Header */}
         <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
@@ -249,6 +255,7 @@ export function TriageActionModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

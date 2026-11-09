@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   signInWithEmailPassword,
@@ -36,8 +37,13 @@ export function AuthModal({
 
   // Email Confirmation Sent Screen State (Option B)
   const [confirmationPendingEmail, setConfirmationPendingEmail] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   function resetState() {
     setDisplayName("");
@@ -126,9 +132,9 @@ export function AuthModal({
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
@@ -386,6 +392,7 @@ export function AuthModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

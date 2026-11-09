@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { VerifierApplication } from "@/lib/types";
 import {
   getAllVerifierApplications,
@@ -20,6 +21,11 @@ export function VerifierRequestsModal({
 }: VerifierRequestsModalProps) {
   const [applications, setApplications] = useState<VerifierApplication[]>([]);
   const [activeTab, setActiveTab] = useState<"pending" | "all">("pending");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function refresh() {
     setApplications(getAllVerifierApplications());
@@ -33,14 +39,14 @@ export function VerifierRequestsModal({
     return unsubscribe;
   }, []);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const pendingApps = applications.filter((app) => app.status === "pending");
   const displayedApps = activeTab === "pending" ? pendingApps : applications;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="verifier-requests-title"
@@ -192,6 +198,7 @@ export function VerifierRequestsModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

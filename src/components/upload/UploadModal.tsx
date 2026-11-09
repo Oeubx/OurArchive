@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { addMyContribution } from "@/lib/contributorService";
 import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
@@ -34,8 +35,13 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const segments = segmentDriveUrl(driveUrl);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -123,8 +129,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
@@ -441,6 +447,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
