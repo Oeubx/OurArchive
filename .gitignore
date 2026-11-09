@@ -32,6 +32,7 @@ pnpm-debug.log*
 service-account*.json
 credentials.json
 test-accounts.local.md
+supabase-seeded-accounts.local.md
 *.local.md
 supabase/seeds/
 

@@ -102,7 +102,7 @@ export default function SearchPage() {
               Explore Verified Works
             </h1>
             <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed max-w-2xl">
-              Search by title, author, fandom, or character tags. All works are mirrored via view-only cloud drives.
+              Search by file name or document title inside cloud drive links. All works are mirrored via view-only cloud drives.
             </p>
           </div>
 
