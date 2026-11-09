@@ -6,12 +6,14 @@ import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
 interface AdminDirectUploadModalProps {
   isOpen: boolean;
+  adminDisplayName?: string;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
 export function AdminDirectUploadModal({
   isOpen,
+  adminDisplayName,
   onClose,
   onSuccess,
 }: AdminDirectUploadModalProps) {
@@ -81,6 +83,8 @@ export function AdminDirectUploadModal({
         rawDriveUrl: canonicalUrl,
         driveOwnerEmail: driveOwnerEmail.trim() || undefined,
         isPriorVerified, // If true => Approved immediately; If false => Under Verification
+        uploadedBy: adminDisplayName || "admin",
+        uploadedByRole: "admin",
       });
 
       setLoading(false);

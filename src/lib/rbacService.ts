@@ -239,7 +239,7 @@ export function rejectLink(linkId: string, reviewerName: string = "verifier_team
 /**
  * Admin: Hide a submission (Temporary Author Takedown Quarantine)
  */
-export function hideLink(linkId: string): boolean {
+export function hideLink(linkId: string, actorName: string = "admin"): boolean {
   const links = getAllCommunityLinks();
   const index = links.findIndex((l) => l.id === linkId);
   if (index === -1) return false;
@@ -256,8 +256,8 @@ export function hideLink(linkId: string): boolean {
     fandom: links[index].fandom,
     maskedDriveUrl: links[index].maskedDriveUrl,
     actionType: "HIDDEN",
-    actorId: "biboy_admin",
-    actorName: "biboy_admin",
+    actorId: actorName,
+    actorName: actorName,
     actorRole: "admin",
     notes: "Work placed in quarantine pending author takedown check.",
   });
@@ -269,7 +269,7 @@ export function hideLink(linkId: string): boolean {
 /**
  * Admin: Unhide / restore a submission
  */
-export function unhideLink(linkId: string): boolean {
+export function unhideLink(linkId: string, actorName: string = "admin"): boolean {
   const links = getAllCommunityLinks();
   const index = links.findIndex((l) => l.id === linkId);
   if (index === -1) return false;
@@ -286,8 +286,8 @@ export function unhideLink(linkId: string): boolean {
     fandom: links[index].fandom,
     maskedDriveUrl: links[index].maskedDriveUrl,
     actionType: "UNHIDDEN",
-    actorId: "biboy_admin",
-    actorName: "biboy_admin",
+    actorId: actorName,
+    actorName: actorName,
     actorRole: "admin",
     notes: "Quarantine lifted. Work visibility restored in catalog.",
   });
@@ -299,7 +299,7 @@ export function unhideLink(linkId: string): boolean {
 /**
  * Admin: Mark a submission as explicitly verified
  */
-export function verifyLink(linkId: string, adminName: string = "biboy_admin"): boolean {
+export function verifyLink(linkId: string, adminName: string = "admin"): boolean {
   const links = getAllCommunityLinks();
   const index = links.findIndex((l) => l.id === linkId);
   if (index === -1) return false;
@@ -335,7 +335,7 @@ export function verifyLink(linkId: string, adminName: string = "biboy_admin"): b
  * Enforces policy: Target must be in 'hidden' state (quarantine), 'rejected' state,
  * OR deemed malicious by the system threat scanner (flagged or risk score >= 70).
  */
-export function removeLink(linkId: string): boolean {
+export function removeLink(linkId: string, actorName: string = "admin"): boolean {
   const links = getAllCommunityLinks();
   const target = links.find((l) => l.id === linkId);
   if (!target) return false;
@@ -354,8 +354,8 @@ export function removeLink(linkId: string): boolean {
     authorName: target.authorName,
     fandom: target.fandom,
     maskedDriveUrl: target.maskedDriveUrl,
-    actorId: "biboy_admin",
-    actorName: "biboy_admin",
+    actorId: actorName,
+    actorName: actorName,
     actorRole: "admin",
     reason: isMalicious
       ? "Threat Scanner Emergency Purge: Malicious executable payload eliminated."
@@ -382,9 +382,13 @@ export function adminDirectUpload(data: {
   rawDriveUrl: string;
   driveOwnerEmail?: string;
   isPriorVerified: boolean;
+  uploadedBy?: string;
+  uploadedByRole?: UserRole;
 }): DriveLink {
   const links = getAllCommunityLinks();
   const isApproved = data.isPriorVerified;
+  const submitterName = data.uploadedBy || "admin";
+  const submitterRole: UserRole = data.uploadedByRole || "admin";
 
   const newLink: DriveLink = {
     id: `admin-upload-${Date.now()}`,
@@ -401,13 +405,13 @@ export function adminDirectUpload(data: {
     mimeType: "application/pdf",
     driveOwnerEmail: data.driveOwnerEmail,
     isOwnerMasked: true,
-    uploadedBy: "biboy_admin",
-    uploadedByRole: "admin",
+    uploadedBy: submitterName,
+    uploadedByRole: submitterRole,
     uploadedAt: new Date().toISOString(),
     status: isApproved ? "approved" : "under_verification",
     verificationBadge: isApproved ? "VERIFIED BY ADMIN" : undefined,
     adminVerifiedAt: isApproved ? new Date().toISOString() : undefined,
-    verifiedBy: isApproved ? "biboy_admin" : undefined,
+    verifiedBy: isApproved ? submitterName : undefined,
     automatedRiskScore: 0,
     isPriorVerified: data.isPriorVerified,
   };
@@ -419,8 +423,8 @@ export function adminDirectUpload(data: {
     fandom: newLink.fandom,
     maskedDriveUrl: newLink.maskedDriveUrl,
     actionType: "UPLOADED",
-    actorId: "biboy_admin",
-    actorName: "biboy_admin",
+    actorId: submitterName,
+    actorName: submitterName,
     actorRole: "admin",
     notes: isApproved
       ? "Admin direct upload with prior verification (published directly as Approved)."
@@ -463,7 +467,7 @@ export function getPendingVerifierApplications(): VerifierApplication[] {
 /**
  * Admin: Approve a verifier application
  */
-export function approveVerifierApplication(applicationId: string, adminName: string = "biboy_admin"): boolean {
+export function approveVerifierApplication(applicationId: string, adminName: string = "admin"): boolean {
   const apps = getAllVerifierApplications();
   const index = apps.findIndex((a) => a.id === applicationId);
   if (index === -1) return false;
@@ -489,7 +493,7 @@ export function approveVerifierApplication(applicationId: string, adminName: str
 /**
  * Admin: Decline a verifier application
  */
-export function declineVerifierApplication(applicationId: string, adminName: string = "biboy_admin"): boolean {
+export function declineVerifierApplication(applicationId: string, adminName: string = "admin"): boolean {
   const apps = getAllVerifierApplications();
   const index = apps.findIndex((a) => a.id === applicationId);
   if (index === -1) return false;
