@@ -94,8 +94,8 @@ export default function ReaderPage() {
     const prevDocBg = document.documentElement.style.backgroundColor;
 
     const bgMap: Record<ThemeMode, { bg: string; color: string; isDark: boolean }> = {
-      light: { bg: "#ffffff", color: "#111827", isDark: false },
-      warm: { bg: "#fbf0d9", color: "#382b1d", isDark: false },
+      light: { bg: "#f8f9fa", color: "#111827", isDark: false },
+      warm: { bg: "#f7edd5", color: "#382b1d", isDark: false },
       dark: { bg: "#121214", color: "#ededed", isDark: true },
     };
 
@@ -288,24 +288,131 @@ export default function ReaderPage() {
   // URL Privacy check: Only Admin or Verifier can see raw external drive links
   const canRevealDrive = role === "admin" || role === "verifier";
 
-  const themeClasses: Record<ThemeMode, { container: string; text: string; header: string; meta: string }> = {
+  interface ReaderThemeConfig {
+    container: string;
+    text: string;
+    textMuted: string;
+    header: string;
+    brandLink: string;
+    toolbarGroup: string;
+    toolbarBtn: string;
+    toolbarBtnActive: string;
+    toolbarBtnHover: string;
+    toolbarDivider: string;
+    bookmarkBtn: string;
+    metaBox: string;
+    metaTitle: string;
+    metaBorder: string;
+    metaTag: string;
+    collectionHeader: string;
+    collectionInput: string;
+    collectionCard: string;
+    collectionCardTitle: string;
+    collectionCardMuted: string;
+    collectionCardAction: string;
+    collectionBanner: string;
+    collectionBannerText: string;
+    collectionBannerBtn: string;
+    badgePdf: string;
+    badgeDoc: string;
+    footerBorder: string;
+    footerBtnSecondary: string;
+    emptyBox: string;
+  }
+
+  const themeClasses: Record<ThemeMode, ReaderThemeConfig> = {
     light: {
-      container: "bg-[#ffffff]", // Crisp clean white paper
+      container: "bg-[#f8f9fa] text-gray-900",
       text: "text-gray-900",
-      header: "bg-white/95 border-gray-200 text-gray-800",
-      meta: "bg-gray-50 border-gray-200 text-gray-800",
+      textMuted: "text-gray-600",
+      header: "bg-white/95 border-gray-200 text-gray-800 shadow-2xs",
+      brandLink: "text-brand-trunk hover:text-brand-bark",
+      toolbarGroup: "bg-gray-100 border-gray-300/80 text-gray-700",
+      toolbarBtn: "text-gray-700 hover:bg-gray-200/80 transition-colors",
+      toolbarBtnActive: "bg-brand-trunk text-white shadow-2xs",
+      toolbarBtnHover: "hover:bg-gray-200/80",
+      toolbarDivider: "border-gray-300/80",
+      bookmarkBtn: "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 shadow-2xs",
+      metaBox: "bg-white border-gray-200 text-gray-800 shadow-xs",
+      metaTitle: "text-gray-900",
+      metaBorder: "border-gray-200",
+      metaTag: "bg-gray-100 border-gray-200 text-gray-700",
+      collectionHeader: "bg-white border-gray-200 text-gray-900 shadow-xs",
+      collectionInput: "bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-brand-trunk focus:ring-1 focus:ring-brand-trunk",
+      collectionCard: "bg-white border-gray-200 text-gray-900 shadow-xs hover:border-brand-trunk/50 hover:bg-amber-50/30",
+      collectionCardTitle: "text-gray-900 group-hover:text-brand-trunk",
+      collectionCardMuted: "text-gray-500",
+      collectionCardAction: "text-brand-trunk group-hover:text-brand-bark",
+      collectionBanner: "bg-amber-50 border-amber-200/80 text-amber-950 shadow-xs",
+      collectionBannerText: "text-amber-900",
+      collectionBannerBtn: "text-brand-trunk hover:text-brand-bark",
+      badgePdf: "bg-red-50 text-red-700 border-red-200",
+      badgeDoc: "bg-blue-50 text-blue-700 border-blue-200",
+      footerBorder: "border-gray-200",
+      footerBtnSecondary: "border-gray-300 text-gray-700 hover:bg-gray-100 bg-white",
+      emptyBox: "border-gray-300 bg-white text-gray-500",
     },
     warm: {
-      container: "bg-[#fbf0d9]", // Soft warm parchment / sepia
+      container: "bg-[#f7edd5] text-[#382b1d]",
       text: "text-[#382b1d]",
-      header: "bg-[#f0e2c2]/95 border-[#decba5] text-[#382b1d]",
-      meta: "bg-[#f5e9ce] border-[#decba5] text-[#54412c]",
+      textMuted: "text-[#70563b]",
+      header: "bg-[#eeddb8]/95 border-[#dec79e] text-[#382b1d] shadow-2xs",
+      brandLink: "text-brand-trunk hover:text-brand-bark",
+      toolbarGroup: "bg-[#e5d0a6] border-[#cfb686] text-[#382b1d]",
+      toolbarBtn: "text-[#382b1d] hover:bg-[#d8be8d] transition-colors",
+      toolbarBtnActive: "bg-brand-trunk text-white shadow-2xs",
+      toolbarBtnHover: "hover:bg-[#d8be8d]",
+      toolbarDivider: "border-[#cfb686]",
+      bookmarkBtn: "bg-[#fbf3e0] border-[#cfb686] text-[#382b1d] hover:bg-[#f2e2be] shadow-2xs",
+      metaBox: "bg-[#fcf5e5] border-[#dfcca4] text-[#382b1d] shadow-xs",
+      metaTitle: "text-[#382b1d]",
+      metaBorder: "border-[#dfcca4]",
+      metaTag: "bg-[#ebd7b0] border-[#dfcca4] text-[#382b1d]",
+      collectionHeader: "bg-[#fcf5e5] border-[#dfcca4] text-[#382b1d] shadow-xs",
+      collectionInput: "bg-[#fdf9ee] border-[#cfb686] text-[#382b1d] placeholder:text-[#9e8363] focus:border-brand-trunk focus:ring-1 focus:ring-brand-trunk",
+      collectionCard: "bg-[#fdf9ee] border-[#dfcca4] text-[#382b1d] shadow-xs hover:border-brand-trunk/60 hover:bg-[#f6ebd1]",
+      collectionCardTitle: "text-[#382b1d] group-hover:text-brand-trunk",
+      collectionCardMuted: "text-[#7a6044]",
+      collectionCardAction: "text-brand-trunk group-hover:text-brand-bark",
+      collectionBanner: "bg-[#f2e2bf] border-[#dfcca4] text-[#382b1d] shadow-xs",
+      collectionBannerText: "text-[#382b1d]",
+      collectionBannerBtn: "text-brand-trunk hover:text-brand-bark",
+      badgePdf: "bg-[#fbe5e1] text-[#9c2b1f] border-[#e8b5ad]",
+      badgeDoc: "bg-[#e2edf9] text-[#1e528a] border-[#b4d0ed]",
+      footerBorder: "border-[#dfcca4]",
+      footerBtnSecondary: "border-[#cfb686] text-[#382b1d] hover:bg-[#ebd7b0] bg-[#fdf9ee]",
+      emptyBox: "border-[#cfb686] bg-[#fcf5e5] text-[#7a6044]",
     },
     dark: {
-      container: "bg-[#121214]", // Obsidian dark charcoal
+      container: "bg-[#121214] text-[#ededed]",
       text: "text-[#ededed]",
-      header: "bg-[#1a1a1e]/95 border-[#2a2a30] text-[#ededed]",
-      meta: "bg-[#18181c] border-[#2a2a30] text-[#9ca3af]",
+      textMuted: "text-gray-400",
+      header: "bg-[#1a1a1e]/95 border-[#2a2a30] text-[#ededed] shadow-2xs",
+      brandLink: "text-brand-light hover:text-white",
+      toolbarGroup: "bg-[#25252b] border-[#383842] text-gray-300",
+      toolbarBtn: "text-gray-300 hover:bg-[#34343d] transition-colors",
+      toolbarBtnActive: "bg-brand-trunk text-white shadow-2xs",
+      toolbarBtnHover: "hover:bg-[#34343d]",
+      toolbarDivider: "border-[#383842]",
+      bookmarkBtn: "bg-[#25252b] border-[#383842] text-gray-200 hover:bg-[#34343d] shadow-2xs",
+      metaBox: "bg-[#18181c] border-[#2a2a30] text-[#ededed] shadow-xs",
+      metaTitle: "text-white",
+      metaBorder: "border-[#2a2a30]",
+      metaTag: "bg-[#25252b] border-[#383842] text-gray-300",
+      collectionHeader: "bg-[#18181c] border-[#2a2a30] text-[#ededed] shadow-xs",
+      collectionInput: "bg-[#25252b] border-[#383842] text-gray-100 placeholder:text-gray-500 focus:border-brand-light focus:ring-1 focus:ring-brand-light",
+      collectionCard: "bg-[#1a1a1f] border-[#2e2e38] text-gray-100 shadow-xs hover:border-brand-amber/50 hover:bg-[#25252d]",
+      collectionCardTitle: "text-gray-100 group-hover:text-brand-light",
+      collectionCardMuted: "text-gray-400",
+      collectionCardAction: "text-brand-light group-hover:text-white",
+      collectionBanner: "bg-[#201d1b] border-brand-trunk/40 text-brand-light shadow-xs",
+      collectionBannerText: "text-brand-light",
+      collectionBannerBtn: "text-amber-200 hover:text-white",
+      badgePdf: "bg-red-950/70 text-red-300 border-red-900/70",
+      badgeDoc: "bg-blue-950/70 text-blue-300 border-blue-900/70",
+      footerBorder: "border-[#2a2a30]",
+      footerBtnSecondary: "border-[#383842] text-gray-300 hover:bg-[#25252b] bg-[#1a1a1f]",
+      emptyBox: "border-[#383842] bg-[#18181c] text-gray-400",
     },
   };
 
@@ -325,12 +432,12 @@ export default function ReaderPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="font-semibold text-brand-trunk hover:underline flex items-center gap-1"
+              className={`font-semibold flex items-center gap-1 transition ${currentTheme.brandLink}`}
             >
               <span>&larr;</span> Library Index
             </Link>
             {data && (
-              <span className="truncate max-w-[180px] sm:max-w-[260px] font-medium hidden xs:inline">
+              <span className={`truncate max-w-[180px] sm:max-w-[260px] font-medium hidden xs:inline ${currentTheme.textMuted}`}>
                 {data.title}
               </span>
             )}
@@ -343,10 +450,10 @@ export default function ReaderPage() {
               <button
                 type="button"
                 onClick={() => saveCurrentProgress(true)}
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition flex items-center gap-1 shadow-2xs ${
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition flex items-center gap-1 ${
                   bookmarkSavedFeedback
                     ? "bg-emerald-600 text-white border-emerald-700"
-                    : "bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark text-gray-700 dark:text-gray-200"
+                    : currentTheme.bookmarkBtn
                 }`}
                 title="Save current reading page to your bookmarks"
               >
@@ -355,7 +462,7 @@ export default function ReaderPage() {
               </button>
             ) : (
               <span
-                className="text-[10px] text-gray-500 italic hidden sm:inline"
+                className={`text-[10px] italic hidden sm:inline ${currentTheme.textMuted}`}
                 title="Sign in as a contributor to automatically save reading bookmarks"
               >
                 💡 Sign in to bookmark
@@ -376,11 +483,11 @@ export default function ReaderPage() {
             )}
 
             {/* Font Family Selector */}
-            <div className="flex items-center border border-gray-400/40 rounded overflow-hidden">
+            <div className={`flex items-center border rounded overflow-hidden shadow-2xs ${currentTheme.toolbarGroup}`}>
               <button
                 onClick={() => setFontFamily("serif")}
-                className={`px-2 py-1 font-serif text-[11px] ${
-                  fontFamily === "serif" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
+                className={`px-2 py-1 font-serif text-[11px] font-medium transition ${
+                  fontFamily === "serif" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
                 title="Serif font (Book style)"
               >
@@ -388,8 +495,8 @@ export default function ReaderPage() {
               </button>
               <button
                 onClick={() => setFontFamily("sans")}
-                className={`px-2 py-1 font-sans text-[11px] border-l border-gray-400/40 ${
-                  fontFamily === "sans" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
+                className={`px-2 py-1 font-sans text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                  fontFamily === "sans" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
                 title="Sans font (Modern)"
               >
@@ -397,8 +504,8 @@ export default function ReaderPage() {
               </button>
               <button
                 onClick={() => setFontFamily("mono")}
-                className={`px-2 py-1 font-mono text-[11px] border-l border-gray-400/40 ${
-                  fontFamily === "mono" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
+                className={`px-2 py-1 font-mono text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                  fontFamily === "mono" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
                 title="Mono font (Code/Draft)"
               >
@@ -407,18 +514,20 @@ export default function ReaderPage() {
             </div>
 
             {/* Font Size Adjusters */}
-            <div className="flex items-center border border-gray-400/40 rounded overflow-hidden">
+            <div className={`flex items-center border rounded overflow-hidden shadow-2xs ${currentTheme.toolbarGroup}`}>
               <button
                 onClick={() => setFontSizePx((prev) => Math.max(14, prev - 2))}
-                className="px-2.5 py-1 hover:bg-black/10 text-xs font-bold"
+                className={`px-2.5 py-1 text-xs font-bold transition ${currentTheme.toolbarBtn}`}
                 title="Decrease font size"
               >
                 A-
               </button>
-              <span className="px-1.5 text-[10px] opacity-75 font-mono">{fontSizePx}px</span>
+              <span className={`px-1.5 text-[10px] font-mono font-semibold ${currentTheme.textMuted}`}>
+                {fontSizePx}px
+              </span>
               <button
                 onClick={() => setFontSizePx((prev) => Math.min(28, prev + 2))}
-                className="px-2.5 py-1 hover:bg-black/10 text-xs font-bold border-l border-gray-400/40"
+                className={`px-2.5 py-1 text-xs font-bold border-l transition ${currentTheme.toolbarDivider} ${currentTheme.toolbarBtn}`}
                 title="Increase font size"
               >
                 A+
@@ -426,7 +535,7 @@ export default function ReaderPage() {
             </div>
 
             {/* Theme Selector: LIGHT - WARM - DARK */}
-            <div className="flex items-center border border-gray-400/40 rounded overflow-hidden">
+            <div className={`flex items-center border rounded overflow-hidden shadow-2xs ${currentTheme.toolbarGroup}`}>
               <button
                 type="button"
                 onClick={() => {
@@ -434,11 +543,9 @@ export default function ReaderPage() {
                   localStorage.setItem("ourarchive_theme", "light");
                 }}
                 className={`px-2 py-1 text-[11px] font-medium transition ${
-                  theme === "light"
-                    ? "bg-brand-trunk text-white"
-                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
+                  theme === "light" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
-                title="Light mode (Clean White)"
+                title="Light mode (Clean Paper)"
               >
                 Light
               </button>
@@ -448,10 +555,8 @@ export default function ReaderPage() {
                   setTheme("warm");
                   localStorage.setItem("ourarchive_theme", "warm");
                 }}
-                className={`px-2 py-1 text-[11px] font-medium border-l border-gray-400/40 transition ${
-                  theme === "warm"
-                    ? "bg-brand-trunk text-white"
-                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
+                className={`px-2 py-1 text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                  theme === "warm" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
                 title="Warm mode (Parchment Book Paper)"
               >
@@ -463,10 +568,8 @@ export default function ReaderPage() {
                   setTheme("dark");
                   localStorage.setItem("ourarchive_theme", "dark");
                 }}
-                className={`px-2 py-1 text-[11px] font-medium border-l border-gray-400/40 transition ${
-                  theme === "dark"
-                    ? "bg-brand-trunk text-white"
-                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
+                className={`px-2 py-1 text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                  theme === "dark" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
                 }`}
                 title="Dark mode (Obsidian Charcoal)"
               >
@@ -477,7 +580,7 @@ export default function ReaderPage() {
             {/* Report Takedown Button */}
             <button
               onClick={() => setShowTakedownModal(true)}
-              className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded text-xs transition"
+              className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
               title="Report copyright concern or author takedown"
             >
               Takedown
@@ -490,9 +593,9 @@ export default function ReaderPage() {
       {showResumeBanner && existingBookmark && (
         <aside
           aria-label="Resume reading notification"
-          className="max-w-2xl mx-auto my-3 p-3 bg-brand-trunk/10 dark:bg-brand-trunk/20 border border-brand-trunk/30 rounded-lg flex items-center justify-between gap-3 text-xs shadow-xs animate-in slide-in-from-top-2 duration-200"
+          className={`max-w-2xl mx-auto my-3 p-3 rounded-lg flex items-center justify-between gap-3 text-xs shadow-xs animate-in slide-in-from-top-2 duration-200 border ${currentTheme.collectionBanner}`}
         >
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${currentTheme.collectionBannerText}`}>
             <span className="text-base">🔖</span>
             <span>
               Welcome back! You were reading <strong>Page {existingBookmark.lastPage}</strong> ({existingBookmark.scrollPercent}% completed).
@@ -509,7 +612,7 @@ export default function ReaderPage() {
             <button
               type="button"
               onClick={() => setShowResumeBanner(false)}
-              className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs"
+              className="p-1 opacity-70 hover:opacity-100 text-xs transition-opacity"
               title="Dismiss"
             >
               ✕
@@ -547,35 +650,35 @@ export default function ReaderPage() {
         {data && (
           <article className="space-y-6">
             {/* Work Metadata Header */}
-            <header className={`p-6 rounded-lg border space-y-3 ${currentTheme.meta}`}>
+            <header className={`p-6 rounded-lg border space-y-3 transition-colors ${currentTheme.metaBox}`}>
               <div className="space-y-1">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight ${currentTheme.metaTitle}`}>
                   {data.title}
                 </h1>
-                <p className="text-sm">
-                  by <strong className="font-semibold underline">{data.authorName}</strong>
+                <p className={`text-sm ${currentTheme.textMuted}`}>
+                  by <strong className={`font-semibold underline ${currentTheme.text}`}>{data.authorName}</strong>
                 </p>
               </div>
 
-              <div className="text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5 opacity-90 pt-1">
+              <div className={`text-xs flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 ${currentTheme.textMuted}`}>
                 <span>
-                  <strong>Fandom:</strong> {data.fandom}
+                  <strong className={currentTheme.text}>Fandom:</strong> {data.fandom}
                 </span>
                 {data.pairing && (
                   <span>
-                    <strong>Pairing:</strong> {data.pairing}
+                    <strong className={currentTheme.text}>Pairing:</strong> {data.pairing}
                   </span>
                 )}
                 <span>
-                  <strong>Rating:</strong> {data.rating}
+                  <strong className={currentTheme.text}>Rating:</strong> {data.rating}
                 </span>
                 <span>
-                  <strong>Words:</strong> {data.wordCount.toLocaleString()}
+                  <strong className={currentTheme.text}>Words:</strong> {data.wordCount.toLocaleString()}
                 </span>
               </div>
 
               {data.summary && (
-                <div className="pt-2 border-t border-black/10 dark:border-white/10 text-xs italic leading-relaxed opacity-90">
+                <div className={`pt-2 border-t text-xs italic leading-relaxed ${currentTheme.metaBorder} ${currentTheme.textMuted}`}>
                   &ldquo;{data.summary}&rdquo;
                 </div>
               )}
@@ -585,7 +688,7 @@ export default function ReaderPage() {
                   {data.tags.map((t, idx) => (
                     <span
                       key={idx}
-                      className="px-2 py-0.5 rounded text-[10px] bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10"
+                      className={`px-2 py-0.5 rounded text-[10px] border ${currentTheme.metaTag}`}
                     >
                       {t}
                     </span>
@@ -593,7 +696,7 @@ export default function ReaderPage() {
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] opacity-80 gap-2 border-t border-black/10 dark:border-white/10">
+              <div className={`pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-2 border-t ${currentTheme.metaBorder} ${currentTheme.textMuted}`}>
                 <div>
                   🔒 <em>Ephemeral Read-Only Stream: No files are persisted on server disks.</em>
                 </div>
@@ -604,7 +707,7 @@ export default function ReaderPage() {
                       href={data.rawDriveUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-brand-trunk font-medium hover:underline"
+                      className={`font-medium hover:underline ${currentTheme.brandLink}`}
                     >
                       Open in Google Drive (Admin) &rarr;
                     </a>
@@ -616,12 +719,12 @@ export default function ReaderPage() {
             {/* Document Content or Collection Table of Contents */}
             {data.isFolder && !selectedChildWork ? (
               <section className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border transition-colors ${currentTheme.collectionHeader}`}>
                   <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <h2 className={`text-base font-bold flex items-center gap-2 ${currentTheme.collectionCardTitle}`}>
                       <span>📁</span> Collection Table of Contents
                     </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <p className={`text-xs mt-0.5 ${currentTheme.collectionCardMuted}`}>
                       {data.collectionWorks && data.collectionWorks.length > 0
                         ? `Contains ${data.collectionWorks.length} fanworks in this archive. Select any work to stream.`
                         : "No readable fanwork documents discovered in this shared folder."}
@@ -633,7 +736,7 @@ export default function ReaderPage() {
                       placeholder="Filter collection works..."
                       value={collectionFilter}
                       onChange={(e) => setCollectionFilter(e.target.value)}
-                      className="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-1 focus:ring-brand-bark"
+                      className={`px-3 py-1.5 text-xs rounded border transition-colors focus:outline-hidden ${currentTheme.collectionInput}`}
                     />
                   )}
                 </div>
@@ -650,29 +753,29 @@ export default function ReaderPage() {
                         <div
                           key={work.id || idx}
                           onClick={() => handleSelectChildWork(work)}
-                          className="group flex items-center justify-between p-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/20 hover:bg-brand-parchment dark:hover:bg-brand-bark/20 hover:border-brand-bark/30 transition cursor-pointer shadow-2xs"
+                          className={`group flex items-center justify-between p-3.5 rounded-lg border transition-all cursor-pointer ${currentTheme.collectionCard}`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                                 work.mimeType.includes("pdf")
-                                  ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900"
-                                  : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                                  ? currentTheme.badgePdf
+                                  : currentTheme.badgeDoc
                               }`}
                             >
                               {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
                             </span>
                             <div className="min-w-0">
-                              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-trunk transition truncate">
+                              <h3 className={`text-sm font-semibold transition truncate ${currentTheme.collectionCardTitle}`}>
                                 {work.title}
                               </h3>
-                              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                              <p className={`text-[11px] truncate ${currentTheme.collectionCardMuted}`}>
                                 {work.fileName} {work.sizeBytes > 0 && `• ${(work.sizeBytes / 1024).toFixed(0)} KB`}
                               </p>
                             </div>
                           </div>
 
-                          <div className="shrink-0 flex items-center gap-1 text-xs font-semibold text-brand-trunk group-hover:translate-x-0.5 transition-transform">
+                          <div className={`shrink-0 flex items-center gap-1 text-xs font-semibold group-hover:translate-x-0.5 transition-transform ${currentTheme.collectionCardAction}`}>
                             <span>Read</span>
                             <span>&rarr;</span>
                           </div>
@@ -680,11 +783,11 @@ export default function ReaderPage() {
                       ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center rounded-lg border border-dashed border-gray-300 dark:border-gray-700 space-y-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className={`p-8 text-center rounded-lg border border-dashed space-y-2 ${currentTheme.emptyBox}`}>
+                    <p className="text-sm">
                       This folder either contains sub-folders, unsupported file formats, or is private.
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs opacity-75">
                       Ensure the Google Drive permissions are set to &quot;Anyone with the link can view&quot;.
                     </p>
                   </div>
@@ -694,8 +797,8 @@ export default function ReaderPage() {
               <>
                 {/* Active Child Work Banner (when reading inside a collection) */}
                 {selectedChildWork && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-brand-trunk/10 border border-brand-trunk/20 text-xs">
-                    <div className="flex items-center gap-2 text-brand-bark dark:text-brand-light truncate">
+                  <div className={`flex items-center justify-between p-3 rounded-lg border text-xs transition-colors ${currentTheme.collectionBanner}`}>
+                    <div className={`flex items-center gap-2 truncate ${currentTheme.collectionBannerText}`}>
                       <span>📁</span>
                       <span>
                         Part of collection: <strong className="font-semibold underline">{data.title}</strong>
@@ -703,7 +806,7 @@ export default function ReaderPage() {
                     </div>
                     <button
                       onClick={handleBackToCollection}
-                      className="shrink-0 font-semibold text-brand-trunk hover:underline ml-2"
+                      className={`shrink-0 font-semibold underline ml-2 transition ${currentTheme.collectionBannerBtn}`}
                     >
                       &larr; Table of Contents
                     </button>
@@ -722,7 +825,7 @@ export default function ReaderPage() {
                     className={`pt-4 ${fontClasses[fontFamily]} ${currentTheme.text}`}
                   >
                     {data.isPdf && data.pdfPreviewUrl ? (
-                      <div className="w-full h-[80vh] border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
+                      <div className={`w-full h-[80vh] border rounded overflow-hidden shadow-xs ${currentTheme.metaBorder}`}>
                         <iframe
                           src={data.pdfPreviewUrl}
                           title={data.title}
@@ -746,7 +849,7 @@ export default function ReaderPage() {
             )}
 
             {/* Reading Complete Footer */}
-            <footer className="pt-12 border-t border-black/10 dark:border-white/10 text-center text-xs opacity-75 space-y-3">
+            <footer className={`pt-12 border-t text-center text-xs space-y-3 ${currentTheme.footerBorder} ${currentTheme.textMuted}`}>
               <p>End of fanwork mirror.</p>
               <div className="flex justify-center gap-3">
                 <Link
@@ -761,7 +864,7 @@ export default function ReaderPage() {
                     href={data.rawDriveUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded hover:bg-black/5 dark:hover:bg-white/5 transition"
+                    className={`px-4 py-2 border rounded transition ${currentTheme.footerBtnSecondary}`}
                   >
                     View Original Drive Link (Admin)
                   </a>
