@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
+import { fetchDriveFolderChildren } from "@/lib/services/drive-api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -87,28 +88,95 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const mimeType = metadata?.mime_type || "application/octet-stream";
     const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
 
-    // Handling Folder Submissions: folders cannot be streamed in the single-document reader
+    // Check if target is a Folder Collection
     const isFolder =
       mimeType.toLowerCase().includes("folder") ||
       mimeType === "application/vnd.google-apps.folder" ||
       (typeof link.drive_url === "string" && link.drive_url.includes("/folders/"));
 
-    if (isFolder) {
-      return NextResponse.json(
-        {
-          error:
-            "This item is a folder collection. The emergency reader is designed for individual fanfiction documents and PDF files.",
-        },
-        { status: 422 }
-      );
+    // Check if client requested a specific child document inside a collection
+    const childIdParam = request.nextUrl.searchParams.get("childId");
+    const childTitleParam = request.nextUrl.searchParams.get("childTitle");
+    const childMimeParam = request.nextUrl.searchParams.get("mimeType");
+
+    // Solution A: If a folder is requested without a specific childId, return the Collection Table of Contents
+    if (isFolder && !childIdParam) {
+      // 1. Check for child works in database matching this collection
+      const collectionWorks: Array<{
+        id: string;
+        title: string;
+        fileName: string;
+        mimeType: string;
+        sizeBytes: number;
+      }> = [];
+
+      try {
+        const { data: dbChildren } = await supabase
+          .from("link_metadata")
+          .select("link_id, title, file_name, mime_type, file_size_bytes")
+          .eq("canonical_ao3_url", link.drive_url)
+          .neq("link_id", workId);
+
+        if (dbChildren && dbChildren.length > 0) {
+          dbChildren.forEach((c) => {
+            collectionWorks.push({
+              id: c.link_id,
+              title: c.title,
+              fileName: c.file_name,
+              mimeType: c.mime_type,
+              sizeBytes: Number(c.file_size_bytes) || 0,
+            });
+          });
+        }
+      } catch (dbErr) {
+        console.warn("Could not query unpacked collection works from DB:", dbErr);
+      }
+
+      // 2. Query Drive API directly for live folder contents
+      if (apiKey && collectionWorks.length === 0) {
+        const folderResult = await fetchDriveFolderChildren(fileId);
+        if (folderResult.success && folderResult.children && folderResult.children.length > 0) {
+          folderResult.children.forEach((c) => {
+            collectionWorks.push({
+              id: c.id,
+              title: c.cleanTitle,
+              fileName: c.name,
+              mimeType: c.mimeType,
+              sizeBytes: c.sizeBytes,
+            });
+          });
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        isFolder: true,
+        workId: link.id,
+        title: metadata?.title || "Curated Fanwork Collection",
+        authorName: metadata?.author_name || "Community Backup",
+        fandom: metadata?.fandom || "General Fanworks",
+        pairing: metadata?.pairing || null,
+        rating: metadata?.rating || "General Audiences",
+        wordCount: metadata?.word_count ?? 0,
+        summary:
+          metadata?.summary ||
+          "Shared Google Drive folder collection containing multiple fanworks. Select any work below to read.",
+        tags: metadata?.tags || [],
+        collectionWorks,
+      });
     }
 
+    // Active streaming target (defaults to primary file, or child work if selected)
+    const activeFileId = childIdParam || fileId;
+    const activeMimeType = (childMimeParam || mimeType).toLowerCase();
+    const activeTitle = childTitleParam || metadata?.title || "Untitled Fanwork";
+
     // Handling PDF Documents: Stream via isolated view-only preview frame
-    if (mimeType.toLowerCase().includes("pdf")) {
+    if (activeMimeType.includes("pdf")) {
       return NextResponse.json({
         success: true,
         workId: link.id,
-        title: metadata?.title || "Untitled Fanwork",
+        title: activeTitle,
         authorName: metadata?.author_name || "Unknown Author",
         fandom: metadata?.fandom || "General",
         pairing: metadata?.pairing || null,
@@ -117,7 +185,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         summary: metadata?.summary || null,
         tags: metadata?.tags || [],
         isPdf: true,
-        pdfPreviewUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+        pdfPreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
         contentHtml: null,
       });
     }
@@ -129,7 +197,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (apiKey) {
       try {
         const exportUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
-          fileId
+          activeFileId
         )}/export?mimeType=text/html&key=${apiKey}`;
 
         const apiResponse = await withTimeout(
@@ -153,7 +221,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (!rawHtml) {
       try {
         const publicExportUrl = `https://docs.google.com/feeds/download/documents/export/Export?id=${encodeURIComponent(
-          fileId
+          activeFileId
         )}&exportFormat=html`;
 
         const feedResponse = await withTimeout(
@@ -183,13 +251,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 3. Clean raw HTML stream with DOMPurify: strip scripts, iframes, trackers
+    // 3. Clean raw HTML stream with zero-dependency native sanitizer
     const sanitizedHtml = sanitizeReaderHtml(rawHtml);
 
     return NextResponse.json({
       success: true,
       workId: link.id,
-      title: metadata?.title || "Untitled Fanwork",
+      title: activeTitle,
       authorName: metadata?.author_name || "Unknown Author",
       fandom: metadata?.fandom || "General",
       pairing: metadata?.pairing || null,

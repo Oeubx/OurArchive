@@ -13,6 +13,14 @@ import {
 } from "@/lib/bookmarkService";
 import type { UserRole } from "@/lib/types";
 
+export interface CollectionChildWork {
+  id: string;
+  title: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 interface ReaderData {
   workId: string;
   title: string;
@@ -24,6 +32,8 @@ interface ReaderData {
   summary: string | null;
   tags: string[];
   isPdf: boolean;
+  isFolder?: boolean;
+  collectionWorks?: CollectionChildWork[];
   pdfPreviewUrl?: string;
   contentHtml?: string | null;
   rawDriveUrl?: string;
@@ -44,6 +54,11 @@ export default function ReaderPage() {
 
   // User RBAC State
   const [role, setRole] = useState<UserRole | "guest">("guest");
+
+  // Collection State (Solution A: Folder Indexing & Table of Contents)
+  const [selectedChildWork, setSelectedChildWork] = useState<CollectionChildWork | null>(null);
+  const [collectionFilter, setCollectionFilter] = useState("");
+  const [streamingChild, setStreamingChild] = useState(false);
 
   // Bookmark State
   const [existingBookmark, setExistingBookmark] = useState<ReaderBookmark | null>(null);
@@ -139,6 +154,57 @@ export default function ReaderPage() {
     window.scrollTo({ top: targetY, behavior: "smooth" });
     setShowResumeBanner(false);
   }, [existingBookmark]);
+
+  // Solution A: Select and stream a specific child work from a collection
+  const handleSelectChildWork = useCallback(
+    (child: CollectionChildWork) => {
+      setSelectedChildWork(child);
+      setStreamingChild(true);
+      setError(null);
+
+      fetch(
+        `/api/reader/${workId}?childId=${encodeURIComponent(child.id)}&childTitle=${encodeURIComponent(
+          child.title
+        )}&mimeType=${encodeURIComponent(child.mimeType)}`
+      )
+        .then(async (res) => {
+          if (!res.ok) {
+            throw new Error("Could not load selected collection fanwork.");
+          }
+          const json = await res.json();
+          setData((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  title: child.title,
+                  isPdf: json.isPdf,
+                  pdfPreviewUrl: json.pdfPreviewUrl,
+                  contentHtml: json.contentHtml,
+                }
+              : json
+          );
+        })
+        .catch((err: unknown) => {
+          console.error("Error streaming collection child work:", err);
+          setError(err instanceof Error ? err.message : "Failed to stream collection work.");
+        })
+        .finally(() => {
+          setStreamingChild(false);
+        });
+    },
+    [workId]
+  );
+
+  // Return to Collection Table of Contents
+  const handleBackToCollection = useCallback(() => {
+    setSelectedChildWork(null);
+    setLoading(true);
+    fetch(`/api/reader/${workId}`)
+      .then((r) => r.json())
+      .then((json) => setData(json))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [workId]);
 
   // Save bookmark calculation helper
   const saveCurrentProgress = useCallback(
@@ -507,31 +573,137 @@ export default function ReaderPage() {
               </div>
             </header>
 
-            {/* Document Content Display */}
-            <section
-              style={{ fontSize: `${fontSizePx}px` }}
-              className={`pt-4 ${fontClasses[fontFamily]} ${currentTheme.text}`}
-            >
-              {data.isPdf && data.pdfPreviewUrl ? (
-                <div className="w-full h-[80vh] border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
-                  <iframe
-                    src={data.pdfPreviewUrl}
-                    title={data.title}
-                    className="w-full h-full"
-                    sandbox="allow-scripts allow-same-origin"
-                  />
+            {/* Document Content or Collection Table of Contents */}
+            {data.isFolder && !selectedChildWork ? (
+              <section className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <span>📁</span> Collection Table of Contents
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {data.collectionWorks && data.collectionWorks.length > 0
+                        ? `Contains ${data.collectionWorks.length} fanworks in this archive. Select any work to stream.`
+                        : "No readable fanwork documents discovered in this shared folder."}
+                    </p>
+                  </div>
+                  {data.collectionWorks && data.collectionWorks.length > 4 && (
+                    <input
+                      type="text"
+                      placeholder="Filter collection works..."
+                      value={collectionFilter}
+                      onChange={(e) => setCollectionFilter(e.target.value)}
+                      className="px-3 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-1 focus:ring-brand-bark"
+                    />
+                  )}
                 </div>
-              ) : data.contentHtml ? (
-                <div
-                  dangerouslySetInnerHTML={{ __html: data.contentHtml }}
-                  className="prose prose-neutral dark:prose-invert max-w-none space-y-4 reader-content"
-                />
-              ) : (
-                <div className="text-center py-12 opacity-60 text-sm">
-                  No text content available in stream.
-                </div>
-              )}
-            </section>
+
+                {data.collectionWorks && data.collectionWorks.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {data.collectionWorks
+                      .filter((w) => {
+                        if (!collectionFilter.trim()) return true;
+                        const q = collectionFilter.toLowerCase();
+                        return w.title.toLowerCase().includes(q) || w.fileName.toLowerCase().includes(q);
+                      })
+                      .map((work, idx) => (
+                        <div
+                          key={work.id || idx}
+                          onClick={() => handleSelectChildWork(work)}
+                          className="group flex items-center justify-between p-3.5 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/20 hover:bg-brand-parchment dark:hover:bg-brand-bark/20 hover:border-brand-bark/30 transition cursor-pointer shadow-2xs"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                work.mimeType.includes("pdf")
+                                  ? "bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900"
+                                  : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                              }`}
+                            >
+                              {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-brand-trunk transition truncate">
+                                {work.title}
+                              </h3>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                {work.fileName} {work.sizeBytes > 0 && `• ${(work.sizeBytes / 1024).toFixed(0)} KB`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-1 text-xs font-semibold text-brand-trunk group-hover:translate-x-0.5 transition-transform">
+                            <span>Read</span>
+                            <span>&rarr;</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center rounded-lg border border-dashed border-gray-300 dark:border-gray-700 space-y-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      This folder either contains sub-folders, unsupported file formats, or is private.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Ensure the Google Drive permissions are set to &quot;Anyone with the link can view&quot;.
+                    </p>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <>
+                {/* Active Child Work Banner (when reading inside a collection) */}
+                {selectedChildWork && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-brand-trunk/10 border border-brand-trunk/20 text-xs">
+                    <div className="flex items-center gap-2 text-brand-bark dark:text-brand-light truncate">
+                      <span>📁</span>
+                      <span>
+                        Part of collection: <strong className="font-semibold underline">{data.title}</strong>
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleBackToCollection}
+                      className="shrink-0 font-semibold text-brand-trunk hover:underline ml-2"
+                    >
+                      &larr; Table of Contents
+                    </button>
+                  </div>
+                )}
+
+                {/* Loading state while switching child work */}
+                {streamingChild ? (
+                  <div className="py-20 text-center space-y-3">
+                    <div className="inline-block w-6 h-6 border-2 border-brand-trunk border-t-transparent rounded-full animate-spin" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Loading fanwork stream...</p>
+                  </div>
+                ) : (
+                  <section
+                    style={{ fontSize: `${fontSizePx}px` }}
+                    className={`pt-4 ${fontClasses[fontFamily]} ${currentTheme.text}`}
+                  >
+                    {data.isPdf && data.pdfPreviewUrl ? (
+                      <div className="w-full h-[80vh] border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
+                        <iframe
+                          src={data.pdfPreviewUrl}
+                          title={data.title}
+                          className="w-full h-full"
+                          sandbox="allow-scripts allow-same-origin"
+                        />
+                      </div>
+                    ) : data.contentHtml ? (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: data.contentHtml }}
+                        className="prose prose-neutral dark:prose-invert max-w-none space-y-4 reader-content"
+                      />
+                    ) : (
+                      <div className="text-center py-12 opacity-60 text-sm">
+                        No text content available in stream.
+                      </div>
+                    )}
+                  </section>
+                )}
+              </>
+            )}
 
             {/* Reading Complete Footer */}
             <footer className="pt-12 border-t border-black/10 dark:border-white/10 text-center text-xs opacity-75 space-y-3">

@@ -11,8 +11,8 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateAndNormalizeDriveUrl } from "@/lib/services/drive-validator";
-import { fetchDriveFileMetadata } from "@/lib/services/drive-api";
-import type { GoogleDriveFileMetadata } from "@/lib/services/drive-api";
+import { fetchDriveFileMetadata, fetchDriveFolderChildren } from "@/lib/services/drive-api";
+import type { GoogleDriveFileMetadata, DriveChildWork } from "@/lib/services/drive-api";
 import { verifyTurnstileToken } from "@/lib/services/turnstile";
 import { performFullThreatScan } from "@/lib/security/threat-scanner";
 import { evaluateScanStateMachine } from "@/lib/security/state-machine";
@@ -110,17 +110,31 @@ export async function POST(request: NextRequest) {
 
     // 4. Inspect Google Drive API Metadata or generate safe fallback
     let metadata: GoogleDriveFileMetadata | undefined;
-    if (process.env.GOOGLE_DRIVE_API_KEY && !urlValidation.isFolder && !driveUrl.includes("onedrive")) {
-      const driveResult = await fetchDriveFileMetadata(urlValidation.fileId);
-      if (driveResult.success && driveResult.metadata) {
-        metadata = driveResult.metadata;
+    let folderChildren: DriveChildWork[] = [];
+    let detectedCollectionName = (title || "").trim();
+
+    if (process.env.GOOGLE_DRIVE_API_KEY && !driveUrl.includes("onedrive")) {
+      if (urlValidation.isFolder) {
+        // Solution A: Inspect and unpack Google Drive folder collections
+        const folderResult = await fetchDriveFolderChildren(urlValidation.fileId);
+        if (folderResult.success && folderResult.children && folderResult.children.length > 0) {
+          folderChildren = folderResult.children;
+          if (folderResult.folderName && !detectedCollectionName) {
+            detectedCollectionName = folderResult.folderName;
+          }
+        }
+      } else {
+        const driveResult = await fetchDriveFileMetadata(urlValidation.fileId);
+        if (driveResult.success && driveResult.metadata) {
+          metadata = driveResult.metadata;
+        }
       }
     }
 
     if (!metadata) {
       metadata = {
         id: urlValidation.fileId,
-        name: (title || (urlValidation.isFolder ? "Shared Cloud Folder" : "Shared Fanwork Document")).trim(),
+        name: (detectedCollectionName || (urlValidation.isFolder ? "Curated Fanwork Collection" : "Shared Fanwork Document")).trim(),
         mimeType: urlValidation.isFolder ? "application/vnd.google-apps.folder" : "application/pdf",
         sizeBytes: 0,
         canEdit: false,
@@ -224,7 +238,73 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id);
     }
 
-    const message = allowDirectApproval
+    // 10. Solution A: Unpack and Index Individual Child Fanworks from Collection Folder
+    let unpackedCount = 0;
+    if (folderChildren.length > 0) {
+      const collectionTag = `collection:${detectedCollectionName || "Curated Archive"}`;
+      for (const child of folderChildren) {
+        try {
+          const childDriveUrl = `https://drive.google.com/file/d/${child.id}/view`;
+          const { data: childLink } = await adminSupabase
+            .from("drive_links")
+            .insert({
+              drive_url: childDriveUrl,
+              google_file_id: child.id,
+              upload_mode: effectiveUploadMode,
+              uploader_user_id: user.id,
+              verification_status: effectiveStatus,
+              is_hidden: effectiveHidden,
+              is_removed: false,
+            })
+            .select()
+            .single();
+
+          if (childLink) {
+            await adminSupabase.from("link_metadata").insert({
+              link_id: childLink.id,
+              title: child.cleanTitle,
+              author_name: (authorName || effectiveDisplayName).trim(),
+              fandom: (fandom || "General Fanworks").trim(),
+              pairing: pairing ? pairing.trim() : null,
+              rating: rating ? rating.trim() : "General Audiences",
+              word_count: 0,
+              summary: summary
+                ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
+                : `Part of collection: ${detectedCollectionName || "Curated Archive"}`,
+              tags: Array.from(new Set([...sanitizedTags, collectionTag])),
+              canonical_ao3_url: canonicalAo3Url ? canonicalAo3Url.trim() : urlValidation.canonicalUrl,
+              file_name: child.name,
+              mime_type: child.mimeType,
+              file_size_bytes: child.sizeBytes,
+              drive_owner_name: effectiveDisplayName,
+              drive_owner_email: metadata.ownerEmail,
+              is_owner_masked: isOwnerMasked !== false,
+            });
+
+            await adminSupabase.from("link_verifications").insert({
+              link_id: childLink.id,
+              automated_risk_score: scanResult.riskScore,
+              automated_flags: scanResult.flags,
+              scanner_passed: scanResult.riskScore === 0,
+              admin_verified_by: allowDirectApproval ? user.id : null,
+              admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
+              admin_notes: allowDirectApproval
+                ? "Auto-verified collection child work."
+                : evaluation.quarantineReason || null,
+              verification_badge: effectiveBadge,
+            });
+
+            unpackedCount += 1;
+          }
+        } catch (childErr) {
+          console.warn(`Could not unpack child fanwork ${child.name}:`, childErr);
+        }
+      }
+    }
+
+    const message = unpackedCount > 0
+      ? `Collection submitted successfully! Unpacked and indexed ${unpackedCount} individual fanworks into library search.`
+      : allowDirectApproval
       ? "Fanwork published directly to the public archive."
       : evaluation.status === "flagged"
       ? "Work submitted and quarantined due to safety flags. An administrator will review it before release."
@@ -237,6 +317,8 @@ export async function POST(request: NextRequest) {
         verificationStatus: effectiveStatus,
         verificationBadge: effectiveBadge,
         riskScore: scanResult.riskScore,
+        isCollection: folderChildren.length > 0,
+        unpackedCount,
         message,
       },
       { status: 201 }

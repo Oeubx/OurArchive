@@ -57,7 +57,11 @@ export function DisplayCard({
           SYSTEM HEADER: OurArchive Emergency Mirror (Temporary Read-Only Library)
         </span>
         <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-          {work.mime_type.includes("pdf") ? "PDF Mirror" : "Doc Mirror"}
+          {work.mime_type.includes("folder")
+            ? "📁 Collection"
+            : work.mime_type.includes("pdf")
+            ? "PDF Mirror"
+            : "Doc Mirror"}
         </span>
       </div>
 
@@ -110,17 +114,25 @@ export function DisplayCard({
           </div>
         )}
 
-        {/* Tags */}
+        {/* Tags & Collection Indicators */}
         {work.tags && work.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {work.tags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="px-2 py-0.5 bg-subtle-light dark:bg-subtle-dark hover:bg-gray-200 dark:hover:bg-gray-700 border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 rounded text-[11px] transition"
-              >
-                {tag}
-              </span>
-            ))}
+            {work.tags.map((tag, idx) => {
+              const isCollectionTag = tag.startsWith("collection:");
+              const tagLabel = isCollectionTag ? `📁 ${tag.replace("collection:", "")}` : tag;
+              return (
+                <span
+                  key={idx}
+                  className={`px-2 py-0.5 rounded text-[11px] transition ${
+                    isCollectionTag
+                      ? "bg-brand-parchment dark:bg-brand-bark/40 text-brand-bark dark:text-brand-light border border-brand-trunk/30 font-semibold"
+                      : "bg-subtle-light dark:bg-subtle-dark hover:bg-gray-200 dark:hover:bg-gray-700 border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  {tagLabel}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
