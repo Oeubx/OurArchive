@@ -10,6 +10,8 @@ import { MaskedDriveRevealModal } from "@/components/modals/MaskedDriveRevealMod
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
+import { createClient } from "@/lib/supabase/client";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import type { PublicSearchFeedRecord } from "@/types/database";
 
@@ -18,9 +20,11 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageSize, setPageSize] = useState<number>(5);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [revealWorkId, setRevealWorkId] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showGuestGateModal, setShowGuestGateModal] = useState(false);
   const [showAssistedModal, setShowAssistedModal] = useState(false);
   const [takedownWork, setTakedownWork] = useState<{ id: string; title: string } | null>(null);
 
@@ -80,6 +84,22 @@ export default function SearchPage() {
     fetchWorks(currentFilters, 1);
   }, [fetchWorks, currentFilters]);
 
+  // Track authentication state for link contribution
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(Boolean(user));
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session?.user));
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // Real-time synchronization: Silently re-query library when works are approved, modified, or removed
   useRealtimeDriveLinks(() => {
     fetchWorks(currentFilters, pagination.page, pageSize);
@@ -120,7 +140,13 @@ export default function SearchPage() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => {
+                if (isAuthenticated) {
+                  setShowUploadModal(true);
+                } else {
+                  setShowGuestGateModal(true);
+                }
+              }}
               className="px-3.5 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg shadow-xs transition"
             >
               + Contribute Link
@@ -278,6 +304,11 @@ export default function SearchPage() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onSuccess={() => fetchWorks(currentFilters, 1, pageSize)}
+      />
+
+      <ContributorAuthGateModal
+        isOpen={showGuestGateModal}
+        onClose={() => setShowGuestGateModal(false)}
       />
 
       <AssistedIntakeModal

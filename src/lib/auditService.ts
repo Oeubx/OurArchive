@@ -62,19 +62,13 @@ export function getAllAuditRecords(): LinkAuditRecord[] {
   if (typeof window === "undefined") return DEFAULT_AUDIT_LOGS;
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_AUDIT);
-    if (!raw) {
-      return [];
+    if (localStorage.getItem(STORAGE_KEY_AUDIT)) {
+      localStorage.removeItem(STORAGE_KEY_AUDIT);
     }
-    const parsed: LinkAuditRecord[] = JSON.parse(raw);
-    const cleaned = parsed.filter((r) => !r.id.startsWith("audit-00") && !r.linkId.startsWith("comm-00"));
-    if (cleaned.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(cleaned));
-    }
-    return cleaned;
   } catch {
-    return [];
+    // Ignore
   }
+  return [];
 }
 
 /**
@@ -99,17 +93,7 @@ export function recordAuditEvent(entry: Omit<LinkAuditRecord, "id" | "timestamp"
     timestamp: new Date().toISOString(),
   };
 
-  const updated = [fullRecord, ...current];
-
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(updated));
-      notifyAuditListeners();
-    } catch {
-      // Ignore
-    }
-  }
-
+  notifyAuditListeners();
   return fullRecord;
 }
 

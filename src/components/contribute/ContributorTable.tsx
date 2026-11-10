@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { DriveLink } from "@/lib/types";
 import { formatTimeAgo } from "@/lib/utils";
+import { maskWorkId } from "@/lib/utils/idMasker";
 
 interface ContributorTableProps {
   contributions: DriveLink[];
@@ -151,7 +152,7 @@ export function ContributorTable({
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       {link.status === "approved" ? (
                         <Link
-                          href={`/reader/${link.id}`}
+                          href={`/reader/${maskWorkId(link.id)}`}
                           className="px-2.5 py-1 bg-brand-trunk hover:bg-brand-bark text-white text-[11px] font-semibold rounded shadow-2xs transition inline-flex items-center gap-1"
                         >
                           <span>👁️</span> Read

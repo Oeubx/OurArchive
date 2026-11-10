@@ -4,11 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { DriveLink, UserRole } from "@/lib/types";
 import {
-  getAllCommunityLinks,
+  fetchAdminCommunityLinks,
   getArchiveMetrics,
-  approveLink,
-  rejectLink,
-  hideLink,
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { LinkInspectionModal } from "@/components/manage/LinkInspectionModal";
@@ -30,9 +27,32 @@ export default function VerifierManagePage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
 
-  function refreshState() {
-    setLinks(getAllCommunityLinks());
-    setMetrics(getArchiveMetrics());
+  async function executeAction(
+    linkId: string,
+    actionType: "VERIFY" | "APPROVE" | "REJECT" | "HIDE" | "UNHIDE" | "REMOVE",
+    reason = "Verifier triage action"
+  ) {
+    const res = await fetch("/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        linkId,
+        actionType,
+        reason,
+        hardDelete: actionType === "REMOVE",
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to execute action ${actionType}`);
+    }
+    await refreshState();
+  }
+
+  async function refreshState() {
+    const liveLinks = await fetchAdminCommunityLinks();
+    setLinks(liveLinks);
+    setMetrics(getArchiveMetrics(liveLinks));
   }
 
   useEffect(() => {
@@ -241,11 +261,6 @@ export default function VerifierManagePage() {
             </div>
           </div>
 
-          {/* Admin Takedown Container */}
-          {role === "admin" && (
-            <AdminTakedownContainer links={links} onRefresh={refreshState} />
-          )}
-
           {/* Main Community Submissions Triage Table */}
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
@@ -356,10 +371,7 @@ export default function VerifierManagePage() {
                           {link.status !== "approved" && (
                             <button
                               type="button"
-                              onClick={() => {
-                                approveLink(link.id);
-                                refreshState();
-                              }}
+                              onClick={() => executeAction(link.id, "APPROVE")}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
                               title="Approve and mark verified"
                             >
@@ -369,10 +381,7 @@ export default function VerifierManagePage() {
                           {link.status !== "hidden" && (
                             <button
                               type="button"
-                              onClick={() => {
-                                hideLink(link.id);
-                                refreshState();
-                              }}
+                              onClick={() => executeAction(link.id, "HIDE")}
                               className="px-2.5 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
                               title="Hide work from public directory"
                             >
@@ -382,10 +391,7 @@ export default function VerifierManagePage() {
                           {link.status !== "rejected" && (
                             <button
                               type="button"
-                              onClick={() => {
-                                rejectLink(link.id);
-                                refreshState();
-                              }}
+                              onClick={() => executeAction(link.id, "REJECT")}
                               className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
                               title="Reject submission"
                             >
@@ -468,10 +474,7 @@ export default function VerifierManagePage() {
                                 {link.status !== "approved" && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      approveLink(link.id);
-                                      refreshState();
-                                    }}
+                                    onClick={() => executeAction(link.id, "APPROVE")}
                                     className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
                                     title="Approve and mark verified"
                                   >
@@ -482,10 +485,7 @@ export default function VerifierManagePage() {
                                 {link.status !== "hidden" && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      hideLink(link.id);
-                                      refreshState();
-                                    }}
+                                    onClick={() => executeAction(link.id, "HIDE")}
                                     className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
                                     title="Hide work from public directory"
                                   >
@@ -496,10 +496,7 @@ export default function VerifierManagePage() {
                                 {link.status !== "rejected" && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      rejectLink(link.id);
-                                      refreshState();
-                                    }}
+                                    onClick={() => executeAction(link.id, "REJECT")}
                                     className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
                                     title="Reject submission"
                                   >
@@ -547,6 +544,11 @@ export default function VerifierManagePage() {
               )}
             </div>
           </div>
+
+          {/* Admin Takedown Container (Relocated below Triage Table) */}
+          {role === "admin" && (
+            <AdminTakedownContainer links={links} onRefresh={refreshState} />
+          )}
         </>
       )}
 
@@ -556,18 +558,15 @@ export default function VerifierManagePage() {
         isOpen={Boolean(inspectingLink)}
         onClose={() => setInspectingLink(null)}
         onApprove={(id) => {
-          approveLink(id);
-          refreshState();
+          executeAction(id, "APPROVE");
           setInspectingLink(null);
         }}
         onReject={(id) => {
-          rejectLink(id);
-          refreshState();
+          executeAction(id, "REJECT");
           setInspectingLink(null);
         }}
         onHide={(id) => {
-          hideLink(id);
-          refreshState();
+          executeAction(id, "HIDE");
           setInspectingLink(null);
         }}
       />

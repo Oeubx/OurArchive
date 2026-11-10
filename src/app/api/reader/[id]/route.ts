@@ -10,6 +10,7 @@ import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
+import { unmaskWorkId } from "@/lib/utils/idMasker";
 
 interface RouteParams {
   params: {
@@ -21,10 +22,12 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const workId = params.id;
-    if (!workId) {
+    const rawId = params.id;
+    if (!rawId) {
       return NextResponse.json({ error: "Work ID is required." }, { status: 400 });
     }
+
+    const workId = unmaskWorkId(rawId);
 
     if (!UUID_REGEX.test(workId)) {
       return NextResponse.json({ error: "Invalid Work ID format." }, { status: 400 });

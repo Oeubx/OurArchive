@@ -78,12 +78,19 @@ export function AuthModal({
       return;
     }
 
+    if (mode === "signin") {
+      // Direct sign in: bypass disclaimer checkbox and interstitial screen, sign in directly
+      handleProceedWithAuth();
+      return;
+    }
+
+    // Sign up mode: enforce mandatory disclaimer acceptance
     if (!disclaimerAccepted) {
       setErrorMsg("You must check the box confirming you have read the community disclaimers.");
       return;
     }
 
-    // Form inputs and disclaimer checkbox are valid -> show interstitial confirmation view
+    // Show interstitial confirmation view for sign up
     setShowConfirmationScreen(true);
   }
 
@@ -324,28 +331,30 @@ export function AuthModal({
                 />
               </div>
 
-              {/* Disclaimer Checkbox & Link */}
-              <div className="pt-1">
-                <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={disclaimerAccepted}
-                    onChange={(e) => setDisclaimerAccepted(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-zinc-700 text-brand-trunk focus:ring-brand-trunk cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
-                    I have read and agree to the{" "}
-                    <Link
-                      href="/disclaimers"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-brand-trunk dark:text-brand-light font-semibold underline hover:opacity-80"
-                    >
-                      Community Disclaimers & Charter
-                    </Link>
-                  </span>
-                </label>
-              </div>
+              {/* Disclaimer Checkbox & Link (Exclusively mandatory for Sign Up registration) */}
+              {mode === "signup" && (
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={disclaimerAccepted}
+                      onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-zinc-700 text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
+                      I have read and agree to the{" "}
+                      <Link
+                        href="/disclaimers"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-trunk dark:text-brand-light font-semibold underline hover:opacity-80"
+                      >
+                        Community Disclaimers & Charter
+                      </Link>
+                    </span>
+                  </label>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button
