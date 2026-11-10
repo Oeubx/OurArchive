@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { getCurrentProfile, updateDisplayName } from "@/lib/services/profile";
 import type { UserProfileRecord } from "@/types/database";
 import Link from "next/link";
+import { maskWorkId } from "@/lib/utils/idMasker";
 import {
   getSavedBookmarks,
   removeBookmark,
@@ -205,7 +206,7 @@ export default function ProfilePage() {
                 <div className="space-y-1 max-w-md">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link
-                      href={`/reader/${b.workId}`}
+                      href={`/reader/${maskWorkId(b.workId)}`}
                       className="font-bold text-brand-trunk dark:text-brand-light hover:underline text-sm"
                     >
                       {b.workTitle}
@@ -231,7 +232,7 @@ export default function ProfilePage() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
-                    href={`/reader/${b.workId}`}
+                    href={`/reader/${maskWorkId(b.workId)}`}
                     className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded text-xs transition shadow-2xs"
                   >
                     Resume &rarr;

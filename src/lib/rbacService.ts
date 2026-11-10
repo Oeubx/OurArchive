@@ -2,6 +2,7 @@ import { DriveLink, LinkStatus, UserRole, VerifierApplication } from "./types";
 import { maskDriveUrl } from "./utils";
 import { segmentDriveUrl } from "./urlSegmenter";
 import { recordAuditEvent, recordExpungeTombstone } from "./auditService";
+import { createClient } from "./supabase/client";
 
 const STORAGE_KEY_COMMUNITY_LINKS = "ourarchive_community_links";
 const STORAGE_KEY_APPLICATIONS = "ourarchive_verifier_applications";
@@ -130,39 +131,133 @@ export function setSimulatedRole(role: UserRole) {
 }
 
 /**
- * Retrieve all community submissions
+ * Retrieve all community submissions directly from Supabase [OA-M3-F2]
+ * Bypasses mock local storage entirely and purges legacy localStorage seeds.
  */
-export function getAllCommunityLinks(): DriveLink[] {
-  if (typeof window === "undefined") return DEFAULT_COMMUNITY_LINKS;
+export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem(STORAGE_KEY_COMMUNITY_LINKS);
+      localStorage.removeItem(STORAGE_KEY_APPLICATIONS);
+    } catch {
+      // Ignore
+    }
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_COMMUNITY_LINKS);
-    if (!raw) {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("drive_links")
+      .select(`
+        id,
+        drive_url,
+        google_file_id,
+        upload_mode,
+        uploader_user_id,
+        verification_status,
+        is_hidden,
+        is_removed,
+        created_at,
+        link_metadata (
+          title,
+          author_name,
+          fandom,
+          pairing,
+          rating,
+          word_count,
+          summary,
+          tags,
+          mime_type,
+          drive_owner_email
+        ),
+        link_verifications (
+          verification_badge,
+          automated_risk_score,
+          admin_verified_at,
+          admin_verified_by
+        )
+      `)
+      .eq("is_removed", false)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      console.warn("Could not query community submissions from Supabase:", error);
       return [];
     }
-    const parsed: DriveLink[] = JSON.parse(raw);
-    // Sanitize any legacy mock seeds starting with comm-
-    const cleaned = parsed.filter((l) => !l.id.startsWith("comm-"));
-    if (cleaned.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY_COMMUNITY_LINKS, JSON.stringify(cleaned));
-    }
-    return cleaned;
-  } catch {
+
+    return data.map((item) => {
+      const meta = Array.isArray(item.link_metadata)
+        ? item.link_metadata[0]
+        : item.link_metadata;
+      const verif = Array.isArray(item.link_verifications)
+        ? item.link_verifications[0]
+        : item.link_verifications;
+
+      let status: LinkStatus = "under_verification";
+      if (item.is_hidden) {
+        status = "hidden";
+      } else if (item.verification_status === "verified") {
+        status = "approved";
+      } else if (item.verification_status === "rejected") {
+        status = "rejected";
+      } else if (item.verification_status === "flagged") {
+        status = "flagged";
+      }
+
+      const ratingVal = (meta?.rating || "General Audiences") as DriveLink["rating"];
+
+      return {
+        id: item.id,
+        title: meta?.title || "Untitled Fanwork",
+        authorName: meta?.author_name || "Anonymous Contributor",
+        fandom: meta?.fandom || "General Fanworks",
+        pairing: meta?.pairing || undefined,
+        rating: ratingVal,
+        wordCount: meta?.word_count ?? 0,
+        summary: meta?.summary || "",
+        tags: meta?.tags || [],
+        rawDriveUrl: item.drive_url,
+        maskedDriveUrl: maskDriveUrl(item.drive_url),
+        mimeType: meta?.mime_type || "application/pdf",
+        driveOwnerEmail: meta?.drive_owner_email || undefined,
+        isOwnerMasked: true,
+        uploadedBy: item.uploader_user_id || "admin",
+        uploadedByRole: item.upload_mode === "assisted_admin" ? "admin" : "contributor",
+        uploadedAt: item.created_at,
+        status,
+        verificationBadge: verif?.verification_badge || (item.verification_status === "verified" ? "VERIFIED BY ADMIN" : undefined),
+        adminVerifiedAt: verif?.admin_verified_at || undefined,
+        verifiedBy: verif?.admin_verified_by || undefined,
+        automatedRiskScore: verif?.automated_risk_score ?? 0,
+        isPriorVerified: item.verification_status === "verified",
+      };
+    });
+  } catch (err) {
+    console.error("fetchAdminCommunityLinks error:", err);
     return [];
   }
 }
 
 /**
+ * Retrieve all community submissions (purges mock seeds)
+ */
+export function getAllCommunityLinks(): DriveLink[] {
+  if (typeof window === "undefined") return DEFAULT_COMMUNITY_LINKS;
+  try {
+    if (localStorage.getItem(STORAGE_KEY_COMMUNITY_LINKS)) {
+      localStorage.removeItem(STORAGE_KEY_COMMUNITY_LINKS);
+    }
+  } catch {
+    // Ignore
+  }
+  return [];
+}
+
+/**
  * Persist community submissions
  */
-function saveCommunityLinks(links: DriveLink[]) {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_COMMUNITY_LINKS, JSON.stringify(links));
-      notifyListeners();
-    } catch {
-      // Ignore
-    }
-  }
+function saveCommunityLinks(_links: DriveLink[]) {
+  notifyListeners();
 }
 
 /**
@@ -443,20 +538,13 @@ export function adminDirectUpload(data: {
 export function getAllVerifierApplications(): VerifierApplication[] {
   if (typeof window === "undefined") return DEFAULT_VERIFIER_APPLICATIONS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
-    if (!raw) {
-      return [];
+    if (localStorage.getItem(STORAGE_KEY_APPLICATIONS)) {
+      localStorage.removeItem(STORAGE_KEY_APPLICATIONS);
     }
-    const apps: VerifierApplication[] = JSON.parse(raw);
-    // Sanitize any legacy mock seeds starting with vapp-seed-
-    const cleaned = apps.filter((a) => !a.id.startsWith("vapp-seed-"));
-    if (cleaned.length !== apps.length) {
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(cleaned));
-    }
-    return cleaned;
   } catch {
-    return [];
+    // Ignore
   }
+  return [];
 }
 
 /**
@@ -481,14 +569,7 @@ export function approveVerifierApplication(applicationId: string, adminName: str
     reviewedBy: adminName,
   };
 
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(apps));
-      notifyListeners();
-    } catch {
-      // Ignore
-    }
-  }
+  notifyListeners();
   return true;
 }
 
@@ -507,22 +588,15 @@ export function declineVerifierApplication(applicationId: string, adminName: str
     reviewedBy: adminName,
   };
 
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(apps));
-      notifyListeners();
-    } catch {
-      // Ignore
-    }
-  }
+  notifyListeners();
   return true;
 }
 
 /**
  * Compute aggregate metrics for Verifier and Admin dashboards
  */
-export function getArchiveMetrics() {
-  const links = getAllCommunityLinks();
+export function getArchiveMetrics(sourceLinks?: DriveLink[]) {
+  const links = sourceLinks || getAllCommunityLinks();
   const apps = getAllVerifierApplications();
 
   const approvedCount = links.filter((l) => l.status === "approved").length;

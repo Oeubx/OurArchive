@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       canonicalAo3Url,
       isOwnerMasked,
       turnstileToken,
+      isPriorVerified,
+      uploadMode,
     } = body;
 
     // 1. Cloudflare Turnstile Bot Defense (Gracefully non-blocking if unconfigured)
@@ -131,10 +133,14 @@ export async function POST(request: NextRequest) {
     const scanResult = await performFullThreatScan(metadata, urlValidation.canonicalUrl);
     const evaluation = evaluateScanStateMachine(scanResult);
 
-    // If submitted by an admin, auto-verify and publish directly to search feed
-    const effectiveStatus: "verified" | typeof evaluation.status = isUserAdmin ? "verified" : evaluation.status;
-    const effectiveHidden = isUserAdmin ? false : evaluation.isHidden;
-    const effectiveBadge = isUserAdmin ? "MANUAL_VERIFIED" : evaluation.badge;
+    // Direct Approved Override: ONLY allowed if submitted by an authorized Admin AND isPriorVerified is explicitly true
+    const allowDirectApproval = isUserAdmin && Boolean(isPriorVerified);
+    const effectiveStatus: "verified" | typeof evaluation.status = allowDirectApproval ? "verified" : evaluation.status;
+    const effectiveHidden = allowDirectApproval ? false : evaluation.isHidden;
+    const effectiveBadge = allowDirectApproval ? "MANUAL_VERIFIED" : evaluation.badge;
+
+    // Determine upload_mode: "assisted_admin" if uploaded by admin via direct upload, otherwise "authenticated"
+    const effectiveUploadMode = isUserAdmin && uploadMode === "assisted_admin" ? "assisted_admin" : "authenticated";
 
     // 6. Insert Drive Link Record
     const { data: newLink, error: linkError } = await adminSupabase
@@ -142,7 +148,7 @@ export async function POST(request: NextRequest) {
       .insert({
         drive_url: urlValidation.canonicalUrl,
         google_file_id: urlValidation.fileId,
-        upload_mode: isUserAdmin ? "assisted_admin" : "authenticated",
+        upload_mode: effectiveUploadMode,
         uploader_user_id: user.id,
         verification_status: effectiveStatus,
         is_hidden: effectiveHidden,
@@ -202,9 +208,11 @@ export async function POST(request: NextRequest) {
       automated_risk_score: scanResult.riskScore,
       automated_flags: scanResult.flags,
       scanner_passed: scanResult.riskScore === 0,
-      admin_verified_by: isUserAdmin ? user.id : null,
-      admin_verified_at: isUserAdmin ? new Date().toISOString() : null,
-      admin_notes: isUserAdmin ? "Direct submission by administrator (auto-verified)." : evaluation.quarantineReason || null,
+      admin_verified_by: allowDirectApproval ? user.id : null,
+      admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
+      admin_notes: allowDirectApproval
+        ? "Direct administrator upload with prior verification bypass (auto-verified override)."
+        : evaluation.quarantineReason || null,
       verification_badge: effectiveBadge,
     });
 
@@ -216,7 +224,7 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id);
     }
 
-    const message = isUserAdmin
+    const message = allowDirectApproval
       ? "Fanwork published directly to the public archive."
       : evaluation.status === "flagged"
       ? "Work submitted and quarantined due to safety flags. An administrator will review it before release."

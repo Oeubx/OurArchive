@@ -5,16 +5,10 @@ import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { DriveLink, UserRole } from "@/lib/types";
 import {
-  getAllCommunityLinks,
+  fetchAdminCommunityLinks,
   getArchiveMetrics,
   getCurrentUserRole,
   setSimulatedRole,
-  approveLink,
-  rejectLink,
-  hideLink,
-  unhideLink,
-  verifyLink,
-  removeLink,
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { getAllAuditRecords, exportAuditToCsv } from "@/lib/auditService";
@@ -72,10 +66,33 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     }
   }
 
-  function refresh() {
+  async function executeAction(
+    linkId: string,
+    actionType: "VERIFY" | "APPROVE" | "REJECT" | "HIDE" | "UNHIDE" | "REMOVE",
+    reason = "Administrative triage action"
+  ) {
+    const res = await fetch("/api/admin/actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        linkId,
+        actionType,
+        reason,
+        hardDelete: actionType === "REMOVE",
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to execute action ${actionType}`);
+    }
+    await refresh();
+  }
+
+  async function refresh() {
     setRole(getCurrentUserRole());
-    setLinks(getAllCommunityLinks());
-    setMetrics(getArchiveMetrics());
+    const liveLinks = await fetchAdminCommunityLinks();
+    setLinks(liveLinks);
+    setMetrics(getArchiveMetrics(liveLinks));
   }
 
   // Real-time synchronization: Automatically refresh queue and metrics on live database changes
@@ -129,9 +146,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   const totalPages = Math.max(1, Math.ceil(filteredLinks.length / pageSize));
   const displayedLinks = filteredLinks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  function handleConfirmRemove() {
+  async function handleConfirmRemove() {
     if (!itemToRemove) return;
-    removeLink(itemToRemove.id);
+    await handleTriageAction(`${itemToRemove.id}-remove`, () =>
+      executeAction(itemToRemove.id, "REMOVE", `Expunged by ${adminDisplayName}`)
+    );
     setItemToRemove(null);
   }
 
@@ -233,9 +252,6 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           </span>
         </div>
       </div>
-
-      {/* Admin Takedown & Multi-Fic Cloud Drive Suppression Desk */}
-      <AdminTakedownContainer links={links} onRefresh={refresh} />
 
       {/* Administrative 5-Action Triage Suite */}
       <div className="space-y-3">
@@ -376,7 +392,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         <button
                           type="button"
                           disabled={Boolean(processingActionId)}
-                          onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
+                          onClick={() => handleTriageAction(`${item.id}-verify`, () => executeAction(item.id, "VERIFY", `Verified by ${adminDisplayName}`))}
                           className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
                           {processingActionId === `${item.id}-verify` && <ActionSpinner />}
@@ -385,7 +401,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         <button
                           type="button"
                           disabled={Boolean(processingActionId)}
-                          onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
+                          onClick={() => handleTriageAction(`${item.id}-approve`, () => executeAction(item.id, "APPROVE", `Approved by ${adminDisplayName}`))}
                           className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
                           {processingActionId === `${item.id}-approve` && <ActionSpinner />}
@@ -394,7 +410,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         <button
                           type="button"
                           disabled={Boolean(processingActionId)}
-                          onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
+                          onClick={() => handleTriageAction(`${item.id}-reject`, () => executeAction(item.id, "REJECT", `Rejected by ${adminDisplayName}`))}
                           className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
                           {processingActionId === `${item.id}-reject` && <ActionSpinner />}
@@ -404,7 +420,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                           <button
                             type="button"
                             disabled={Boolean(processingActionId)}
-                            onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
+                            onClick={() => handleTriageAction(`${item.id}-unhide`, () => executeAction(item.id, "UNHIDE", `Unhidden by ${adminDisplayName}`))}
                             className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                           >
                             {processingActionId === `${item.id}-unhide` && <ActionSpinner />}
@@ -414,7 +430,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                           <button
                             type="button"
                             disabled={Boolean(processingActionId)}
-                            onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
+                            onClick={() => handleTriageAction(`${item.id}-hide`, () => executeAction(item.id, "HIDE", `Hidden by ${adminDisplayName}`))}
                             className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                           >
                             {processingActionId === `${item.id}-hide` && <ActionSpinner />}
@@ -553,7 +569,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               <button
                                 type="button"
                                 disabled={Boolean(processingActionId)}
-                                onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
+                                onClick={() => handleTriageAction(`${item.id}-verify`, () => executeAction(item.id, "VERIFY", `Verified by ${adminDisplayName}`))}
                                 title="Verify and certify link"
                                 className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
@@ -565,7 +581,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               <button
                                 type="button"
                                 disabled={Boolean(processingActionId)}
-                                onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
+                                onClick={() => handleTriageAction(`${item.id}-approve`, () => executeAction(item.id, "APPROVE", `Approved by ${adminDisplayName}`))}
                                 title="Approve and publish"
                                 className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
@@ -577,7 +593,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               <button
                                 type="button"
                                 disabled={Boolean(processingActionId)}
-                                onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
+                                onClick={() => handleTriageAction(`${item.id}-reject`, () => executeAction(item.id, "REJECT", `Rejected by ${adminDisplayName}`))}
                                 title="Reject submission"
                                 className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
@@ -590,7 +606,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                                 <button
                                   type="button"
                                   disabled={Boolean(processingActionId)}
-                                  onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
+                                  onClick={() => handleTriageAction(`${item.id}-unhide`, () => executeAction(item.id, "UNHIDE", `Unhidden by ${adminDisplayName}`))}
                                   title="Restore visibility"
                                   className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                                 >
@@ -601,7 +617,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                                 <button
                                   type="button"
                                   disabled={Boolean(processingActionId)}
-                                  onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
+                                  onClick={() => handleTriageAction(`${item.id}-hide`, () => executeAction(item.id, "HIDE", `Hidden by ${adminDisplayName}`))}
                                   title="Quarantine work for author takedown checking"
                                   className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                                 >
@@ -681,20 +697,23 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         </div>
       </div>
 
+      {/* Admin Takedown & Multi-Fic Cloud Drive Suppression Desk (Relocated Below Triage Suite) */}
+      <AdminTakedownContainer links={links} onRefresh={refresh} />
+
       {/* Link Inspection Modal */}
       <LinkInspectionModal
         link={inspectingLink}
         isOpen={!!inspectingLink}
         isAdmin={true}
         onClose={() => setInspectingLink(null)}
-        onApprove={(id, isPriorVerified) => {
-          approveLink(id, adminDisplayName, isPriorVerified);
+        onApprove={(id) => {
+          handleTriageAction(`${id}-approve`, () => executeAction(id, "APPROVE", `Approved by ${adminDisplayName}`));
         }}
         onReject={(id) => {
-          rejectLink(id, adminDisplayName);
+          handleTriageAction(`${id}-reject`, () => executeAction(id, "REJECT", `Rejected by ${adminDisplayName}`));
         }}
         onHide={(id) => {
-          hideLink(id, adminDisplayName);
+          handleTriageAction(`${id}-hide`, () => executeAction(id, "HIDE", `Hidden by ${adminDisplayName}`));
         }}
         onRemove={(id) => {
           const target = links.find((l) => l.id === id);

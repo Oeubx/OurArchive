@@ -124,13 +124,6 @@ export function addMyContribution(
   };
 
   const updated = [fullLink, ...current];
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY_CONTRIBUTIONS, JSON.stringify(updated));
-    } catch {
-      // Ignore
-    }
-  }
   return fullLink;
 }
 
@@ -154,16 +147,6 @@ export function submitVerifierApplication(data: {
     submittedAt: new Date().toISOString(),
   };
 
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
-      const apps: VerifierApplication[] = raw ? JSON.parse(raw) : [];
-      apps.unshift(app);
-      localStorage.setItem(STORAGE_KEY_APPLICATIONS, JSON.stringify(apps));
-    } catch {
-      // Ignore
-    }
-  }
   return app;
 }
 
@@ -173,10 +156,11 @@ export function submitVerifierApplication(data: {
 export function getVerifierApplications(): VerifierApplication[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_APPLICATIONS);
-    if (!raw) return [];
-    return JSON.parse(raw);
+    if (localStorage.getItem(STORAGE_KEY_APPLICATIONS)) {
+      localStorage.removeItem(STORAGE_KEY_APPLICATIONS);
+    }
   } catch {
-    return [];
+    // Ignore
   }
+  return [];
 }

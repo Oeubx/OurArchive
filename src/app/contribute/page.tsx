@@ -6,6 +6,7 @@ import { BecomeVerifierModal } from "@/components/contribute/BecomeVerifierModal
 import { ContributorTable } from "@/components/contribute/ContributorTable";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
 import { createClient } from "@/lib/supabase/client";
 import { getMyContributions, fetchUserContributions } from "@/lib/contributorService";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
@@ -23,6 +24,7 @@ export default function ContributePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showVerifierModal, setShowVerifierModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showGuestGateModal, setShowGuestGateModal] = useState(false);
 
   // Check authentic Supabase auth state on mount
   useEffect(() => {
@@ -189,7 +191,13 @@ export default function ContributePage() {
       <section>
         <ContributorTable
           contributions={contributions}
-          onUploadClick={() => setShowUploadModal(true)}
+          onUploadClick={() => {
+            if (isAuthenticated) {
+              setShowUploadModal(true);
+            } else {
+              setShowGuestGateModal(true);
+            }
+          }}
         />
       </section>
 
@@ -199,6 +207,11 @@ export default function ContributePage() {
         onClose={() => setShowVerifierModal(false)}
         userEmail={userEmail}
         userName={userName}
+      />
+
+      <ContributorAuthGateModal
+        isOpen={showGuestGateModal}
+        onClose={() => setShowGuestGateModal(false)}
       />
 
       <UploadModal

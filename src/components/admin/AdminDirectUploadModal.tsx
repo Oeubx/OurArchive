@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { adminDirectUpload } from "@/lib/rbacService";
 import { segmentDriveUrl } from "@/lib/urlSegmenter";
 
 interface AdminDirectUploadModalProps {
@@ -77,24 +76,30 @@ export function AdminDirectUploadModal({
       const resolvedAuthor = authorName.trim() || "Anonymous Contributor";
       const resolvedFandom = fandom.trim() || "General / Multi-Fandom";
 
-      // Submit via rbacService adminDirectUpload
-      adminDirectUpload({
-        title: resolvedTitle,
-        authorName: resolvedAuthor,
-        fandom: resolvedFandom,
-        pairing: pairing.trim() || undefined,
-        rating,
-        wordCount: parsedWordCount,
-        summary: summary.trim(),
-        tags,
-        rawDriveUrl: canonicalUrl,
-        driveOwnerEmail: driveOwnerEmail.trim() || undefined,
-        isPriorVerified, // If true => Approved immediately; If false => Under Verification
-        uploadedBy: adminDisplayName || "admin",
-        uploadedByRole: "admin",
-        isFolder,
-        mimeType: isFolder ? "application/vnd.google-apps.folder" : "application/pdf",
+      // Submit directly to Supabase via authenticated API endpoint
+      const res = await fetch("/api/links/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driveUrl: canonicalUrl,
+          title: resolvedTitle,
+          authorName: resolvedAuthor,
+          fandom: resolvedFandom,
+          pairing: pairing.trim() || undefined,
+          rating,
+          wordCount: parsedWordCount,
+          summary: summary.trim(),
+          tags,
+          driveOwnerEmail: driveOwnerEmail.trim() || undefined,
+          isPriorVerified,
+          uploadMode: "assisted_admin",
+        }),
       });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to upload fanwork as admin.");
+      }
 
       setLoading(false);
       onClose();

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import type { PublicSearchFeedRecord } from "@/types/database";
+import { maskWorkId } from "@/lib/utils/idMasker";
 
 interface DisplayCardProps {
   work: PublicSearchFeedRecord;
@@ -65,7 +66,7 @@ export function DisplayCard({
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-bold text-brand-trunk dark:text-brand-light hover:underline">
-              <Link href={`/reader/${work.work_id}`}>{work.title}</Link>
+              <Link href={`/reader/${maskWorkId(work.work_id)}`}>{work.title}</Link>
             </h3>
             <span className="text-xs text-gray-600 dark:text-gray-400">
               by <strong className="text-gray-900 dark:text-gray-100">{work.author_name}</strong>
@@ -137,7 +138,7 @@ export function DisplayCard({
         <div className="flex items-center gap-2">
           {/* PRIMARY READING ACCESS */}
           <Link
-            href={`/reader/${work.work_id}`}
+            href={`/reader/${maskWorkId(work.work_id)}`}
             className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition flex items-center gap-1"
           >
             <span>👁️</span> Read Work
