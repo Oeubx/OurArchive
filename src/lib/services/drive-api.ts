@@ -156,10 +156,14 @@ export async function fetchDriveFileMetadata(fileId: string): Promise<DriveFetch
 }
 
 /**
- * Inspects a public Google Drive folder and queries all readable child documents.
- * Discovers individual fanworks (PDFs, Google Docs, Word Docs) inside shared folders.
+ * Inspects a public Google Drive folder and recursively queries all readable child documents.
+ * Traverses nested subfolders (Folder within a folder within a folder) up to 5 levels deep.
  */
-export async function fetchDriveFolderChildren(folderId: string): Promise<DriveFolderChildrenResult> {
+export async function fetchDriveFolderChildren(
+  rootFolderId: string,
+  maxDepth: number = 4,
+  maxTotalFiles: number = 100
+): Promise<DriveFolderChildrenResult> {
   const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
 
   if (!apiKey) {
@@ -170,10 +174,10 @@ export async function fetchDriveFolderChildren(folderId: string): Promise<DriveF
   }
 
   try {
-    // 1. Fetch folder metadata (name)
+    // 1. Fetch root folder metadata (name)
     let folderName = "Shared Fanwork Folder";
     const folderMetaEndpoint = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
-      folderId
+      rootFolderId
     )}?fields=id,name,mimeType&key=${apiKey}`;
 
     const folderRes = await withTimeout(
@@ -192,57 +196,76 @@ export async function fetchDriveFolderChildren(folderId: string): Promise<DriveF
       }
     }
 
-    // 2. Query child files: `'folderId' in parents and trashed = false`
-    const query = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
-    const listEndpoint = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,size)&pageSize=100&orderBy=name&key=${apiKey}`;
-
-    const listRes = await withTimeout(
-      fetch(listEndpoint, {
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      }),
-      6000,
-      "Folder children query timed out."
-    );
-
-    if (!listRes.ok) {
-      return {
-        success: false,
-        folderName,
-        error: `Could not list folder contents (HTTP ${listRes.status}). Ensure the folder permissions are set to 'Anyone with the link can view'.`,
-      };
-    }
-
-    const listData = await listRes.json();
-    const rawFiles: Array<{ id?: string; name?: string; mimeType?: string; size?: string }> = Array.isArray(listData.files) ? listData.files : [];
-
-    // Filter readable documents (ignore folders and binary executables)
+    // 2. BFS Traversal queue for recursive subfolder discovery
+    const queue: Array<{ folderId: string; folderPath: string; depth: number }> = [
+      { folderId: rootFolderId, folderPath: "", depth: 0 },
+    ];
+    const visitedFolders = new Set<string>([rootFolderId]);
     const validChildren: DriveChildWork[] = [];
     const supportedExtensions = /\.(pdf|docx?|txt|epub|rtf|html?)$/i;
 
-    for (const f of rawFiles) {
-      if (!f.id || !f.name) continue;
-      const mime = f.mimeType || "";
-      const isDoc =
-        mime === "application/pdf" ||
-        mime === "application/vnd.google-apps.document" ||
-        mime.includes("word") ||
-        mime.includes("text") ||
-        supportedExtensions.test(f.name);
+    while (queue.length > 0 && validChildren.length < maxTotalFiles) {
+      const current = queue.shift()!;
+      if (current.depth > maxDepth) continue;
 
-      // Exclude subfolders and zip/executables
-      if (mime.includes("folder") || mime.includes("zip") || (mime.includes("octet-stream") && !supportedExtensions.test(f.name))) {
-        continue;
-      }
+      const query = encodeURIComponent(`'${current.folderId}' in parents and trashed = false`);
+      const listEndpoint = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,mimeType,size)&pageSize=100&orderBy=name&key=${apiKey}`;
 
-      if (isDoc) {
-        validChildren.push({
-          id: f.id,
-          name: f.name,
-          mimeType: mime || (f.name.endsWith(".pdf") ? "application/pdf" : "application/vnd.google-apps.document"),
-          sizeBytes: f.size ? parseInt(f.size, 10) : 0,
-          cleanTitle: cleanFilenameToTitle(f.name),
-        });
+      const listRes = await withTimeout(
+        fetch(listEndpoint, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        }),
+        5000,
+        "Folder children query timed out."
+      ).catch(() => null);
+
+      if (!listRes || !listRes.ok) continue;
+
+      const listData = await listRes.json();
+      const rawFiles: Array<{ id?: string; name?: string; mimeType?: string; size?: string }> = Array.isArray(listData.files) ? listData.files : [];
+
+      for (const f of rawFiles) {
+        if (!f.id || !f.name) continue;
+        const mime = f.mimeType || "";
+
+        // If it's a subfolder, queue it for recursive discovery
+        if (mime === "application/vnd.google-apps.folder" || mime.toLowerCase().includes("folder")) {
+          if (!visitedFolders.has(f.id) && visitedFolders.size < 30) {
+            visitedFolders.add(f.id);
+            queue.push({
+              folderId: f.id,
+              folderPath: current.folderPath ? `${current.folderPath} / ${f.name}` : f.name,
+              depth: current.depth + 1,
+            });
+          }
+          continue;
+        }
+
+        const isDoc =
+          mime === "application/pdf" ||
+          mime === "application/vnd.google-apps.document" ||
+          mime.includes("word") ||
+          mime.includes("text") ||
+          supportedExtensions.test(f.name);
+
+        // Exclude zip or unknown binary executables
+        if (mime.includes("zip") || (mime.includes("octet-stream") && !supportedExtensions.test(f.name))) {
+          continue;
+        }
+
+        if (isDoc) {
+          const displayName = current.folderPath ? `${current.folderPath} / ${f.name}` : f.name;
+          validChildren.push({
+            id: f.id,
+            name: displayName,
+            mimeType: mime || (f.name.endsWith(".pdf") ? "application/pdf" : "application/vnd.google-apps.document"),
+            sizeBytes: f.size ? parseInt(f.size, 10) : 0,
+            cleanTitle: cleanFilenameToTitle(f.name),
+          });
+
+          if (validChildren.length >= maxTotalFiles) break;
+        }
       }
     }
 

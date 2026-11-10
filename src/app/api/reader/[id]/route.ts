@@ -112,27 +112,43 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
       try {
         const { data: dbChildren } = await supabase
-          .from("link_metadata")
-          .select("link_id, title, file_name, mime_type, file_size_bytes")
-          .eq("canonical_ao3_url", link.drive_url)
-          .neq("link_id", workId);
+          .from("drive_links")
+          .select(`
+            id,
+            google_file_id,
+            drive_url,
+            link_metadata (
+              title,
+              file_name,
+              mime_type,
+              file_size_bytes,
+              canonical_ao3_url
+            )
+          `)
+          .neq("id", workId)
+          .eq("is_removed", false);
 
         if (dbChildren && dbChildren.length > 0) {
-          dbChildren.forEach((c) => {
-            collectionWorks.push({
-              id: c.link_id,
-              title: c.title,
-              fileName: c.file_name,
-              mimeType: c.mime_type,
-              sizeBytes: Number(c.file_size_bytes) || 0,
-            });
+          dbChildren.forEach((item) => {
+            const meta = Array.isArray(item.link_metadata)
+              ? item.link_metadata[0]
+              : item.link_metadata;
+            if (meta?.canonical_ao3_url === link.drive_url) {
+              collectionWorks.push({
+                id: item.google_file_id || item.id,
+                title: meta.title,
+                fileName: meta.file_name,
+                mimeType: meta.mime_type,
+                sizeBytes: Number(meta.file_size_bytes) || 0,
+              });
+            }
           });
         }
       } catch (dbErr) {
         console.warn("Could not query unpacked collection works from DB:", dbErr);
       }
 
-      // 2. Query Drive API directly for live folder contents
+      // 2. Query Drive API directly for live folder contents (including recursive nested subfolders)
       if (apiKey && collectionWorks.length === 0) {
         const folderResult = await fetchDriveFolderChildren(fileId);
         if (folderResult.success && folderResult.children && folderResult.children.length > 0) {
@@ -166,10 +182,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Active streaming target (defaults to primary file, or child work if selected)
-    const activeFileId = childIdParam || fileId;
-    const activeMimeType = (childMimeParam || mimeType).toLowerCase();
-    const activeTitle = childTitleParam || metadata?.title || "Untitled Fanwork";
+    // Resolve active streaming target (defaults to primary file, or child work if selected)
+    let activeFileId = fileId;
+    let activeMimeType = (childMimeParam || mimeType).toLowerCase();
+    let activeTitle = childTitleParam || metadata?.title || "Untitled Fanwork";
+
+    if (childIdParam) {
+      // Check if childIdParam was passed as an internal database UUID or masked oa_ token
+      const unmaskedChild = unmaskWorkId(childIdParam);
+      if (UUID_REGEX.test(unmaskedChild)) {
+        const { data: childRecord } = await supabase
+          .from("drive_links")
+          .select(`
+            google_file_id,
+            link_metadata (
+              title,
+              mime_type
+            )
+          `)
+          .eq("id", unmaskedChild)
+          .maybeSingle();
+
+        if (childRecord && childRecord.google_file_id) {
+          activeFileId = childRecord.google_file_id;
+          const childMeta = Array.isArray(childRecord.link_metadata)
+            ? childRecord.link_metadata[0]
+            : childRecord.link_metadata;
+          if (childMeta?.mime_type) activeMimeType = childMeta.mime_type.toLowerCase();
+          if (childMeta?.title) activeTitle = childMeta.title;
+        } else {
+          activeFileId = childIdParam;
+        }
+      } else {
+        // It's already an authentic Google Drive File ID
+        activeFileId = childIdParam;
+      }
+    }
 
     // Handling PDF Documents: Stream via isolated view-only preview frame
     if (activeMimeType.includes("pdf")) {

@@ -41,7 +41,7 @@ interface ReaderData {
 }
 
 type FontFamily = "serif" | "sans" | "mono";
-type ThemeMode = "light" | "sepia" | "dark";
+type ThemeMode = "light" | "warm" | "dark";
 
 export default function ReaderPage() {
   const params = useParams();
@@ -71,6 +71,21 @@ export default function ReaderPage() {
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
 
+  // Synchronize initial theme with global stored site theme (prevent unwanted reset to lightmode)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("ourarchive_theme");
+      const isSystemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (stored === "dark" || (!stored && isSystemDark)) {
+        setTheme("dark");
+      } else if (stored === "warm" || stored === "sepia") {
+        setTheme("warm");
+      } else {
+        setTheme("light");
+      }
+    }
+  }, []);
+
   // Synchronize document body and root background with reader theme to eliminate margin gutters on wide screens
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -78,16 +93,23 @@ export default function ReaderPage() {
     const prevBodyColor = document.body.style.color;
     const prevDocBg = document.documentElement.style.backgroundColor;
 
-    const bgMap: Record<ThemeMode, { bg: string; color: string }> = {
-      light: { bg: "#f6f6f4", color: "#1a1a1a" },
-      sepia: { bg: "#fbf0d9", color: "#382b1d" },
-      dark: { bg: "#121214", color: "#ededed" },
+    const bgMap: Record<ThemeMode, { bg: string; color: string; isDark: boolean }> = {
+      light: { bg: "#ffffff", color: "#111827", isDark: false },
+      warm: { bg: "#fbf0d9", color: "#382b1d", isDark: false },
+      dark: { bg: "#121214", color: "#ededed", isDark: true },
     };
 
     const target = bgMap[theme];
     document.body.style.backgroundColor = target.bg;
     document.body.style.color = target.color;
     document.documentElement.style.backgroundColor = target.bg;
+
+    // Synchronize Tailwind dark mode class with root HTML element
+    if (target.isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
 
     return () => {
       document.body.style.backgroundColor = prevBodyBg;
@@ -268,21 +290,21 @@ export default function ReaderPage() {
 
   const themeClasses: Record<ThemeMode, { container: string; text: string; header: string; meta: string }> = {
     light: {
-      container: "bg-[#f6f6f4]", // Soft warm off-white
-      text: "text-[#1a1a1a]",
-      header: "bg-[#ededeb] border-[#e5e5e0] text-[#1a1a1a]",
-      meta: "bg-white border-[#e5e5e0] text-[#444440]",
+      container: "bg-[#ffffff]", // Crisp clean white paper
+      text: "text-gray-900",
+      header: "bg-white/95 border-gray-200 text-gray-800",
+      meta: "bg-gray-50 border-gray-200 text-gray-800",
     },
-    sepia: {
-      container: "bg-[#fbf0d9]",
+    warm: {
+      container: "bg-[#fbf0d9]", // Soft warm parchment / sepia
       text: "text-[#382b1d]",
-      header: "bg-[#f0e2c2] border-[#decba5] text-[#382b1d]",
+      header: "bg-[#f0e2c2]/95 border-[#decba5] text-[#382b1d]",
       meta: "bg-[#f5e9ce] border-[#decba5] text-[#54412c]",
     },
     dark: {
-      container: "bg-[#121214]", // Obsidian graphite
+      container: "bg-[#121214]", // Obsidian dark charcoal
       text: "text-[#ededed]",
-      header: "bg-[#1a1a1e] border-[#2a2a30] text-[#ededed]",
+      header: "bg-[#1a1a1e]/95 border-[#2a2a30] text-[#ededed]",
       meta: "bg-[#18181c] border-[#2a2a30] text-[#9ca3af]",
     },
   };
@@ -297,8 +319,8 @@ export default function ReaderPage() {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
-      {/* Sticky Reader Toolbar */}
-      <header className={`sticky top-0 z-40 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
+      {/* Sticky Reader Toolbar docked under the main Header without overlapping */}
+      <header className={`sticky top-[53px] sm:top-[57px] z-30 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <Link
@@ -403,32 +425,50 @@ export default function ReaderPage() {
               </button>
             </div>
 
-            {/* Theme Selector */}
+            {/* Theme Selector: LIGHT - WARM - DARK */}
             <div className="flex items-center border border-gray-400/40 rounded overflow-hidden">
               <button
-                onClick={() => setTheme("light")}
-                className={`px-2 py-1 text-[11px] ${
-                  theme === "light" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
+                type="button"
+                onClick={() => {
+                  setTheme("light");
+                  localStorage.setItem("ourarchive_theme", "light");
+                }}
+                className={`px-2 py-1 text-[11px] font-medium transition ${
+                  theme === "light"
+                    ? "bg-brand-trunk text-white"
+                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
                 }`}
-                title="Warm Parchment mode"
+                title="Light mode (Clean White)"
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme("warm");
+                  localStorage.setItem("ourarchive_theme", "warm");
+                }}
+                className={`px-2 py-1 text-[11px] font-medium border-l border-gray-400/40 transition ${
+                  theme === "warm"
+                    ? "bg-brand-trunk text-white"
+                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
+                }`}
+                title="Warm mode (Parchment Book Paper)"
               >
                 Warm
               </button>
               <button
-                onClick={() => setTheme("sepia")}
-                className={`px-2 py-1 text-[11px] border-l border-gray-400/40 ${
-                  theme === "sepia" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
+                type="button"
+                onClick={() => {
+                  setTheme("dark");
+                  localStorage.setItem("ourarchive_theme", "dark");
+                }}
+                className={`px-2 py-1 text-[11px] font-medium border-l border-gray-400/40 transition ${
+                  theme === "dark"
+                    ? "bg-brand-trunk text-white"
+                    : "hover:bg-black/10 text-gray-700 dark:text-gray-300"
                 }`}
-                title="Sepia mode"
-              >
-                Sepia
-              </button>
-              <button
-                onClick={() => setTheme("dark")}
-                className={`px-2 py-1 text-[11px] border-l border-gray-400/40 ${
-                  theme === "dark" ? "bg-brand-trunk text-white" : "hover:bg-black/10"
-                }`}
-                title="Obsidian Dark mode"
+                title="Dark mode (Obsidian Charcoal)"
               >
                 Dark
               </button>
