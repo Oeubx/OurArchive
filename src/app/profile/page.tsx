@@ -164,8 +164,14 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={saving || displayName.trim() === profile.display_name}
-            className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
           >
+            {saving && (
+              <svg className="animate-spin -ml-0.5 mr-1 h-3 w-3 inline text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            )}
             {saving ? "Saving Changes..." : "Save Display Name"}
           </button>
         </form>

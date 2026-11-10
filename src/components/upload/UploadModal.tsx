@@ -440,8 +440,14 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             <button
               type="submit"
               disabled={loading || !segments.isValid || !confirmedViewOnly}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-brand-trunk hover:bg-brand-bark rounded transition disabled:opacity-40"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-brand-trunk hover:bg-brand-bark rounded transition disabled:opacity-40 inline-flex items-center gap-1.5"
             >
+              {loading && (
+                <svg className="animate-spin -ml-0.5 mr-1 h-3 w-3 inline text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+              )}
               {loading ? "Verifying & Submitting..." : "Submit Work"}
             </button>
           </div>

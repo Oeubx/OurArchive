@@ -28,6 +28,15 @@ interface AdminDashboardClientProps {
   adminEmail: string;
 }
 
+function ActionSpinner() {
+  return (
+    <svg className="animate-spin -ml-0.5 mr-1 h-2.5 w-2.5 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+  );
+}
+
 export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) {
   const [links, setLinks] = useState<DriveLink[]>([]);
   const [role, setRole] = useState<UserRole>("admin");
@@ -45,11 +54,22 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   });
 
   const [filter, setFilter] = useState<string>("all");
+  const [processingActionId, setProcessingActionId] = useState<string | null>(null);
   const [showVerifierRequestsModal, setShowVerifierRequestsModal] = useState(false);
   const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
   const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
+
+  async function handleTriageAction(actionKey: string, actionFn: () => Promise<unknown> | unknown) {
+    if (processingActionId) return;
+    setProcessingActionId(actionKey);
+    try {
+      await actionFn();
+    } finally {
+      setProcessingActionId(null);
+    }
+  }
 
   function refresh() {
     setRole(getCurrentUserRole());
@@ -349,39 +369,49 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         </button>
                         <button
                           type="button"
-                          onClick={() => verifyLink(item.id, adminDisplayName)}
-                          className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition cursor-pointer"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
+                          className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
+                          {processingActionId === `${item.id}-verify` && <ActionSpinner />}
                           Verify
                         </button>
                         <button
                           type="button"
-                          onClick={() => approveLink(item.id, adminDisplayName, item.isPriorVerified)}
-                          className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition cursor-pointer"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
+                          className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
+                          {processingActionId === `${item.id}-approve` && <ActionSpinner />}
                           Approve
                         </button>
                         <button
                           type="button"
-                          onClick={() => rejectLink(item.id, adminDisplayName)}
-                          className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition cursor-pointer"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
+                          className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                         >
+                          {processingActionId === `${item.id}-reject` && <ActionSpinner />}
                           Reject
                         </button>
                         {item.status === "hidden" ? (
                           <button
                             type="button"
-                            onClick={() => unhideLink(item.id, adminDisplayName)}
-                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition cursor-pointer"
+                            disabled={Boolean(processingActionId)}
+                            onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
+                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                           >
+                            {processingActionId === `${item.id}-unhide` && <ActionSpinner />}
                             Unhide
                           </button>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => hideLink(item.id, adminDisplayName)}
-                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition cursor-pointer"
+                            disabled={Boolean(processingActionId)}
+                            onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
+                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                           >
+                            {processingActionId === `${item.id}-hide` && <ActionSpinner />}
                             Hide
                           </button>
                         )}
@@ -516,30 +546,36 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               {/* VERIFY */}
                               <button
                                 type="button"
-                                onClick={() => verifyLink(item.id, adminDisplayName)}
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
                                 title="Verify and certify link"
-                                className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition"
+                                className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
+                                {processingActionId === `${item.id}-verify` && <ActionSpinner />}
                                 Verify
                               </button>
 
                               {/* APPROVE */}
                               <button
                                 type="button"
-                                onClick={() => approveLink(item.id, adminDisplayName, item.isPriorVerified)}
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
                                 title="Approve and publish"
-                                className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition"
+                                className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
+                                {processingActionId === `${item.id}-approve` && <ActionSpinner />}
                                 Approve
                               </button>
 
                               {/* REJECT */}
                               <button
                                 type="button"
-                                onClick={() => rejectLink(item.id, adminDisplayName)}
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
                                 title="Reject submission"
-                                className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition"
+                                className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                               >
+                                {processingActionId === `${item.id}-reject` && <ActionSpinner />}
                                 Reject
                               </button>
 
@@ -547,19 +583,23 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               {item.status === "hidden" ? (
                                 <button
                                   type="button"
-                                  onClick={() => unhideLink(item.id, adminDisplayName)}
+                                  disabled={Boolean(processingActionId)}
+                                  onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
                                   title="Restore visibility"
-                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
+                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                                 >
+                                  {processingActionId === `${item.id}-unhide` && <ActionSpinner />}
                                   Unhide
                                 </button>
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => hideLink(item.id, adminDisplayName)}
+                                  disabled={Boolean(processingActionId)}
+                                  onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
                                   title="Quarantine work for author takedown checking"
-                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
+                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
                                 >
+                                  {processingActionId === `${item.id}-hide` && <ActionSpinner />}
                                   Hide
                                 </button>
                               )}
