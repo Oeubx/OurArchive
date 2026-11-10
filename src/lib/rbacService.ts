@@ -384,6 +384,8 @@ export function adminDirectUpload(data: {
   isPriorVerified: boolean;
   uploadedBy?: string;
   uploadedByRole?: UserRole;
+  mimeType?: string;
+  isFolder?: boolean;
 }): DriveLink {
   const links = getAllCommunityLinks();
   const isApproved = data.isPriorVerified;
@@ -402,7 +404,7 @@ export function adminDirectUpload(data: {
     tags: data.tags,
     rawDriveUrl: data.rawDriveUrl,
     maskedDriveUrl: maskDriveUrl(data.rawDriveUrl),
-    mimeType: "application/pdf",
+    mimeType: data.isFolder ? "application/vnd.google-apps.folder" : (data.mimeType || "application/pdf"),
     driveOwnerEmail: data.driveOwnerEmail,
     isOwnerMasked: true,
     uploadedBy: submitterName,
