@@ -1,5 +1,6 @@
-import { DriveLink, VerifierApplication } from "./types";
+import { DriveLink, LinkStatus, VerifierApplication } from "./types";
 import { maskDriveUrl } from "./utils";
+import { createClient } from "./supabase/client";
 
 const STORAGE_KEY_CONTRIBUTIONS = "ourarchive_my_contributions";
 const STORAGE_KEY_APPLICATIONS = "ourarchive_verifier_applications";
@@ -8,21 +9,97 @@ const STORAGE_KEY_APPLICATIONS = "ourarchive_verifier_applications";
 const DEFAULT_MY_CONTRIBUTIONS: DriveLink[] = [];
 
 /**
- * Get all contributions submitted by the current user
+ * Fetch authentic contributions submitted by the authenticated user directly from Supabase.
+ */
+export async function fetchUserContributions(userId: string): Promise<DriveLink[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("drive_links")
+      .select(`
+        id,
+        drive_url,
+        upload_mode,
+        uploader_user_id,
+        verification_status,
+        is_hidden,
+        is_removed,
+        created_at,
+        link_metadata (
+          title,
+          author_name,
+          fandom,
+          pairing,
+          rating,
+          word_count,
+          summary,
+          tags,
+          mime_type,
+          file_name
+        )
+      `)
+      .eq("uploader_user_id", userId)
+      .eq("is_removed", false)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      console.warn("Could not query user contributions from Supabase:", error);
+      return [];
+    }
+
+    return data.map((item) => {
+      const meta = Array.isArray(item.link_metadata) ? item.link_metadata[0] : item.link_metadata;
+      let status: LinkStatus = "under_verification";
+      if (item.is_hidden) {
+        status = "hidden";
+      } else if (item.verification_status === "verified") {
+        status = "approved";
+      } else if (item.verification_status === "rejected") {
+        status = "rejected";
+      } else if (item.verification_status === "flagged") {
+        status = "flagged";
+      }
+
+      const ratingVal = (meta?.rating || "Not Rated") as DriveLink["rating"];
+
+      return {
+        id: item.id,
+        title: meta?.title || "Untitled Fanwork",
+        authorName: meta?.author_name || "Anonymous Contributor",
+        fandom: meta?.fandom || "General / Multi-Fandom",
+        pairing: meta?.pairing || undefined,
+        rating: ratingVal,
+        wordCount: meta?.word_count ?? 0,
+        summary: meta?.summary || "",
+        tags: meta?.tags || [],
+        rawDriveUrl: item.drive_url,
+        maskedDriveUrl: maskDriveUrl(item.drive_url),
+        mimeType: meta?.mime_type || "application/octet-stream",
+        uploadedBy: userId,
+        uploadedByRole: "contributor",
+        uploadedAt: item.created_at,
+        status,
+        automatedRiskScore: 0,
+        isOwnerMasked: true,
+      };
+    });
+  } catch (err) {
+    console.error("fetchUserContributions error:", err);
+    return [];
+  }
+}
+
+/**
+ * Get all contributions submitted by the current user (purges legacy localized caches)
  */
 export function getMyContributions(): DriveLink[] {
   if (typeof window === "undefined") return DEFAULT_MY_CONTRIBUTIONS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_CONTRIBUTIONS);
-    if (!raw) {
-      return [];
+    // Purge legacy localized contributions cache to prevent stale duplicate items
+    if (localStorage.getItem(STORAGE_KEY_CONTRIBUTIONS)) {
+      localStorage.removeItem(STORAGE_KEY_CONTRIBUTIONS);
     }
-    const parsed: DriveLink[] = JSON.parse(raw);
-    const cleaned = parsed.filter((l) => !l.id.startsWith("my-contrib-"));
-    if (cleaned.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY_CONTRIBUTIONS, JSON.stringify(cleaned));
-    }
-    return cleaned;
+    return [];
   } catch {
     return [];
   }

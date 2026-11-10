@@ -7,12 +7,13 @@ import { ContributorTable } from "@/components/contribute/ContributorTable";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { createClient } from "@/lib/supabase/client";
-import { getMyContributions } from "@/lib/contributorService";
+import { getMyContributions, fetchUserContributions } from "@/lib/contributorService";
 import { DriveLink } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
 export default function ContributePage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [userId, setUserId] = useState<string>("");
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("contributor");
@@ -29,6 +30,7 @@ export default function ContributePage() {
     function evaluateAuth(user: User | null) {
       if (user) {
         setIsAuthenticated(true);
+        setUserId(user.id);
         setUserEmail(user.email || "");
         const role = ((user.app_metadata as Record<string, unknown> | undefined)?.role as string) || "contributor";
         setUserRole(role);
@@ -39,8 +41,14 @@ export default function ContributePage() {
           user.email?.split("@")[0] ||
           "Contributor"
         );
+        // Load authentic contributions from Supabase
+        fetchUserContributions(user.id).then((items) => {
+          setContributions(items);
+        });
       } else {
         setIsAuthenticated(false);
+        setUserId("");
+        setContributions([]);
       }
     }
 
@@ -54,15 +62,16 @@ export default function ContributePage() {
       evaluateAuth(session?.user ?? null);
     });
 
-    setContributions(getMyContributions());
-
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
-  function handleUploadSuccess() {
-    setContributions(getMyContributions());
+  async function handleUploadSuccess() {
+    if (userId) {
+      const items = await fetchUserContributions(userId);
+      setContributions(items);
+    }
     setShowUploadModal(false);
   }
 
