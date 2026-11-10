@@ -1,14 +1,52 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { AboutContent } from "@/components/about/AboutContent";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
+import { createClient } from "@/lib/supabase/client";
+
+function AuthErrorQueryWatcher({ onTriggerGate }: { onTriggerGate: () => void }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("auth_error") === "contributor_login_required") {
+      onTriggerGate();
+    }
+  }, [searchParams, onTriggerGate]);
+
+  return null;
+}
 
 export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showGateModal, setShowGateModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleTriggerGate = useCallback(() => {
+    setShowGateModal(true);
+  }, []);
 
   function openSignUp() {
     setAuthMode("signup");
@@ -17,6 +55,11 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8 py-4">
+      {/* Search param watcher wrapped in Suspense for Next.js App Router static compliance */}
+      <Suspense fallback={null}>
+        <AuthErrorQueryWatcher onTriggerGate={handleTriggerGate} />
+      </Suspense>
+
       {/* =========================================================================
           CONTAINER 1: OurArchive Primary Hero Container
           ========================================================================= */}
@@ -60,14 +103,25 @@ export default function HomePage() {
               <span>SEARCH LIBRARY</span>
             </Link>
 
-            {/* Contribute Button */}
-            <Link
-              href="/contribute"
-              className="w-full py-2.5 px-4 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs sm:text-sm font-semibold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 text-center"
-            >
-              <span>➕</span>
-              <span>CONTRIBUTE LINK</span>
-            </Link>
+            {/* Contribute Button: Direct auth gate modal if not signed in, otherwise go to /contribute */}
+            {isAuthenticated ? (
+              <Link
+                href="/contribute"
+                className="w-full py-2.5 px-4 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs sm:text-sm font-semibold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 text-center"
+              >
+                <span>➕</span>
+                <span>CONTRIBUTE LINK</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowGateModal(true)}
+                className="w-full py-2.5 px-4 bg-canvas-light dark:bg-canvas-dark hover:bg-subtle-light dark:hover:bg-subtle-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs sm:text-sm font-semibold rounded-xl shadow-2xs transition flex items-center justify-center gap-2 text-center"
+              >
+                <span>➕</span>
+                <span>CONTRIBUTE LINK</span>
+              </button>
+            )}
 
             {/* Sign Up Section with Bookmarking Subtext */}
             <div className="pt-1 text-center space-y-1">
@@ -107,6 +161,12 @@ export default function HomePage() {
         {/* Embedded About Developer & Platform Content */}
         <AboutContent />
       </section>
+
+      {/* Auth Gate Modal */}
+      <ContributorAuthGateModal
+        isOpen={showGateModal}
+        onClose={() => setShowGateModal(false)}
+      />
 
       {/* Auth Modal Triggered by Sign Up */}
       <AuthModal
