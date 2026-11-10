@@ -8,6 +8,7 @@ import { UploadModal } from "@/components/upload/UploadModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { createClient } from "@/lib/supabase/client";
 import { getMyContributions, fetchUserContributions } from "@/lib/contributorService";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { DriveLink } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
@@ -66,6 +67,18 @@ export default function ContributePage() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Real-time synchronization: Automatically update contributor table on triage status changes
+  useRealtimeDriveLinks(
+    () => {
+      if (userId) {
+        fetchUserContributions(userId).then((items) => {
+          setContributions(items);
+        });
+      }
+    },
+    { enabled: Boolean(userId) }
+  );
 
   async function handleUploadSuccess() {
     if (userId) {

@@ -10,6 +10,7 @@ import { MaskedDriveRevealModal } from "@/components/modals/MaskedDriveRevealMod
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import type { PublicSearchFeedRecord } from "@/types/database";
 
 export default function SearchPage() {
@@ -78,6 +79,11 @@ export default function SearchPage() {
   useEffect(() => {
     fetchWorks(currentFilters, 1);
   }, [fetchWorks, currentFilters]);
+
+  // Real-time synchronization: Silently re-query library when works are approved, modified, or removed
+  useRealtimeDriveLinks(() => {
+    fetchWorks(currentFilters, pagination.page, pageSize);
+  });
 
   function handleSearch(filters: SearchFilters) {
     setCurrentFilters(filters);

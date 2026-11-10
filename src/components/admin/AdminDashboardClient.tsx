@@ -18,6 +18,7 @@ import {
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { getAllAuditRecords, exportAuditToCsv } from "@/lib/auditService";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { VerifierRequestsModal } from "./VerifierRequestsModal";
 import { AdminDirectUploadModal } from "./AdminDirectUploadModal";
 import { AuditHistoryModal } from "./AuditHistoryModal";
@@ -76,6 +77,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     setLinks(getAllCommunityLinks());
     setMetrics(getArchiveMetrics());
   }
+
+  // Real-time synchronization: Automatically refresh queue and metrics on live database changes
+  useRealtimeDriveLinks(() => {
+    refresh();
+  });
 
   useEffect(() => {
     refresh();
