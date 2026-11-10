@@ -47,6 +47,22 @@ export async function fetchUserContributions(userId: string): Promise<DriveLink[
       return [];
     }
 
+    // Resolve contributor display name from user profile
+    let contributorDisplayName = "Contributor";
+    try {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("display_name")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profile?.display_name) {
+        contributorDisplayName = profile.display_name;
+      }
+    } catch {
+      // Fallback
+    }
+
     return data.map((item) => {
       const meta = Array.isArray(item.link_metadata) ? item.link_metadata[0] : item.link_metadata;
       let status: LinkStatus = "under_verification";
@@ -75,7 +91,8 @@ export async function fetchUserContributions(userId: string): Promise<DriveLink[
         rawDriveUrl: item.drive_url,
         maskedDriveUrl: maskDriveUrl(item.drive_url),
         mimeType: meta?.mime_type || "application/octet-stream",
-        uploadedBy: userId,
+        uploadedBy: contributorDisplayName,
+        uploaderUserId: userId,
         uploadedByRole: "contributor",
         uploadedAt: item.created_at,
         status,

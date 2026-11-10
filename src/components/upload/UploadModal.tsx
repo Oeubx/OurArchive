@@ -116,7 +116,12 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         uploadedByRole: "contributor",
       });
 
-      setSuccessMessage("Work submitted successfully! The link is now live and recorded in the library.");
+      const successMsg =
+        resData.unpackedCount && resData.unpackedCount > 0
+          ? `Collection unpacked! Successfully indexed ${resData.unpackedCount} individual fanworks into library search.`
+          : "Work submitted successfully! The link is now live and recorded in the library.";
+
+      setSuccessMessage(successMsg);
       setTimeout(() => {
         onSuccess?.();
         onClose();

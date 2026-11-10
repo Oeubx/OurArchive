@@ -430,8 +430,10 @@ export default function VerifierManagePage() {
                               </div>
                             </td>
                             <td className="p-3 text-gray-700 dark:text-gray-300">
-                              <div>{link.driveOwnerName || "Anonymous Contributor"}</div>
-                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">{link.uploadedBy}</div>
+                              <div className="font-medium text-gray-900 dark:text-gray-100">@{link.uploadedBy || link.driveOwnerName || "contributor"}</div>
+                              {link.driveOwnerEmail && (
+                                <div className="text-[10px] text-gray-400 mt-0.5">{link.driveOwnerEmail}</div>
+                              )}
                             </td>
                             <td className="p-3">
                               <span

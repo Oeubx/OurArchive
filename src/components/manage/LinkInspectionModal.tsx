@@ -137,7 +137,7 @@ export function LinkInspectionModal({
                   {link.wordCount.toLocaleString()} words
                 </span>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Submitted by: <code className="font-mono text-gray-700 dark:text-gray-300">@{link.uploadedBy}</code>
+                  Submitted by: <strong className="font-semibold text-gray-800 dark:text-gray-200">@{link.uploadedBy}</strong>
                 </span>
               </div>
             </div>
@@ -163,7 +163,8 @@ export function LinkInspectionModal({
               <div>
                 <span className="text-gray-500 dark:text-gray-400 block font-medium">Drive Owner / Submitter:</span>
                 <span className="text-gray-800 dark:text-gray-200">
-                  {link.driveOwnerEmail ? link.driveOwnerEmail : "Anonymous Community Upload"}
+                  {link.uploadedBy ? `@${link.uploadedBy}` : "Community Contributor"}
+                  {link.driveOwnerEmail ? ` (${link.driveOwnerEmail})` : ""}
                 </span>
               </div>
             </div>

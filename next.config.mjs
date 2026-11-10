@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  experimental: {
-    serverComponentsExternalPackages: ["isomorphic-dompurify", "jsdom"],
-  },
 };
 
 export default nextConfig;
