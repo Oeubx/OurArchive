@@ -88,24 +88,24 @@ export default function ProfilePage() {
 
   return (
     <div className="py-8 max-w-2xl mx-auto space-y-6">
-      <div className="border-b border-gray-200 pb-4 flex items-center justify-between">
+      <div className="border-b border-border-light dark:border-border-dark pb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Archivist Profile</h1>
-          <p className="text-xs text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Archivist Profile</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Manage your contributor identity, reading bookmarks, and submission metrics.
           </p>
         </div>
-        <span className="text-xs bg-red-100 text-brand-trunk px-2.5 py-1 rounded font-semibold uppercase tracking-wider">
+        <span className="text-xs bg-amber-100 dark:bg-amber-950/80 text-brand-bark dark:text-amber-200 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded font-semibold uppercase tracking-wider font-mono">
           {profile.role}
         </span>
       </div>
 
       {feedback && (
         <div
-          className={`p-3 text-xs rounded border ${
+          className={`p-3 text-xs rounded-lg border ${
             feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : "bg-red-50 border-red-200 text-red-800"
+              ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+              : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300"
           }`}
         >
           {feedback.message}
@@ -113,28 +113,28 @@ export default function ProfilePage() {
       )}
 
       {profile.is_banned && (
-        <div className="p-4 bg-red-100 border border-red-300 rounded text-red-900 text-xs">
+        <div className="p-4 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 rounded-lg text-red-900 dark:text-red-200 text-xs">
           <strong>Account Flagged:</strong> Your account is currently restricted from submitting new fanwork links. Contact an administrator for assistance.
         </div>
       )}
 
       {/* Profile Overview Card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-6">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs space-y-6 text-gray-900 dark:text-gray-100">
         {/* Profile Attributes */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-100 pb-6 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-border-light dark:border-border-dark pb-6 text-xs">
           <div>
-            <span className="text-gray-500 block">Contributor Status</span>
-            <span className="font-semibold text-gray-800">
+            <span className="text-gray-500 dark:text-gray-400 block">Contributor Status</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
               {profile.is_banned ? "Restricted" : "Good Standing"}
             </span>
           </div>
           <div>
-            <span className="text-gray-500 block">Total Submissions</span>
-            <span className="font-semibold text-gray-800">{profile.submission_count}</span>
+            <span className="text-gray-500 dark:text-gray-400 block">Total Submissions</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{profile.submission_count}</span>
           </div>
           <div>
-            <span className="text-gray-500 block">Member Since</span>
-            <span className="font-semibold text-gray-800">
+            <span className="text-gray-500 dark:text-gray-400 block">Member Since</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
               {new Date(profile.created_at).toLocaleDateString()}
             </span>
           </div>
@@ -143,10 +143,10 @@ export default function ProfilePage() {
         {/* Display Name Editing Form */}
         <form onSubmit={handleSaveDisplayName} className="space-y-4">
           <div>
-            <label htmlFor="display-name-input" className="block text-xs font-semibold text-gray-700">
+            <label htmlFor="display-name-input" className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
               Public Display Name
             </label>
-            <p className="text-[11px] text-gray-500 mb-1">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">
               Visible on approved submissions and contributor badges.
             </p>
             <input
@@ -157,14 +157,14 @@ export default function ProfilePage() {
               maxLength={50}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full sm:w-80 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-none"
+              className="w-full sm:w-80 px-3 py-2 text-sm border border-border-light dark:border-border-dark rounded-lg bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden"
             />
           </div>
 
           <button
             type="submit"
             disabled={saving || displayName.trim() === profile.display_name}
-            className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded transition disabled:opacity-50"
+            className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition disabled:opacity-50 cursor-pointer"
           >
             {saving ? "Saving Changes..." : "Save Display Name"}
           </button>
@@ -172,50 +172,50 @@ export default function ProfilePage() {
       </div>
 
       {/* SAVED READING BOOKMARKS SECTION */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs space-y-4 text-gray-900 dark:text-gray-100">
+        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">🔖</span>
-            <h2 className="text-sm font-bold text-gray-900">Saved Reading Bookmarks</h2>
-            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-mono">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Saved Reading Bookmarks</h2>
+            <span className="text-xs bg-subtle-light dark:bg-subtle-dark text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-mono border border-border-light dark:border-border-dark">
               {bookmarks.length}
             </span>
           </div>
-          <span className="text-[11px] text-gray-500">Auto-saved reading progress</span>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">Auto-saved reading progress</span>
         </div>
 
         {bookmarks.length === 0 ? (
-          <div className="text-center py-8 text-xs text-gray-500 space-y-2">
+          <div className="text-center py-8 text-xs text-gray-500 dark:text-gray-400 space-y-2">
             <p className="text-2xl">📖</p>
-            <p className="font-semibold text-gray-700">No saved bookmarks yet</p>
-            <p className="max-w-xs mx-auto text-gray-500">
+            <p className="font-semibold text-gray-700 dark:text-gray-300">No saved bookmarks yet</p>
+            <p className="max-w-xs mx-auto text-gray-500 dark:text-gray-400">
               When reading fanworks in the emergency reader mode, your reading progress and last-read page are saved automatically right here.
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border-light dark:divide-border-dark">
             {bookmarks.map((b) => (
               <div key={b.workId} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="space-y-1 max-w-md">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link
                       href={`/reader/${b.workId}`}
-                      className="font-bold text-brand-trunk hover:underline text-sm"
+                      className="font-bold text-brand-trunk dark:text-brand-light hover:underline text-sm"
                     >
                       {b.workTitle}
                     </Link>
-                    <span className="text-gray-500">by {b.authorName}</span>
+                    <span className="text-gray-500 dark:text-gray-400">by {b.authorName}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded">{b.fandom}</span>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    <span className="bg-subtle-light dark:bg-subtle-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">{b.fandom}</span>
                     <span>•</span>
                     <span>Page {b.lastPage} {b.totalPages ? `of ${b.totalPages}` : ""}</span>
                     <span>•</span>
-                    <span className="text-brand-trunk font-semibold">{b.scrollPercent}% read</span>
+                    <span className="text-brand-trunk dark:text-brand-light font-semibold">{b.scrollPercent}% read</span>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                  <div className="w-full bg-subtle-light dark:bg-subtle-dark rounded-full h-1.5 mt-1.5 overflow-hidden border border-border-light/40 dark:border-border-dark/40">
                     <div
                       className="bg-brand-trunk h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${b.scrollPercent}%` }}
@@ -245,7 +245,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="text-[11px] text-gray-500 bg-gray-50 p-4 border border-gray-200 rounded">
+      <div className="text-[11px] text-gray-600 dark:text-gray-400 bg-subtle-light dark:bg-subtle-dark/50 p-4 border border-border-light dark:border-border-dark rounded-xl leading-relaxed">
         <strong>Zero-Download Privacy Notice:</strong> Google Drive links and fanfiction files submitted via OurArchive are streamed ephemerally. Direct Drive URLs are masked from public listings to protect against mass copying and scraping.
       </div>
     </div>
