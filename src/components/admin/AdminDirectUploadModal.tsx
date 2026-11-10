@@ -19,8 +19,10 @@ export function AdminDirectUploadModal({
   onSuccess,
 }: AdminDirectUploadModalProps) {
   const [driveUrl, setDriveUrl] = useState("");
+  const [isFolder, setIsFolder] = useState(true); // Default to folder grouping
   const [confirmedViewOnly, setConfirmedViewOnly] = useState(false);
   const [isPriorVerified, setIsPriorVerified] = useState(false); // Default: Unchecked
+  const [detailsExpanded, setDetailsExpanded] = useState(false); // Default: closed
 
   const [title, setTitle] = useState("");
   const [authorName, setAuthorName] = useState("");
@@ -60,11 +62,6 @@ export function AdminDirectUploadModal({
       return;
     }
 
-    if (!title.trim() || !authorName.trim() || !fandom.trim()) {
-      setError("Title, Author Name, and Fandom are required.");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -76,11 +73,15 @@ export function AdminDirectUploadModal({
       const parsedWordCount = typeof wordCount === "number" ? wordCount : 0;
       const canonicalUrl = segments.canonicalUrl;
 
+      const resolvedTitle = title.trim() || (isFolder ? "Curated Fanwork Folder" : "Untitled Fanwork");
+      const resolvedAuthor = authorName.trim() || "Anonymous Contributor";
+      const resolvedFandom = fandom.trim() || "General / Multi-Fandom";
+
       // Submit via rbacService adminDirectUpload
       adminDirectUpload({
-        title: title.trim(),
-        authorName: authorName.trim(),
-        fandom: fandom.trim(),
+        title: resolvedTitle,
+        authorName: resolvedAuthor,
+        fandom: resolvedFandom,
         pairing: pairing.trim() || undefined,
         rating,
         wordCount: parsedWordCount,
@@ -91,6 +92,8 @@ export function AdminDirectUploadModal({
         isPriorVerified, // If true => Approved immediately; If false => Under Verification
         uploadedBy: adminDisplayName || "admin",
         uploadedByRole: "admin",
+        isFolder,
+        mimeType: isFolder ? "application/vnd.google-apps.folder" : "application/pdf",
       });
 
       setLoading(false);
@@ -182,6 +185,26 @@ export function AdminDirectUploadModal({
                 </div>
               </div>
             )}
+            {/* Folder Grouping Checkbox (Defaults to Folder) */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="adminFolderGroupingCheckbox"
+                  checked={isFolder}
+                  onChange={(e) => setIsFolder(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-xs">
+                    This link is a Folder grouping (e.g. series, multi-chapter work, or collection)
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                    Recommended: Enables indexing multiple related fanwork files, chapter collections, or entire series under a single view-only link. Uncheck only if uploading an isolated individual file.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* View-Only Confirmation Checkbox */}
@@ -235,119 +258,138 @@ export function AdminDirectUploadModal({
             </label>
           </div>
 
-          {/* Metadata Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Work Title"
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              />
-            </div>
+          {/* Expandable Sub-Details Section (Default Closed) */}
+          <div className="border border-border-light dark:border-border-dark rounded-lg overflow-hidden bg-canvas-light/50 dark:bg-canvas-dark/50">
+            <button
+              type="button"
+              onClick={() => setDetailsExpanded(!detailsExpanded)}
+              className="w-full px-4 py-2.5 flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-brand-trunk dark:text-brand-light font-mono text-sm">
+                  {detailsExpanded ? "▼" : "▶"}
+                </span>
+                <span>PROVIDE DETAILS (OPTIONAL)</span>
+              </div>
+              <span className="text-[10px] text-gray-400 font-normal">
+                {detailsExpanded ? "Click to collapse" : "Click to specify title, author, fandom, or tags"}
+              </span>
+            </button>
 
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Author Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="Author / Pen Name"
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              />
-            </div>
+            {detailsExpanded && (
+              <div className="p-4 space-y-3.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Work Title <span className="text-gray-400 font-normal">(Optional, uses folder/file name if blank)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. To Build a Home"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
 
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Fandom <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={fandom}
-                onChange={(e) => setFandom(e.target.value)}
-                placeholder="e.g. Genshin Impact, Good Omens"
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              />
-            </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Author Name <span className="text-gray-400 font-normal">(Optional, defaults to Anonymous)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      placeholder="e.g. Anonymous Contributor"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
 
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Relationship / Pairing
-              </label>
-              <input
-                type="text"
-                value={pairing}
-                onChange={(e) => setPairing(e.target.value)}
-                placeholder="e.g. Character A/Character B"
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              />
-            </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Fandom <span className="text-gray-400 font-normal">(Optional, defaults to General)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={fandom}
+                      onChange={(e) => setFandom(e.target.value)}
+                      placeholder="e.g. Genshin Impact, Good Omens"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
 
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Content Rating
-              </label>
-              <select
-                value={rating}
-                onChange={(e) => setRating(e.target.value as typeof rating)}
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              >
-                <option value="General Audiences">General Audiences</option>
-                <option value="Teen And Up Audiences">Teen And Up Audiences</option>
-                <option value="Mature">Mature</option>
-                <option value="Explicit">Explicit</option>
-                <option value="Not Rated">Not Rated</option>
-              </select>
-            </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Relationship / Pairing
+                    </label>
+                    <input
+                      type="text"
+                      value={pairing}
+                      onChange={(e) => setPairing(e.target.value)}
+                      placeholder="e.g. Character A/Character B"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
 
-            <div>
-              <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-                Word Count
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={wordCount}
-                onChange={(e) => setWordCount(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="15000"
-                className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-              />
-            </div>
-          </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Content Rating
+                    </label>
+                    <select
+                      value={rating}
+                      onChange={(e) => setRating(e.target.value as typeof rating)}
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="General Audiences">General Audiences</option>
+                      <option value="Teen And Up Audiences">Teen And Up Audiences</option>
+                      <option value="Mature">Mature</option>
+                      <option value="Explicit">Explicit</option>
+                      <option value="Not Rated">Not Rated</option>
+                    </select>
+                  </div>
 
-          <div>
-            <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              Summary
-            </label>
-            <textarea
-              rows={2}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Brief summary or description of the work"
-              className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-            />
-          </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Word Count
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={wordCount}
+                      onChange={(e) => setWordCount(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="15000"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                </div>
 
-          <div>
-            <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              Additional Tags (Comma-separated)
-            </label>
-            <input
-              type="text"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="Fluff, Slow Burn, Alternate Universe"
-              className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
-            />
+                <div>
+                  <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                    Summary / Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Brief summary or description of the work"
+                    className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                    Additional Tags (Comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="Fluff, Slow Burn, Alternate Universe"
+                    className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Modal Footer Controls */}
@@ -366,10 +408,16 @@ export function AdminDirectUploadModal({
                 isPriorVerified
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-brand-trunk hover:bg-brand-bark"
-              }`}
+              } disabled:opacity-40`}
             >
+              {loading && (
+                <svg className="animate-spin -ml-0.5 mr-1 h-3 w-3 inline text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                </svg>
+              )}
               {loading ? (
-                "Submitting..."
+                "Cataloging Fanwork..."
               ) : isPriorVerified ? (
                 <>
                   <span>✓</span> Direct Publish (Approved)

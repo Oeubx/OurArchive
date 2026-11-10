@@ -17,11 +17,17 @@ interface RouteParams {
   };
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const workId = params.id;
     if (!workId) {
       return NextResponse.json({ error: "Work ID is required." }, { status: 400 });
+    }
+
+    if (!UUID_REGEX.test(workId)) {
+      return NextResponse.json({ error: "Invalid Work ID format." }, { status: 400 });
     }
 
     const supabase = createAdminClient();
@@ -74,6 +80,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const fileId = link.google_file_id;
     const mimeType = metadata?.mime_type || "application/octet-stream";
     const apiKey = process.env.GOOGLE_DRIVE_API_KEY;
+
+    // Handling Folder Submissions: folders cannot be streamed in the single-document reader
+    const isFolder =
+      mimeType.toLowerCase().includes("folder") ||
+      mimeType === "application/vnd.google-apps.folder" ||
+      (typeof link.drive_url === "string" && link.drive_url.includes("/folders/"));
+
+    if (isFolder) {
+      return NextResponse.json(
+        {
+          error:
+            "This item is a folder collection. The emergency reader is designed for individual fanfiction documents and PDF files.",
+        },
+        { status: 422 }
+      );
+    }
 
     // Handling PDF Documents: Stream via isolated view-only preview frame
     if (mimeType.toLowerCase().includes("pdf")) {

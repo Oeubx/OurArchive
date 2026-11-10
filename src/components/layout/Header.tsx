@@ -108,67 +108,113 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Conditional Center/Desktop Navigation: Only rendered when user is a GUEST */}
-          {!isSignedIn && (
-            <nav className="hidden md:flex items-center gap-4 text-xs font-medium text-amber-100/90">
-              <Link href="/" className="hover:text-white transition py-1">
-                Home
-              </Link>
-              <span>•</span>
-              <Link href="/search" className="hover:text-white transition py-1">
-                Search
-              </Link>
-              <span>•</span>
-              <Link href="/contribute" className="hover:text-white transition py-1">
-                Contribute
-              </Link>
-              <span>•</span>
-              <Link href="/disclaimers" className="hover:text-white transition py-1">
-                Disclaimers
-              </Link>
-            </nav>
-          )}
+          {/* Desktop Navigation Links (md:flex): Home, Search, (Contribute if Signed In), Disclaimers */}
+          <nav className="hidden md:flex items-center gap-4 text-xs font-medium text-amber-100/90">
+            <Link href="/" className="hover:text-white transition py-1">
+              Home
+            </Link>
+            <span>•</span>
+            <Link href="/search" className="hover:text-white transition py-1">
+              Search
+            </Link>
+            {isSignedIn && (
+              <>
+                <span>•</span>
+                <Link href="/contribute" className="hover:text-white transition py-1">
+                  Contribute
+                </Link>
+              </>
+            )}
+            <span>•</span>
+            <Link href="/disclaimers" className="hover:text-white transition py-1">
+              Disclaimers
+            </Link>
+          </nav>
 
           {/* Right Controls */}
-          {isSignedIn ? (
-            /* When Signed In: Render ONLY the 3 Lines (☰) hamburger button */
-            <div className="flex items-center">
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-                className="p-1.5 rounded-lg text-white hover:bg-brand-bark transition cursor-pointer flex items-center gap-1.5"
-                aria-label="Open profile navigation drawer"
-                aria-expanded={drawerOpen}
-              >
-                <span className="sr-only">Menu</span>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            /* When Signed Out (Guest): Render ThemeToggle, Sign In button, and 3-lines on mobile */
-            <div className="flex items-center gap-2 sm:gap-3">
-              <ThemeToggle />
+          {/* DESKTOP (md:flex): ThemeToggle, Profile pill, Sign Out, and Drawer Hamburger */}
+          <div className="hidden md:flex items-center gap-2.5">
+            <ThemeToggle />
+            {isSignedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 py-1 px-2.5 rounded-lg bg-black/20 hover:bg-black/35 border border-white/20 text-white text-xs transition"
+                  title="View your profile"
+                >
+                  <div className="w-5 h-5 rounded-full bg-amber-200 text-brand-bark flex items-center justify-center text-[10px] font-bold">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="max-w-[130px] truncate font-semibold text-[11px]">
+                    {displayName}
+                  </span>
+                  {isAdmin && (
+                    <span className="text-[9px] bg-brand-bark text-amber-200 px-1 py-0.2 rounded font-mono uppercase">
+                      Admin
+                    </span>
+                  )}
+                  {isVerifier && (
+                    <span className="text-[9px] bg-emerald-950 text-emerald-200 px-1 py-0.2 rounded font-mono uppercase">
+                      Verifier
+                    </span>
+                  )}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="px-2.5 py-1 text-xs font-semibold bg-white/10 hover:bg-red-600/90 text-white border border-white/25 rounded transition cursor-pointer"
+                  title="Sign Out of account"
+                >
+                  Sign Out
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(true)}
+                  className="p-1.5 rounded-lg text-white hover:bg-brand-bark transition cursor-pointer"
+                  aria-label="Open navigation drawer"
+                  aria-expanded={drawerOpen}
+                  title="More navigations"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </>
+            ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="px-3 py-1 text-xs font-semibold bg-white text-brand-trunk hover:bg-amber-50 rounded shadow-xs transition"
+                className="px-3 py-1 text-xs font-semibold bg-white text-brand-trunk hover:bg-amber-50 rounded shadow-xs transition cursor-pointer"
               >
                 Sign In
               </button>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-                className="md:hidden p-1.5 rounded-lg text-white hover:bg-brand-bark transition"
-                aria-label="Open mobile navigation"
-                aria-expanded={drawerOpen}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* MOBILE (md:hidden): Left is Logo OurArchive, Right is Search + 3 Lines Icon */}
+          <div className="flex md:hidden items-center gap-1.5">
+            <Link
+              href="/search"
+              className="p-1.5 text-white/90 hover:text-white hover:bg-brand-bark rounded-lg transition flex items-center gap-1 text-xs font-semibold"
+              aria-label="Search Library"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="text-[11px] font-medium">Search</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="p-1.5 rounded-lg text-white hover:bg-brand-bark transition cursor-pointer"
+              aria-label="Open mobile navigation"
+              aria-expanded={drawerOpen}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -277,15 +323,6 @@ export function Header() {
                 >
                   <span className="text-base">🏠</span>
                   <span>Home Index</span>
-                </Link>
-
-                <Link
-                  href="/search"
-                  onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
-                >
-                  <span className="text-base">🔍</span>
-                  <span>Search Archive</span>
                 </Link>
 
                 <Link

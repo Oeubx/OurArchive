@@ -42,9 +42,14 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh token by querying auth user (safely populates refreshed cookies)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user, supabase };
+    return { supabaseResponse, user, supabase };
+  } catch (err) {
+    console.warn("Supabase middleware auth session refresh error:", err);
+    return { supabaseResponse, user: null, supabase };
+  }
 }

@@ -56,26 +56,28 @@ export default function ReaderPage() {
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
 
-  // Synchronize document body background with reader theme to eliminate black contrast margins on wide laptop screens
+  // Synchronize document body and root background with reader theme to eliminate margin gutters on wide screens
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const prevBg = document.body.style.backgroundColor;
-    const prevColor = document.body.style.color;
+    const prevBodyBg = document.body.style.backgroundColor;
+    const prevBodyColor = document.body.style.color;
+    const prevDocBg = document.documentElement.style.backgroundColor;
 
-    if (theme === "sepia") {
-      document.body.style.backgroundColor = "#fbf0d9";
-      document.body.style.color = "#3d2b1f";
-    } else if (theme === "dark") {
-      document.body.style.backgroundColor = "#121212";
-      document.body.style.color = "#e5e5e5";
-    } else {
-      document.body.style.backgroundColor = "#ffffff";
-      document.body.style.color = "#1f2937";
-    }
+    const bgMap: Record<ThemeMode, { bg: string; color: string }> = {
+      light: { bg: "#f6f6f4", color: "#1a1a1a" },
+      sepia: { bg: "#fbf0d9", color: "#382b1d" },
+      dark: { bg: "#121214", color: "#ededed" },
+    };
+
+    const target = bgMap[theme];
+    document.body.style.backgroundColor = target.bg;
+    document.body.style.color = target.color;
+    document.documentElement.style.backgroundColor = target.bg;
 
     return () => {
-      document.body.style.backgroundColor = prevBg;
-      document.body.style.color = prevColor;
+      document.body.style.backgroundColor = prevBodyBg;
+      document.body.style.color = prevBodyColor;
+      document.documentElement.style.backgroundColor = prevDocBg;
     };
   }, [theme]);
 

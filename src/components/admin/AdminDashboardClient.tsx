@@ -18,6 +18,7 @@ import {
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
 import { getAllAuditRecords, exportAuditToCsv } from "@/lib/auditService";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { VerifierRequestsModal } from "./VerifierRequestsModal";
 import { AdminDirectUploadModal } from "./AdminDirectUploadModal";
 import { AuditHistoryModal } from "./AuditHistoryModal";
@@ -26,6 +27,15 @@ import { AdminTakedownContainer } from "./AdminTakedownContainer";
 
 interface AdminDashboardClientProps {
   adminEmail: string;
+}
+
+function ActionSpinner() {
+  return (
+    <svg className="animate-spin -ml-0.5 mr-1 h-2.5 w-2.5 inline-block text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+  );
 }
 
 export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) {
@@ -45,17 +55,33 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   });
 
   const [filter, setFilter] = useState<string>("all");
+  const [processingActionId, setProcessingActionId] = useState<string | null>(null);
   const [showVerifierRequestsModal, setShowVerifierRequestsModal] = useState(false);
   const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
   const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
 
+  async function handleTriageAction(actionKey: string, actionFn: () => Promise<unknown> | unknown) {
+    if (processingActionId) return;
+    setProcessingActionId(actionKey);
+    try {
+      await actionFn();
+    } finally {
+      setProcessingActionId(null);
+    }
+  }
+
   function refresh() {
     setRole(getCurrentUserRole());
     setLinks(getAllCommunityLinks());
     setMetrics(getArchiveMetrics());
   }
+
+  // Real-time synchronization: Automatically refresh queue and metrics on live database changes
+  useRealtimeDriveLinks(() => {
+    refresh();
+  });
 
   useEffect(() => {
     refresh();
@@ -78,7 +104,19 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     return unsubscribe;
   }, []);
 
-  const filteredLinks = links.filter((item) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // Sorting: latest uploaded that is not approved at the top
+  const sortedLinks = [...links].sort((a, b) => {
+    const aUnapproved = a.status !== "approved";
+    const bUnapproved = b.status !== "approved";
+    if (aUnapproved && !bUnapproved) return -1;
+    if (!aUnapproved && bUnapproved) return 1;
+    return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+  });
+
+  const filteredLinks = sortedLinks.filter((item) => {
     if (filter === "all") return true;
     if (filter === "pending") return item.status === "under_verification";
     if (filter === "approved") return item.status === "approved";
@@ -87,6 +125,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     if (filter === "rejected") return item.status === "rejected";
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredLinks.length / pageSize));
+  const displayedLinks = filteredLinks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   function handleConfirmRemove() {
     if (!itemToRemove) return;
@@ -208,8 +249,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             </p>
           </div>
 
-          {/* Categorized Filter Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {/* Categorized Filter Tabs (Native scrollbar hidden) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {[
               { id: "all", label: `All (${links.length})` },
               { id: "pending", label: `Pending (${metrics.underVerificationCount})` },
@@ -221,8 +262,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setFilter(tab.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition ${
+                onClick={() => {
+                  setFilter(tab.id);
+                  setCurrentPage(1);
+                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                   filter === tab.id
                     ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xs"
                     : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
@@ -234,90 +278,57 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           </div>
         </div>
 
-        {/* Triage Table */}
+        {/* Triage Container: Dual Responsive Layout (Mobile Cards vs Desktop Table) */}
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-border-light dark:border-border-dark bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Work & Author</th>
-                  <th className="py-3 px-4">Masked Link</th>
-                  <th className="py-3 px-4">Submitted By</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Administrative Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {filteredLinks.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center text-gray-500 dark:text-gray-400">
-                      No submissions found matching the &ldquo;{filter}&rdquo; filter.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLinks.map((item) => {
-                    const isMaliciousThreat =
-                      item.status === "flagged" || (item.automatedRiskScore ?? 0) >= 70;
-                    const isQuarantined = item.status === "hidden" || item.status === "rejected";
-                    const canDelete = isQuarantined || isMaliciousThreat;
+          {displayedLinks.length === 0 ? (
+            <div className="py-10 text-center text-xs text-gray-500 dark:text-gray-400">
+              No submissions found matching the &ldquo;{filter}&rdquo; filter.
+            </div>
+          ) : (
+            <>
+              {/* MOBILE VIEW (< md): Touch-Friendly Accessible Card Stack */}
+              <div className="block md:hidden divide-y divide-border-light dark:divide-border-dark">
+                {displayedLinks.map((item) => {
+                  const isMaliciousThreat =
+                    item.status === "flagged" || (item.automatedRiskScore ?? 0) >= 70;
+                  const isQuarantined = item.status === "hidden" || item.status === "rejected";
+                  const canDelete = isQuarantined || isMaliciousThreat;
 
-                    return (
-                      <tr
-                        key={item.id}
-                        onClick={() => setInspectingLink(item)}
-                        className="hover:bg-subtle-light dark:hover:bg-subtle-dark/60 cursor-pointer transition"
-                      >
-                        {/* Work & Author */}
-                        <td className="py-3 px-4 max-w-xs">
-                          <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk transition">
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setInspectingLink(item)}
+                      className="p-4 space-y-3 hover:bg-subtle-light dark:hover:bg-subtle-dark/40 cursor-pointer transition text-xs"
+                    >
+                      {/* Card Header: Title & Status Badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
                             {item.title}
-                          </div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-                            <span>by {item.authorName}</span>
-                            <span>•</span>
-                            <span>{item.fandom}</span>
-                          </div>
+                          </h4>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                            by {item.authorName} &bull; {item.fandom}
+                          </p>
                           {item.verificationBadge && (
-                            <div className="mt-1">
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                                {item.verificationBadge}
-                              </span>
-                            </div>
+                            <span className="inline-block mt-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                              {item.verificationBadge}
+                            </span>
                           )}
-                        </td>
-
-                        {/* Masked Link & Privacy (Protected against mass scraping) */}
-                        <td className="py-3 px-4 max-w-[200px] truncate font-mono text-gray-600 dark:text-gray-300">
-                          <span title={item.maskedDriveUrl} className="hover:underline">
-                            {item.maskedDriveUrl}
-                          </span>
-                        </td>
-
-                        {/* Submitter */}
-                        <td className="py-3 px-4">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">
-                            @{item.uploadedBy}
-                          </span>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
-                            Role: {item.uploadedByRole}
-                          </span>
-                        </td>
-
-                        {/* Status Badge */}
-                        <td className="py-3 px-4">
+                        </div>
+                        <div>
                           {item.status === "approved" && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 uppercase">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 uppercase">
                               Approved
                             </span>
                           )}
                           {item.status === "under_verification" && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 uppercase">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 uppercase">
                               Under Review
                             </span>
                           )}
                           {item.status === "hidden" && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border border-gray-400 uppercase">
-                              Hidden (Quarantine)
+                              Hidden
                             </span>
                           )}
                           {item.status === "rejected" && (
@@ -330,119 +341,343 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                               Threat Flagged
                             </span>
                           )}
-                        </td>
+                        </div>
+                      </div>
 
-                        {/* Action Buttons */}
-                        <td className="py-3 px-4 text-right">
-                          <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            {/* Inspect */}
-                            <button
-                              type="button"
-                              onClick={() => setInspectingLink(item)}
-                              title="Inspect metadata, run scanner, and triage"
-                              className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
-                            >
-                              🔍 Inspect
-                            </button>
+                      {/* Masked Link & Submitter Row */}
+                      <div className="bg-canvas-light/60 dark:bg-canvas-dark/60 p-2.5 rounded-lg border border-border-light dark:border-border-dark space-y-1 font-mono text-[11px]">
+                        <div className="truncate text-gray-600 dark:text-gray-300">
+                          {item.maskedDriveUrl}
+                        </div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-sans">
+                          Submitted by <strong className="text-gray-700 dark:text-gray-300">@{item.uploadedBy}</strong> ({item.uploadedByRole})
+                        </div>
+                      </div>
 
-                            {/* AUDIT HISTORY */}
-                            <button
-                              type="button"
-                              onClick={() => setAuditLink({ id: item.id, title: item.title })}
-                              title="View lifecycle audit history and export CSV/PDF report"
-                              className="px-2 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white rounded border border-purple-200 dark:border-purple-800 text-[11px] font-semibold transition"
-                            >
-                              📜 Audit
-                            </button>
+                      {/* Touch-Friendly Action Buttons */}
+                      <div
+                        className="flex flex-wrap items-center gap-1.5 pt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setInspectingLink(item)}
+                          className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition cursor-pointer"
+                        >
+                          🔍 Inspect
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAuditLink({ id: item.id, title: item.title })}
+                          className="px-2.5 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white rounded border border-purple-200 dark:border-purple-800 text-[11px] font-semibold transition cursor-pointer"
+                        >
+                          📜 Audit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
+                          className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                        >
+                          {processingActionId === `${item.id}-verify` && <ActionSpinner />}
+                          Verify
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
+                          className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                        >
+                          {processingActionId === `${item.id}-approve` && <ActionSpinner />}
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(processingActionId)}
+                          onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
+                          className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                        >
+                          {processingActionId === `${item.id}-reject` && <ActionSpinner />}
+                          Reject
+                        </button>
+                        {item.status === "hidden" ? (
+                          <button
+                            type="button"
+                            disabled={Boolean(processingActionId)}
+                            onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
+                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                          >
+                            {processingActionId === `${item.id}-unhide` && <ActionSpinner />}
+                            Unhide
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={Boolean(processingActionId)}
+                            onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
+                            className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                          >
+                            {processingActionId === `${item.id}-hide` && <ActionSpinner />}
+                            Hide
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => setItemToRemove(item)}
+                            className="px-2.5 py-1 rounded text-[11px] font-bold bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 hover:bg-red-600 hover:text-white transition cursor-pointer"
+                          >
+                            {isMaliciousThreat ? "🚨 Purge" : "🗑️ Delete"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                            {/* VERIFY */}
-                            <button
-                              type="button"
-                              onClick={() => verifyLink(item.id, adminDisplayName)}
-                              title="Verify and certify link"
-                              className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition"
-                            >
-                              Verify
-                            </button>
+              {/* DESKTOP VIEW (md:block): Full Structured Data Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-border-light dark:border-border-dark bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">Work & Author</th>
+                      <th className="py-3 px-4">Masked Link</th>
+                      <th className="py-3 px-4">Submitted By</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Administrative Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                    {displayedLinks.map((item) => {
+                      const isMaliciousThreat =
+                        item.status === "flagged" || (item.automatedRiskScore ?? 0) >= 70;
+                      const isQuarantined = item.status === "hidden" || item.status === "rejected";
+                      const canDelete = isQuarantined || isMaliciousThreat;
 
-                            {/* APPROVE */}
-                            <button
-                              type="button"
-                              onClick={() => approveLink(item.id, adminDisplayName, item.isPriorVerified)}
-                              title="Approve and publish"
-                              className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition"
-                            >
-                              Approve
-                            </button>
-
-                            {/* REJECT */}
-                            <button
-                              type="button"
-                              onClick={() => rejectLink(item.id, adminDisplayName)}
-                              title="Reject submission"
-                              className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition"
-                            >
-                              Reject
-                            </button>
-
-                            {/* HIDE / UNHIDE */}
-                            {item.status === "hidden" ? (
-                              <button
-                                type="button"
-                                onClick={() => unhideLink(item.id, adminDisplayName)}
-                                title="Restore visibility"
-                                className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
-                              >
-                                Unhide
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => hideLink(item.id, adminDisplayName)}
-                                title="Quarantine work for author takedown checking"
-                                className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
-                              >
-                                Hide
-                              </button>
+                      return (
+                        <tr
+                          key={item.id}
+                          onClick={() => setInspectingLink(item)}
+                          className="hover:bg-subtle-light dark:hover:bg-subtle-dark/60 cursor-pointer transition"
+                        >
+                          {/* Work & Author */}
+                          <td className="py-3 px-4 max-w-xs">
+                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk transition">
+                              {item.title}
+                            </div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                              <span>by {item.authorName}</span>
+                              <span>•</span>
+                              <span>{item.fandom}</span>
+                            </div>
+                            {item.verificationBadge && (
+                              <div className="mt-1">
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                  {item.verificationBadge}
+                                </span>
+                              </div>
                             )}
+                          </td>
 
-                            {/* PERMANENT REMOVE / PURGE ACTION */}
-                            {canDelete ? (
-                              <button
-                                type="button"
-                                onClick={() => setItemToRemove(item)}
-                                title={
-                                  isMaliciousThreat
-                                    ? "Emergency Threat Purge (Malicious/Hazard Deemed by System)"
-                                    : "Permanent Expunge (Author Takedown Request)"
-                                }
-                                className={`px-2 py-1 rounded text-[11px] font-bold transition shadow-2xs ${
-                                  isMaliciousThreat
-                                    ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
-                                    : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 hover:bg-red-600 hover:text-white"
-                                }`}
-                              >
-                                {isMaliciousThreat ? "🚨 Purge" : "🗑️ Delete"}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled
-                                title="Fanwork must be placed in Hidden or Rejected state before permanent deletion, unless deemed malicious by threat scanner"
-                                className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 rounded text-[11px] cursor-not-allowed"
-                              >
-                                🔒
-                              </button>
+                          {/* Masked Link & Privacy (Protected against mass scraping) */}
+                          <td className="py-3 px-4 max-w-[200px] truncate font-mono text-gray-600 dark:text-gray-300">
+                            <span title={item.maskedDriveUrl} className="hover:underline">
+                              {item.maskedDriveUrl}
+                            </span>
+                          </td>
+
+                          {/* Submitter */}
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              @{item.uploadedBy}
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
+                              Role: {item.uploadedByRole}
+                            </span>
+                          </td>
+
+                          {/* Status Badge */}
+                          <td className="py-3 px-4">
+                            {item.status === "approved" && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 uppercase">
+                                Approved
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                            {item.status === "under_verification" && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 uppercase">
+                                Under Review
+                              </span>
+                            )}
+                            {item.status === "hidden" && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border border-gray-400 uppercase">
+                                Hidden (Quarantine)
+                              </span>
+                            )}
+                            {item.status === "rejected" && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 uppercase">
+                                Rejected
+                              </span>
+                            )}
+                            {item.status === "flagged" && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase animate-pulse">
+                                Threat Flagged
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Action Buttons */}
+                          <td className="py-3 px-4 text-right">
+                            <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              {/* Inspect */}
+                              <button
+                                type="button"
+                                onClick={() => setInspectingLink(item)}
+                                title="Inspect metadata, run scanner, and triage"
+                                className="px-2 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition"
+                              >
+                                🔍 Inspect
+                              </button>
+
+                              {/* AUDIT HISTORY */}
+                              <button
+                                type="button"
+                                onClick={() => setAuditLink({ id: item.id, title: item.title })}
+                                title="View lifecycle audit history and export CSV/PDF report"
+                                className="px-2 py-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white rounded border border-purple-200 dark:border-purple-800 text-[11px] font-semibold transition"
+                              >
+                                📜 Audit
+                              </button>
+
+                              {/* VERIFY */}
+                              <button
+                                type="button"
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-verify`, () => verifyLink(item.id, adminDisplayName))}
+                                title="Verify and certify link"
+                                className="px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-600 hover:text-white rounded border border-blue-200 dark:border-blue-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                              >
+                                {processingActionId === `${item.id}-verify` && <ActionSpinner />}
+                                Verify
+                              </button>
+
+                              {/* APPROVE */}
+                              <button
+                                type="button"
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-approve`, () => approveLink(item.id, adminDisplayName, item.isPriorVerified))}
+                                title="Approve and publish"
+                                className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                              >
+                                {processingActionId === `${item.id}-approve` && <ActionSpinner />}
+                                Approve
+                              </button>
+
+                              {/* REJECT */}
+                              <button
+                                type="button"
+                                disabled={Boolean(processingActionId)}
+                                onClick={() => handleTriageAction(`${item.id}-reject`, () => rejectLink(item.id, adminDisplayName))}
+                                title="Reject submission"
+                                className="px-2 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white rounded border border-amber-200 dark:border-amber-800 text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                              >
+                                {processingActionId === `${item.id}-reject` && <ActionSpinner />}
+                                Reject
+                              </button>
+
+                              {/* HIDE / UNHIDE */}
+                              {item.status === "hidden" ? (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(processingActionId)}
+                                  onClick={() => handleTriageAction(`${item.id}-unhide`, () => unhideLink(item.id, adminDisplayName))}
+                                  title="Restore visibility"
+                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                                >
+                                  {processingActionId === `${item.id}-unhide` && <ActionSpinner />}
+                                  Unhide
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(processingActionId)}
+                                  onClick={() => handleTriageAction(`${item.id}-hide`, () => hideLink(item.id, adminDisplayName))}
+                                  title="Quarantine work for author takedown checking"
+                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-700 hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition disabled:opacity-40 cursor-pointer"
+                                >
+                                  {processingActionId === `${item.id}-hide` && <ActionSpinner />}
+                                  Hide
+                                </button>
+                              )}
+
+                              {/* PERMANENT REMOVE / PURGE ACTION */}
+                              {canDelete ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setItemToRemove(item)}
+                                  title={
+                                    isMaliciousThreat
+                                      ? "Emergency Threat Purge (Malicious/Hazard Deemed by System)"
+                                      : "Permanent Expunge (Author Takedown Request)"
+                                  }
+                                  className={`px-2 py-1 rounded text-[11px] font-bold transition shadow-2xs ${
+                                    isMaliciousThreat
+                                      ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
+                                      : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 hover:bg-red-600 hover:text-white"
+                                  }`}
+                                >
+                                  {isMaliciousThreat ? "🚨 Purge" : "🗑️ Delete"}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Fanwork must be placed in Hidden or Rejected state before permanent deletion, unless deemed malicious by threat scanner"
+                                  className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 rounded text-[11px] cursor-not-allowed"
+                                >
+                                  🔒
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Bar (Maximum 5 Data Rows) */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-border-light dark:border-border-dark bg-subtle-light/40 dark:bg-subtle-dark/40 text-xs">
+                  <div className="text-gray-500 dark:text-gray-400 text-[11px]">
+                    Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLinks.length)} of {filteredLinks.length} submissions
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark disabled:opacity-40 transition font-medium text-xs cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      &larr; Prev
+                    </button>
+                    <span className="text-gray-600 dark:text-gray-300 font-medium text-[11px]">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="px-2.5 py-1 rounded border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark disabled:opacity-40 transition font-medium text-xs cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      Next &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

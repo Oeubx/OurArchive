@@ -5,16 +5,19 @@ import Link from "next/link";
 import { SearchSection } from "@/components/search/SearchSection";
 import type { SearchFilters } from "@/components/search/SearchSection";
 import { DisplayCard } from "@/components/cards/DisplayCard";
+import { SkeletonCard } from "@/components/ui/SkeletonCard";
 import { MaskedDriveRevealModal } from "@/components/modals/MaskedDriveRevealModal";
 import { UploadModal } from "@/components/upload/UploadModal";
 import { AssistedIntakeModal } from "@/components/upload/AssistedIntakeModal";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import type { PublicSearchFeedRecord } from "@/types/database";
 
 export default function SearchPage() {
   const [works, setWorks] = useState<PublicSearchFeedRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState<number>(5);
 
   const [revealWorkId, setRevealWorkId] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -34,7 +37,7 @@ export default function SearchPage() {
     total: 0,
   });
 
-  const fetchWorks = useCallback(async (filters: SearchFilters, page = 1) => {
+  const fetchWorks = useCallback(async (filters: SearchFilters, page = 1, limit = pageSize) => {
     setLoading(true);
     setError(null);
 
@@ -45,7 +48,7 @@ export default function SearchPage() {
       if (filters.rating && filters.rating !== "All") params.set("rating", filters.rating);
       if (filters.tag) params.set("tag", filters.tag);
       params.set("page", page.toString());
-      params.set("limit", "15");
+      params.set("limit", limit.toString());
 
       const res = await fetch(`/api/search?${params.toString()}`);
       const json = await res.json();
@@ -55,7 +58,7 @@ export default function SearchPage() {
         setPagination(
           json.pagination || {
             page: 1,
-            totalPages: Math.max(1, Math.ceil((json.works?.length || 0) / 15)),
+            totalPages: Math.max(1, Math.ceil((json.works?.length || 0) / limit)),
             total: json.works?.length || 0,
           }
         );
@@ -71,22 +74,31 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pageSize]);
 
   useEffect(() => {
     fetchWorks(currentFilters, 1);
   }, [fetchWorks, currentFilters]);
 
+  // Real-time synchronization: Silently re-query library when works are approved, modified, or removed
+  useRealtimeDriveLinks(() => {
+    fetchWorks(currentFilters, pagination.page, pageSize);
+  });
+
   function handleSearch(filters: SearchFilters) {
     setCurrentFilters(filters);
-    fetchWorks(filters, 1);
+    fetchWorks(filters, 1, pageSize);
+  }
+
+  function handlePageSizeChange(newSize: number) {
+    setPageSize(newSize);
+    fetchWorks(currentFilters, 1, newSize);
   }
 
   function handlePageChange(newPage: number) {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
-      fetchWorks(currentFilters, newPage);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    if (newPage < 1 || newPage > pagination.totalPages || newPage === pagination.page) return;
+    fetchWorks(currentFilters, newPage, pageSize);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -152,7 +164,7 @@ export default function SearchPage() {
 
       {/* Results Feed Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-1 gap-2">
           <span>
             {loading ? (
               "Searching library in Supabase..."
@@ -162,11 +174,32 @@ export default function SearchPage() {
               </>
             )}
           </span>
-          {pagination.totalPages > 1 && (
-            <span>
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
-          )}
+
+          <div className="flex items-center gap-4">
+            {/* Page Size Selector (5 - 15) */}
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="pageSizeSelect" className="text-gray-600 dark:text-gray-400">
+                Show:
+              </label>
+              <select
+                id="pageSizeSelect"
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-0.5 rounded border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-gray-800 dark:text-gray-200 text-xs font-semibold focus:outline-hidden"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+              </select>
+              <span>per page</span>
+            </div>
+
+            {pagination.totalPages > 1 && (
+              <span>
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -175,22 +208,13 @@ export default function SearchPage() {
           </div>
         )}
 
-        {loading && works.length === 0 && (
+        {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 animate-pulse space-y-3"
-              >
-                <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-1/3" />
-                <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded w-1/4" />
-                <div className="h-12 bg-gray-200 dark:bg-zinc-700 rounded w-full" />
-              </div>
+            {Array.from({ length: pageSize }).map((_, i) => (
+              <SkeletonCard key={i} />
             ))}
           </div>
-        )}
-
-        {!loading && works.length === 0 && !error && (
+        ) : works.length === 0 && !error ? (
           <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-10 text-center space-y-4 max-w-lg mx-auto shadow-xs">
             <div className="text-3xl">📚</div>
             <h3 className="text-base font-bold text-gray-800 dark:text-gray-200">No Verified Works Found</h3>
@@ -206,18 +230,18 @@ export default function SearchPage() {
               </button>
             </div>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {works.map((work) => (
+              <DisplayCard
+                key={work.work_id}
+                work={work}
+                onRevealDrive={(id) => setRevealWorkId(id)}
+                onReportTakedown={(id, title) => setTakedownWork({ id, title })}
+              />
+            ))}
+          </div>
         )}
-
-        <div className="space-y-4">
-          {works.map((work) => (
-            <DisplayCard
-              key={work.work_id}
-              work={work}
-              onRevealDrive={(id) => setRevealWorkId(id)}
-              onReportTakedown={(id, title) => setTakedownWork({ id, title })}
-            />
-          ))}
-        </div>
 
         {/* Pagination Controls */}
         {pagination.totalPages > 1 && (
@@ -253,13 +277,13 @@ export default function SearchPage() {
       <UploadModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
-        onSuccess={() => fetchWorks(currentFilters, 1)}
+        onSuccess={() => fetchWorks(currentFilters, 1, pageSize)}
       />
 
       <AssistedIntakeModal
         isOpen={showAssistedModal}
         onClose={() => setShowAssistedModal(false)}
-        onSuccess={() => fetchWorks(currentFilters, 1)}
+        onSuccess={() => fetchWorks(currentFilters, 1, pageSize)}
       />
 
       <TakedownModal
@@ -267,7 +291,7 @@ export default function SearchPage() {
         workId={takedownWork?.id}
         workTitle={takedownWork?.title}
         onClose={() => setTakedownWork(null)}
-        onSuccess={() => fetchWorks(currentFilters, pagination.page)}
+        onSuccess={() => fetchWorks(currentFilters, pagination.page, pageSize)}
       />
     </div>
   );

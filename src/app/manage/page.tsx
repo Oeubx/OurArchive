@@ -72,10 +72,25 @@ export default function VerifierManagePage() {
   }, []);
 
   // Filtered links
-  const filteredLinks = links.filter((item) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // Sorting: latest uploaded that is not approved at the top
+  const sortedLinks = [...links].sort((a, b) => {
+    const aUnapproved = a.status !== "approved";
+    const bUnapproved = b.status !== "approved";
+    if (aUnapproved && !bUnapproved) return -1;
+    if (!aUnapproved && bUnapproved) return 1;
+    return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+  });
+
+  const filteredLinks = sortedLinks.filter((item) => {
     if (selectedStatusFilter === "all") return true;
     return item.status === selectedStatusFilter;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredLinks.length / pageSize));
+  const displayedLinks = filteredLinks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const isAuthorized = role === "verifier" || role === "admin";
 
@@ -243,8 +258,8 @@ export default function VerifierManagePage() {
                 </p>
               </div>
 
-              {/* Status Filter Buttons */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {/* Status Filter Buttons (Scrollbar hidden) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {[
                   { id: "all", label: `All (${links.length})` },
                   { id: "under_verification", label: `Pending (${metrics.underVerificationCount})` },
@@ -253,8 +268,11 @@ export default function VerifierManagePage() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setSelectedStatusFilter(tab.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                    onClick={() => {
+                      setSelectedStatusFilter(tab.id);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                       selectedStatusFilter === tab.id
                         ? "bg-brand-trunk text-white shadow-2xs"
                         : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
@@ -266,130 +284,266 @@ export default function VerifierManagePage() {
               </div>
             </div>
 
-            {/* Submission Records Table */}
+            {/* Submission Records Container: Dual Responsive Layout */}
             <div className="border border-border-light dark:border-border-dark rounded-xl bg-surface-light dark:bg-surface-dark overflow-hidden shadow-xs">
-              {filteredLinks.length === 0 ? (
+              {displayedLinks.length === 0 ? (
                 <div className="p-12 text-center text-xs text-gray-500 dark:text-gray-400 space-y-2">
                   <div className="text-2xl">📋</div>
                   <div className="font-semibold text-gray-700 dark:text-gray-300">No submissions in this filter</div>
                   <p>Check other tabs or submit a new drive link from the contribute portal.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-canvas-light dark:bg-canvas-dark text-gray-600 dark:text-gray-400 border-b border-border-light dark:border-border-dark select-none">
-                      <tr>
-                        <th className="p-3">Work Details</th>
-                        <th className="p-3">Drive Uploader</th>
-                        <th className="p-3">Safety Risk</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3 text-right">Triage Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                      {filteredLinks.map((link) => (
-                        <tr
-                          key={link.id}
-                          className="hover:bg-subtle-light dark:hover:bg-subtle-dark transition group"
-                        >
-                          <td className="p-3">
-                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
+                <>
+                  {/* MOBILE VIEW (< md): Touch-Friendly Accessible Cards */}
+                  <div className="block md:hidden divide-y divide-border-light dark:divide-border-dark">
+                    {displayedLinks.map((link) => (
+                      <div
+                        key={link.id}
+                        onClick={() => setInspectingLink(link)}
+                        className="p-4 space-y-3 hover:bg-subtle-light dark:hover:bg-subtle-dark/40 cursor-pointer transition text-xs"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
                               {link.title}
                             </div>
                             <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                               by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
                             </div>
-                          </td>
-                          <td className="p-3 text-gray-700 dark:text-gray-300">
-                            <div>{link.driveOwnerName || "Anonymous Contributor"}</div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">{link.uploadedBy}</div>
-                          </td>
-                          <td className="p-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                link.automatedRiskScore === 0
-                                  ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                  : link.automatedRiskScore < 70
-                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
-                                  : "bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300"
-                              }`}
-                            >
-                              Risk Score: {link.automatedRiskScore}/100
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border shrink-0 ${
+                              link.status === "approved"
+                                ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                                : link.status === "hidden"
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700"
+                                : link.status === "rejected"
+                                ? "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800"
+                                : "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800"
+                            }`}
+                          >
+                            {link.status.replace("_", " ")}
+                          </span>
+                        </div>
+
+                        <div className="bg-canvas-light/60 dark:bg-canvas-dark/60 p-2.5 rounded-lg border border-border-light dark:border-border-dark flex items-center justify-between text-[11px]">
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">Uploader: </span>
+                            <strong className="text-gray-800 dark:text-gray-200">@{link.uploadedBy || "anonymous"}</strong>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">Risk Score: </span>
+                            <span className={`font-mono font-bold ${
+                              (link.automatedRiskScore ?? 0) > 40 ? "text-red-600" : "text-emerald-600"
+                            }`}>
+                              {link.automatedRiskScore ?? 0}/100
                             </span>
-                          </td>
-                          <td className="p-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
-                                link.status === "approved"
-                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
-                                  : link.status === "under_verification"
-                                  ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-                                  : link.status === "hidden"
-                                  ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
-                                  : "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800"
-                              }`}
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div
+                          className="flex flex-wrap items-center gap-1.5 pt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setInspectingLink(link)}
+                            className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded border border-border-light dark:border-border-dark text-[11px] font-semibold transition cursor-pointer"
+                          >
+                            🔍 Inspect
+                          </button>
+                          {link.status !== "approved" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                approveLink(link.id);
+                                refreshState();
+                              }}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
+                              title="Approve and mark verified"
                             >
-                              {link.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setInspectingLink(link)}
-                                className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs"
-                              >
-                                <span>🔍</span> Inspect
-                              </button>
+                              Approve
+                            </button>
+                          )}
+                          {link.status !== "hidden" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                hideLink(link.id);
+                                refreshState();
+                              }}
+                              className="px-2.5 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
+                              title="Hide work from public directory"
+                            >
+                              Hide
+                            </button>
+                          )}
+                          {link.status !== "rejected" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                rejectLink(link.id);
+                                refreshState();
+                              }}
+                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-semibold transition shadow-2xs cursor-pointer"
+                              title="Reject submission"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                              {link.status !== "approved" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    approveLink(link.id);
-                                    refreshState();
-                                  }}
-                                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold transition shadow-2xs"
-                                  title="Approve and mark verified"
-                                >
-                                  Approve
-                                </button>
-                              )}
-
-                              {link.status !== "hidden" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    hideLink(link.id);
-                                    refreshState();
-                                  }}
-                                  className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-semibold transition shadow-2xs"
-                                  title="Hide work from public directory"
-                                >
-                                  Hide
-                                </button>
-                              )}
-
-                              {link.status !== "rejected" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    rejectLink(link.id);
-                                    refreshState();
-                                  }}
-                                  className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition shadow-2xs"
-                                  title="Reject submission"
-                                >
-                                  Reject
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                  {/* DESKTOP VIEW (md:block): Full Table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-canvas-light dark:bg-canvas-dark text-gray-600 dark:text-gray-400 border-b border-border-light dark:border-border-dark select-none">
+                        <tr>
+                          <th className="p-3">Work Details</th>
+                          <th className="p-3">Drive Uploader</th>
+                          <th className="p-3">Safety Risk</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 text-right">Triage Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                        {displayedLinks.map((link) => (
+                          <tr
+                            key={link.id}
+                            className="hover:bg-subtle-light dark:hover:bg-subtle-dark transition group"
+                          >
+                            <td className="p-3">
+                              <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
+                                {link.title}
+                              </div>
+                              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
+                              </div>
+                            </td>
+                            <td className="p-3 text-gray-700 dark:text-gray-300">
+                              <div>{link.driveOwnerName || "Anonymous Contributor"}</div>
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">{link.uploadedBy}</div>
+                            </td>
+                            <td className="p-3">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                  link.automatedRiskScore === 0
+                                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                                    : link.automatedRiskScore < 70
+                                    ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
+                                    : "bg-red-100 dark:bg-red-950 text-red-800 dark:text-red-300"
+                                }`}
+                              >
+                                Risk Score: {link.automatedRiskScore}/100
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
+                                  link.status === "approved"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                                    : link.status === "under_verification"
+                                    ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                                    : link.status === "hidden"
+                                    ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700"
+                                    : "bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800"
+                                }`}
+                              >
+                                {link.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setInspectingLink(link)}
+                                  className="px-2.5 py-1 bg-subtle-light dark:bg-subtle-dark hover:bg-brand-trunk hover:text-white rounded text-xs font-semibold border border-border-light dark:border-border-dark transition inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                                >
+                                  <span>🔍</span> Inspect
+                                </button>
+
+                                {link.status !== "approved" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      approveLink(link.id);
+                                      refreshState();
+                                    }}
+                                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
+                                    title="Approve and mark verified"
+                                  >
+                                    Approve
+                                  </button>
+                                )}
+
+                                {link.status !== "hidden" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      hideLink(link.id);
+                                      refreshState();
+                                    }}
+                                    className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
+                                    title="Hide work from public directory"
+                                  >
+                                    Hide
+                                  </button>
+                                )}
+
+                                {link.status !== "rejected" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      rejectLink(link.id);
+                                      refreshState();
+                                    }}
+                                    className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold transition shadow-2xs cursor-pointer"
+                                    title="Reject submission"
+                                  >
+                                    Reject
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Bar (Max 5 rows per page) */}
+                  {totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-border-light dark:border-border-dark bg-subtle-light/40 dark:bg-subtle-dark/40 text-xs">
+                      <div className="text-gray-500 dark:text-gray-400 text-[11px]">
+                        Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredLinks.length)} of {filteredLinks.length} items
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={currentPage <= 1}
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          className="px-2.5 py-1 rounded border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark disabled:opacity-40 transition font-medium text-xs cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          &larr; Prev
+                        </button>
+                        <span className="text-gray-600 dark:text-gray-300 font-medium text-[11px]">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          className="px-2.5 py-1 rounded border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark disabled:opacity-40 transition font-medium text-xs cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          Next &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
