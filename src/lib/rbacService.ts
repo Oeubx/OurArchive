@@ -168,6 +168,7 @@ export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
           summary,
           tags,
           mime_type,
+          drive_owner_name,
           drive_owner_email
         ),
         link_verifications (
@@ -183,6 +184,30 @@ export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
     if (error || !data) {
       console.warn("Could not query community submissions from Supabase:", error);
       return [];
+    }
+
+    // Batch query user_profiles to resolve authentic contributor display names
+    const userIds = Array.from(new Set(data.map((d) => d.uploader_user_id).filter(Boolean))) as string[];
+    const profileMap = new Map<string, { displayName: string; role: UserRole }>();
+
+    if (userIds.length > 0) {
+      try {
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("id, display_name, role")
+          .in("id", userIds);
+
+        profiles?.forEach((p) => {
+          if (p.id && p.display_name) {
+            profileMap.set(p.id, {
+              displayName: p.display_name,
+              role: (p.role as UserRole) || "contributor",
+            });
+          }
+        });
+      } catch (profileErr) {
+        console.warn("Could not batch resolve contributor profiles:", profileErr);
+      }
     }
 
     return data.map((item) => {
@@ -206,6 +231,16 @@ export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
 
       const ratingVal = (meta?.rating || "General Audiences") as DriveLink["rating"];
 
+      const profile = item.uploader_user_id ? profileMap.get(item.uploader_user_id) : undefined;
+      const resolvedDisplayName =
+        profile?.displayName ||
+        meta?.drive_owner_name ||
+        (item.upload_mode === "assisted_admin" ? "admin" : "Community Contributor");
+
+      const resolvedRole: UserRole =
+        profile?.role ||
+        (item.upload_mode === "assisted_admin" ? "admin" : "contributor");
+
       return {
         id: item.id,
         title: meta?.title || "Untitled Fanwork",
@@ -219,10 +254,12 @@ export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
         rawDriveUrl: item.drive_url,
         maskedDriveUrl: maskDriveUrl(item.drive_url),
         mimeType: meta?.mime_type || "application/pdf",
+        driveOwnerName: meta?.drive_owner_name || undefined,
         driveOwnerEmail: meta?.drive_owner_email || undefined,
         isOwnerMasked: true,
-        uploadedBy: item.uploader_user_id || "admin",
-        uploadedByRole: item.upload_mode === "assisted_admin" ? "admin" : "contributor",
+        uploadedBy: resolvedDisplayName,
+        uploaderUserId: item.uploader_user_id || undefined,
+        uploadedByRole: resolvedRole,
         uploadedAt: item.created_at,
         status,
         verificationBadge: verif?.verification_badge || (item.verification_status === "verified" ? "VERIFIED BY ADMIN" : undefined),

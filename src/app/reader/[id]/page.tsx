@@ -99,6 +99,8 @@ export default function ReaderPage() {
       .then(async (res) => {
         const contentType = res.headers.get("content-type") || "";
         if (!contentType.includes("application/json")) {
+          const rawText = await res.text().catch(() => "");
+          console.error("Non-JSON reader response:", res.status, rawText);
           throw new Error(
             res.status === 404
               ? "This fanwork could not be found or has not been verified yet."

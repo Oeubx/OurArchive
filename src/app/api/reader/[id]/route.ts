@@ -12,6 +12,9 @@ import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 15;
+
 interface RouteParams {
   params: {
     id: string;
@@ -134,7 +137,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             headers: { Accept: "text/html" },
             cache: "no-store",
           }),
-          10000,
+          3500,
           "Drive export request timed out."
         );
 
@@ -158,7 +161,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             headers: { "User-Agent": "OurArchive-Emergency-Reader/1.0" },
             cache: "no-store",
           }),
-          10000,
+          3500,
           "Public doc export request timed out."
         );
 
