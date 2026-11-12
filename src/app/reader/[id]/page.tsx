@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
-
-import { getCurrentUserRole } from "@/lib/rbacService";
+import { createClient } from "@/lib/supabase/client";
+import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
+import { unmaskWorkId } from "@/lib/utils/idMasker";
 import {
-  getBookmarkForWork,
-  saveReadingProgress,
+  fetchBookmarkForWorkFromApi,
+  saveBookmarkToApi,
   ReaderBookmark,
 } from "@/lib/bookmarkService";
 import type { UserRole } from "@/lib/types";
@@ -45,14 +46,22 @@ type ThemeMode = "light" | "warm" | "dark";
 
 export default function ReaderPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const workId = params?.id as string;
+  const unmaskedWorkId = unmaskWorkId(workId || "");
 
   const [data, setData] = useState<ReaderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
 
-  // User RBAC State
+  // Realtime Takedown/Suppression Interruption Modal State
+  const [interruptedReason, setInterruptedReason] = useState<string | null>(null);
+  const [redirectCountdown, setRedirectCountdown] = useState<number>(5);
+
+  // Authentic Supabase Auth State
+  const [userId, setUserId] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole | "guest">("guest");
 
   // Collection State (Solution A: Folder Indexing & Table of Contents)
@@ -64,7 +73,9 @@ export default function ReaderPage() {
   const [existingBookmark, setExistingBookmark] = useState<ReaderBookmark | null>(null);
   const [showResumeBanner, setShowResumeBanner] = useState(false);
   const [bookmarkSavedFeedback, setBookmarkSavedFeedback] = useState(false);
+  const [pdfPageInput, setPdfPageInput] = useState<number>(1);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initialChildAppliedRef = useRef(false);
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
@@ -118,13 +129,87 @@ export default function ReaderPage() {
     };
   }, [theme]);
 
-  // Determine user role and load bookmark
+  // Authenticate Supabase user session & role cleanly
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const activeRole = getCurrentUserRole();
-      setRole(activeRole);
-    }
+    let active = true;
+    const supabase = createClient();
+    supabase.auth
+      .getUser()
+      .then(async ({ data: { user } }) => {
+        if (!active || !user) return;
+        setUserId(user.id);
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!active) return;
+        setRole(profile?.role === "admin" ? "admin" : "contributor");
+      })
+      .catch(() => {
+        if (active) {
+          setUserId(null);
+          setRole("guest");
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  // Subscribe to Realtime database changes: interrupt & purge reader DOM if admin hides/removes mid-read
+  useRealtimeDriveLinks(
+    (payload) => {
+      if (interruptedReason) return;
+      const newRow = payload.new as {
+        id?: string;
+        is_hidden?: boolean;
+        is_removed?: boolean;
+        verification_status?: string;
+      } | null;
+      const oldRow = payload.old as { id?: string } | null;
+
+      const isTarget =
+        newRow?.id === unmaskedWorkId || oldRow?.id === unmaskedWorkId;
+      if (!isTarget) return;
+
+      const isSuppressed =
+        payload.eventType === "DELETE" ||
+        Boolean(newRow?.is_hidden) ||
+        Boolean(newRow?.is_removed) ||
+        newRow?.verification_status === "rejected" ||
+        newRow?.verification_status === "flagged";
+
+      if (isSuppressed) {
+        setData(null);
+        setSelectedChildWork(null);
+        setLoading(false);
+        setRedirectCountdown(5);
+        setInterruptedReason(
+          payload.eventType === "DELETE" || newRow?.is_removed
+            ? "This fanwork was permanently removed by an administrator or author takedown."
+            : "This fanwork has been temporarily hidden or quarantined by an administrator."
+        );
+      }
+    },
+    {
+      filter: unmaskedWorkId ? `id=eq.${unmaskedWorkId}` : undefined,
+      enabled: Boolean(unmaskedWorkId),
+    }
+  );
+
+  // Auto-redirect countdown once reader session is interrupted
+  useEffect(() => {
+    if (!interruptedReason) return;
+    if (redirectCountdown <= 0) {
+      router.replace("/search");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRedirectCountdown((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [interruptedReason, redirectCountdown, router]);
 
   useEffect(() => {
     if (!workId) return;
@@ -158,24 +243,26 @@ export default function ReaderPage() {
       });
   }, [workId]);
 
-  // Check for saved reading bookmark on load
+  // Check for saved reading bookmark in Supabase on load
   useEffect(() => {
-    if (!workId || role === "guest") return;
-    const b = getBookmarkForWork(workId, undefined, false);
-    if (b && b.scrollPercent > 5) {
-      setExistingBookmark(b);
-      setShowResumeBanner(true);
-    }
-  }, [workId, role]);
-
-  // Jump to saved position
-  const handleResumeReading = useCallback(() => {
-    if (!existingBookmark) return;
-    const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-    const targetY = scrollMax * (existingBookmark.scrollPercent / 100);
-    window.scrollTo({ top: targetY, behavior: "smooth" });
-    setShowResumeBanner(false);
-  }, [existingBookmark]);
+    if (!workId || !userId) return;
+    let active = true;
+    fetchBookmarkForWorkFromApi(workId)
+      .then((b) => {
+        if (!active || !b) return;
+        setExistingBookmark(b);
+        if (b.isPdf && b.lastPage) {
+          setPdfPageInput(b.lastPage);
+        }
+        if (b.scrollPercent > 5 || b.lastPage > 1 || Boolean(b.childId)) {
+          setShowResumeBanner(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [workId, userId]);
 
   // Solution A: Select and stream a specific child work from a collection
   const handleSelectChildWork = useCallback(
@@ -217,6 +304,46 @@ export default function ReaderPage() {
     [workId]
   );
 
+  // Auto-open collection child if navigated with ?childId=...
+  useEffect(() => {
+    if (!data || initialChildAppliedRef.current) return;
+    const childIdParam = searchParams?.get("childId");
+    if (!childIdParam) return;
+    initialChildAppliedRef.current = true;
+    const matchedFromList = data.collectionWorks?.find((w) => w.id === childIdParam);
+    const child: CollectionChildWork = matchedFromList || {
+      id: childIdParam,
+      title: searchParams?.get("childTitle") || "Bookmarked Chapter",
+      fileName: "",
+      mimeType: searchParams?.get("mimeType") || "application/pdf",
+      sizeBytes: 0,
+    };
+    handleSelectChildWork(child);
+  }, [data, searchParams, handleSelectChildWork]);
+
+  // Jump to saved position (or open saved collection chapter)
+  const handleResumeReading = useCallback(() => {
+    if (!existingBookmark) return;
+    if (
+      existingBookmark.childId &&
+      selectedChildWork?.id !== existingBookmark.childId
+    ) {
+      handleSelectChildWork({
+        id: existingBookmark.childId,
+        title: existingBookmark.childTitle || "Bookmarked Work",
+        fileName: "",
+        mimeType: existingBookmark.childMimeType || "application/pdf",
+        sizeBytes: 0,
+      });
+    }
+    if (!existingBookmark.isPdf) {
+      const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+      const targetY = scrollMax * (existingBookmark.scrollPercent / 100);
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    }
+    setShowResumeBanner(false);
+  }, [existingBookmark, selectedChildWork, handleSelectChildWork]);
+
   // Return to Collection Table of Contents
   const handleBackToCollection = useCallback(() => {
     setSelectedChildWork(null);
@@ -228,46 +355,57 @@ export default function ReaderPage() {
       .finally(() => setLoading(false));
   }, [workId]);
 
-  // Save bookmark calculation helper
+  // Save bookmark progress to Supabase (`public.user_bookmarks`)
   const saveCurrentProgress = useCallback(
-    (manual: boolean = false) => {
-      if (!data || role === "guest") return;
+    async (manual: boolean = false) => {
+      if (!data || !userId) return;
+      if (data.isPdf && !manual) return; // Cross-origin PDF iframes cannot auto-track scroll
 
       const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent =
-        scrollMax > 0
-          ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100)))
-          : 0;
+      const scrollPercent = data.isPdf
+        ? 0
+        : scrollMax > 0
+        ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100)))
+        : 0;
 
-      // Estimate total pages by standard 350 words per page
       const totalPages = Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
-      const lastPage = Math.max(1, Math.ceil((scrollPercent / 100) * totalPages));
+      const lastPage = data.isPdf
+        ? Math.max(1, Math.floor(Number(pdfPageInput) || 1))
+        : Math.max(1, Math.ceil((scrollPercent / 100) * totalPages));
 
       const bookmark: ReaderBookmark = {
         workId: data.workId,
-        workTitle: data.title,
+        title: data.title,
         authorName: data.authorName,
         fandom: data.fandom,
-        rating: data.rating,
-        lastPage,
-        totalPages,
         scrollPercent,
-        lastReadAt: new Date().toISOString(),
+        lastPage,
+        updatedAt: new Date().toISOString(),
+        isPdf: Boolean(data.isPdf),
+        childId: selectedChildWork?.id,
+        childTitle: selectedChildWork?.title,
+        childMimeType: selectedChildWork?.mimeType,
       };
 
-      saveReadingProgress(bookmark, undefined, false);
-
-      if (manual) {
-        setBookmarkSavedFeedback(true);
-        setTimeout(() => setBookmarkSavedFeedback(false), 2000);
+      try {
+        const saved = await saveBookmarkToApi(bookmark);
+        if (saved) setExistingBookmark(saved);
+        if (manual) {
+          setBookmarkSavedFeedback(true);
+          setTimeout(() => setBookmarkSavedFeedback(false), 2000);
+        }
+      } catch (err) {
+        if (manual) {
+          console.error("Failed to save bookmark:", err);
+        }
       }
     },
-    [data, role]
+    [data, userId, pdfPageInput, selectedChildWork]
   );
 
-  // Debounced auto-save on scroll for logged-in users
+  // Debounced auto-save on scroll for authenticated HTML document readers
   useEffect(() => {
-    if (role === "guest" || !data) return;
+    if (!userId || !data || data.isPdf || data.isFolder) return;
 
     const handleScroll = () => {
       if (scrollTimeoutRef.current) {
@@ -283,7 +421,7 @@ export default function ReaderPage() {
       window.removeEventListener("scroll", handleScroll);
       if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
     };
-  }, [role, data, saveCurrentProgress]);
+  }, [userId, data, saveCurrentProgress]);
 
   // URL Privacy check: Only Admin or Verifier can see raw external drive links
   const canRevealDrive = role === "admin" || role === "verifier";
@@ -425,7 +563,7 @@ export default function ReaderPage() {
   const currentTheme = themeClasses[theme];
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
+    <div className={`min-h-screen overflow-x-clip transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
       {/* Sticky Reader Toolbar docked under the main Header without overlapping */}
       <header className={`sticky top-[53px] sm:top-[57px] z-30 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
@@ -445,25 +583,50 @@ export default function ReaderPage() {
 
           {/* Reader Preferences Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* BOOKMARK BUTTON (Authenticated users only) */}
-            {role !== "guest" ? (
-              <button
-                type="button"
-                onClick={() => saveCurrentProgress(true)}
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition flex items-center gap-1 ${
-                  bookmarkSavedFeedback
-                    ? "bg-emerald-600 text-white border-emerald-700"
-                    : currentTheme.bookmarkBtn
-                }`}
-                title="Save current reading page to your bookmarks"
-              >
-                <span>🔖</span>
-                <span>{bookmarkSavedFeedback ? "Saved!" : "Bookmark"}</span>
-              </button>
+            {/* BOOKMARK BUTTON (Authenticated users only, Supabase-persisted) */}
+            {userId ? (
+              <div className="flex items-center gap-1.5">
+                {data?.isPdf && (
+                  <label
+                    className={`flex items-center gap-1 px-2 py-0.5 border rounded text-[11px] ${currentTheme.toolbarGroup}`}
+                    title="Google Drive PDF previews cannot expose internal scroll position; enter your page checkpoint manually"
+                  >
+                    <span className="text-[10px] opacity-80">Pg</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      value={pdfPageInput}
+                      onChange={(e) =>
+                        setPdfPageInput(Math.max(1, parseInt(e.target.value, 10) || 1))
+                      }
+                      aria-label="PDF Page Number"
+                      className="w-11 bg-transparent text-center font-mono text-[11px] focus:outline-hidden"
+                    />
+                  </label>
+                )}
+                <button
+                  type="button"
+                  onClick={() => saveCurrentProgress(true)}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded border transition flex items-center gap-1 ${
+                    bookmarkSavedFeedback
+                      ? "bg-emerald-600 text-white border-emerald-700"
+                      : currentTheme.bookmarkBtn
+                  }`}
+                  title={
+                    data?.isPdf
+                      ? "Save manual PDF page checkpoint to your Supabase bookmarks"
+                      : "Save current reading position to your Supabase bookmarks"
+                  }
+                >
+                  <span>🔖</span>
+                  <span>{bookmarkSavedFeedback ? "Saved!" : "Bookmark"}</span>
+                </button>
+              </div>
             ) : (
               <span
                 className={`text-[10px] italic hidden sm:inline ${currentTheme.textMuted}`}
-                title="Sign in as a contributor to automatically save reading bookmarks"
+                title="Sign in to save reading bookmarks across devices"
               >
                 💡 Sign in to bookmark
               </span>
@@ -598,7 +761,13 @@ export default function ReaderPage() {
           <div className={`flex items-center gap-2 ${currentTheme.collectionBannerText}`}>
             <span className="text-base">🔖</span>
             <span>
-              Welcome back! You were reading <strong>Page {existingBookmark.lastPage}</strong> ({existingBookmark.scrollPercent}% completed).
+              Welcome back! Saved at <strong>Page {existingBookmark.lastPage}</strong>
+              {existingBookmark.childTitle
+                ? ` in "${existingBookmark.childTitle}"`
+                : existingBookmark.isPdf
+                ? " (PDF checkpoint)"
+                : ` (${existingBookmark.scrollPercent}% completed)`}
+              .
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -632,8 +801,8 @@ export default function ReaderPage() {
           </div>
         )}
 
-        {error && !data && (
-          <div className="p-6 bg-red-50 border border-red-200 text-red-800 rounded-lg text-center space-y-3">
+        {error && !data && !interruptedReason && (
+          <div className="p-6 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-200 rounded-lg text-center space-y-3">
             <h2 className="text-base font-bold">Failed to Stream Work</h2>
             <p className="text-xs">{error}</p>
             <div className="pt-2">
@@ -882,6 +1051,39 @@ export default function ReaderPage() {
         workTitle={data?.title}
         onClose={() => setShowTakedownModal(false)}
       />
+
+      {/* Real-Time Reader Interruption Modal (When Admin Hides or Purges Mid-Read) */}
+      {interruptedReason && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="reader-interrupted-title"
+        >
+          <div className="bg-surface-light dark:bg-surface-dark border border-red-300 dark:border-red-900 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 text-center space-y-4">
+            <div className="text-4xl">🛑</div>
+            <h2
+              id="reader-interrupted-title"
+              className="text-lg font-bold text-gray-900 dark:text-gray-100"
+            >
+              Content No Longer Available
+            </h2>
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+              {interruptedReason}
+            </p>
+            <p className="text-[11px] font-mono text-brand-trunk dark:text-brand-light">
+              Redirecting to Library Search in {redirectCountdown}s...
+            </p>
+            <button
+              type="button"
+              onClick={() => router.replace("/search")}
+              className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-bold rounded-lg shadow-xs transition"
+            >
+              Return to Search Now &rarr;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
