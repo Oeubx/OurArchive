@@ -195,7 +195,7 @@ export function AuditHistoryModal({
 
                     {record.isTombstone && (
                       <div className="text-[10px] text-red-600 dark:text-red-400 font-semibold flex items-center gap-1 pt-1">
-                        <span>⚠️</span> Permanent Tombstone Record (Work expunged from live index)
+                        <span>⚠️</span> Permanent Removal Record (Work deleted from live index)
                       </div>
                     )}
                   </div>

@@ -339,7 +339,7 @@ export function LinkInspectionModal({
                     onClose();
                   }}
                   className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-semibold transition shadow-xs"
-                  title="Permanently remove and expunge from database"
+                  title="Permanently delete from database"
                 >
                   🗑️ Permanent Delete
                 </button>

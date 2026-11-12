@@ -52,7 +52,7 @@ export function TriageActionModal({
     HIDE: "Hide Fanwork from Public Search",
     UNHIDE: "Restore Fanwork Visibility",
     CONTACT: "Contact Submitter / Drive Owner",
-    REMOVE: "Expunge Fanwork Record",
+    REMOVE: "Permanently Delete Fanwork Record",
   };
 
   const actionDescriptions: Record<AdminActionType, string> = {
@@ -69,7 +69,7 @@ export function TriageActionModal({
     CONTACT:
       "Prepares direct communication with the Drive owner or submitter regarding formatting, permissions, or missing author metadata.",
     REMOVE:
-      "Permanently expunges this fanwork from OurArchive. Soft-delete hides it from all queries while preserving audit logs, or hard-delete deletes all cascaded database records.",
+      "Permanently deletes this fanwork from OurArchive. Soft-delete hides it from all listings while keeping audit logs, or hard-delete deletes all related database records.",
   };
 
   const buttonColors: Record<AdminActionType, string> = {
@@ -226,7 +226,7 @@ export function TriageActionModal({
                     className="rounded text-red-600"
                   />
                   <label htmlFor="hardDelete" className="text-[11px] leading-tight cursor-pointer">
-                    <strong>Permanent Database Purge (Hard Delete):</strong> Expunge cascading rows completely instead of soft-delete marking.
+                    <strong>Permanent Database Delete (Hard Delete):</strong> Delete all related database rows completely instead of hiding them.
                   </label>
                 </div>
               )}

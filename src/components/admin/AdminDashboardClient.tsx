@@ -171,7 +171,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         }
         setItemToRemove(null);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to purge record.");
+        alert(err instanceof Error ? err.message : "Failed to permanently delete record.");
       }
     });
   }
@@ -300,7 +300,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               Administrative 5-Action Triage Suite
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Categorized queue management: Verify, Approve, Reject, Quarantine Hide, or Permanent Expunge.
+              Categorized queue management: Verify, Approve, Reject, Hide, or Permanently Delete.
             </p>
           </div>
 
@@ -482,7 +482,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                             onClick={() => setItemToRemove(item)}
                             className="px-2.5 py-1 rounded text-[11px] font-bold bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 hover:bg-red-600 hover:text-white transition cursor-pointer"
                           >
-                            {isMaliciousThreat ? "🚨 Purge" : "🗑️ Delete"}
+                            {isMaliciousThreat ? "🚨 Remove" : "🗑️ Delete"}
                           </button>
                         )}
                       </div>
@@ -672,8 +672,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                                   onClick={() => setItemToRemove(item)}
                                   title={
                                     isMaliciousThreat
-                                      ? "Emergency Threat Purge (Malicious/Hazard Deemed by System)"
-                                      : "Permanent Expunge (Author Takedown Request)"
+                                      ? "Emergency Threat Removal (Malicious/Hazard Deemed by System)"
+                                      : "Permanent Delete (Author Takedown Request)"
                                   }
                                   className={`px-2 py-1 rounded text-[11px] font-bold transition shadow-2xs ${
                                     isMaliciousThreat
@@ -681,7 +681,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                                       : "bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 hover:bg-red-600 hover:text-white"
                                   }`}
                                 >
-                                  {isMaliciousThreat ? "🚨 Purge" : "🗑️ Delete"}
+                                  {isMaliciousThreat ? "🚨 Remove" : "🗑️ Delete"}
                                 </button>
                               ) : (
                                 <button
@@ -798,7 +798,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               </span>
               <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
                 {itemToRemove.status === "flagged" || (itemToRemove.automatedRiskScore ?? 0) >= 70
-                  ? "Emergency Threat Purge"
+                  ? "Emergency Threat Removal"
                   : "Confirm Permanent Deletion (Author Takedown)"}
               </h3>
             </div>
@@ -806,17 +806,17 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
               {itemToRemove.status === "flagged" || (itemToRemove.automatedRiskScore ?? 0) >= 70 ? (
                 <>
-                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently erase this hazard from the system and database? A permanent tombstone audit log will be retained in Supabase.
+                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently delete this hazard from the system and database? A permanent audit record will be kept in Supabase.
                 </>
               ) : (
                 <>
-                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently expunge &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All public records will be erased and a permanent immutable tombstone will be recorded in Supabase.
+                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently delete &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All public records will be erased and a permanent audit record will be kept in Supabase.
                 </>
               )}
             </p>
 
             <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-900 dark:text-amber-200">
-              <strong>Automatic Audit Compliance Export:</strong> Confirming this purge will automatically download the full compliance audit &amp; tombstone CSV record.
+              <strong>Automatic Audit Compliance Export:</strong> Confirming this deletion will automatically download the full compliance audit CSV record.
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -834,8 +834,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                 className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold transition shadow-xs disabled:opacity-50"
               >
                 {processingActionId === `${itemToRemove.id}-remove`
-                  ? "Purging & Exporting CSV..."
-                  : "Purge & Export CSV"}
+                  ? "Deleting & Exporting CSV..."
+                  : "Permanently Delete & Export CSV"}
               </button>
             </div>
           </div>
