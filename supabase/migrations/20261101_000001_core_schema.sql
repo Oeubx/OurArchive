@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.link_metadata (
     word_count INTEGER DEFAULT 0,
     summary TEXT,
     tags TEXT[] DEFAULT '{}'::TEXT[],
-    canonical_ao3_url TEXT,
+    canonical_source_url TEXT,
     
     -- Drive file descriptors
     file_name VARCHAR(255) NOT NULL,
