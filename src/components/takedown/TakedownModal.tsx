@@ -125,7 +125,7 @@ export function TakedownModal({
                   Takedown Request Logged in Supabase
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-xs">
-                  Your request, pointed Google Drive target, and proof of ownership have been saved to our administrative Supabase Takedown Queue. Matched works are <strong>immediately hidden</strong> from public search and readers pending final purge verification.
+                  Your request and ownership details have been saved to our Takedown Queue. Matched works are <strong>hidden right away</strong> from public search and readers pending final removal review.
                 </p>
                 <div className="pt-2">
                   <button
@@ -242,7 +242,7 @@ export function TakedownModal({
                         checked={preference === "permanent"}
                         onChange={() => setPreference("permanent")}
                       />
-                      <span>Permanent Database Purge</span>
+                      <span>Permanent Removal</span>
                     </label>
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input
