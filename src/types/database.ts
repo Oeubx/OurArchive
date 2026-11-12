@@ -93,6 +93,16 @@ export type AdminActionRecord = {
   executed_at: string;
 };
 
+export type FeedbackRecord = {
+  id: string;
+  user_id: string;
+  subject: string;
+  description: string;
+  rating: number;
+  is_anonymous: boolean;
+  created_at: string;
+};
+
 export type PublicSearchFeedRecord = {
   work_id: string;
   upload_mode: UploadMode;
@@ -183,6 +193,16 @@ export type Database = {
           executed_at?: string;
         };
         Update: Partial<Omit<AdminActionRecord, "id">>;
+        Relationships: [];
+      };
+      feedback: {
+        Row: FeedbackRecord;
+        Insert: Omit<FeedbackRecord, "id" | "created_at"> & {
+          id?: string;
+          is_anonymous?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Omit<FeedbackRecord, "id" | "user_id">>;
         Relationships: [];
       };
     };

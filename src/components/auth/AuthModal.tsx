@@ -43,6 +43,12 @@ export function AuthModal({
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode]);
+
   if (!isOpen || !mounted) return null;
 
   function resetState() {
@@ -102,7 +108,11 @@ export function AuthModal({
       if (mode === "signin") {
         await signInWithEmailPassword(email, password);
         resetState();
-        window.location.reload();
+        if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+          window.location.href = redirectTo;
+        } else {
+          window.location.reload();
+        }
       } else {
         const { session } = await signUpWithEmailPassword(email, password, redirectTo, displayName.trim());
         if (!session) {
@@ -112,7 +122,11 @@ export function AuthModal({
         } else {
           // Instant sign-in occurred
           resetState();
-          window.location.reload();
+          if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+            window.location.href = redirectTo;
+          } else {
+            window.location.reload();
+          }
         }
       }
     } catch (err: unknown) {

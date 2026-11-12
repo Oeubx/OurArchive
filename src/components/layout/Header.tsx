@@ -123,6 +123,10 @@ export function Header() {
                 <Link href="/contribute" className="hover:text-white transition py-1">
                   Contribute
                 </Link>
+                <span>•</span>
+                <Link href="/feedback" className="hover:text-white transition py-1">
+                  Feedback
+                </Link>
               </>
             )}
             <span>•</span>
@@ -335,14 +339,24 @@ export function Header() {
                 </Link>
 
                 {isSignedIn && (
-                  <Link
-                    href="/profile"
-                    onClick={() => setDrawerOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
-                  >
-                    <span className="text-base">👤</span>
-                    <span>My Profile</span>
-                  </Link>
+                  <>
+                    <Link
+                      href="/feedback"
+                      onClick={() => setDrawerOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
+                    >
+                      <span className="text-base">💬</span>
+                      <span>Feedback</span>
+                    </Link>
+                    <Link
+                      href="/profile"
+                      onClick={() => setDrawerOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
+                    >
+                      <span className="text-base">👤</span>
+                      <span>My Profile</span>
+                    </Link>
+                  </>
                 )}
 
                 {/* Verifier Section: Rendered only for Verifiers */}

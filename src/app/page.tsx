@@ -9,14 +9,23 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
 import { createClient } from "@/lib/supabase/client";
 
-function AuthErrorQueryWatcher({ onTriggerGate }: { onTriggerGate: () => void }) {
+function AuthErrorQueryWatcher({
+  onTriggerGate,
+  onTriggerFeedbackSignIn,
+}: {
+  onTriggerGate: () => void;
+  onTriggerFeedbackSignIn: () => void;
+}) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (searchParams.get("auth_error") === "contributor_login_required") {
+    const authError = searchParams.get("auth_error");
+    if (authError === "contributor_login_required") {
       onTriggerGate();
+    } else if (authError === "feedback_login_required") {
+      onTriggerFeedbackSignIn();
     }
-  }, [searchParams, onTriggerGate]);
+  }, [searchParams, onTriggerGate, onTriggerFeedbackSignIn]);
 
   return null;
 }
@@ -25,6 +34,7 @@ export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showGateModal, setShowGateModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [authRedirectTo, setAuthRedirectTo] = useState<string | undefined>(undefined);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -48,8 +58,15 @@ export default function HomePage() {
     setShowGateModal(true);
   }, []);
 
+  const handleTriggerFeedbackSignIn = useCallback(() => {
+    setAuthMode("signin");
+    setAuthRedirectTo("/feedback");
+    setShowAuthModal(true);
+  }, []);
+
   function openSignUp() {
     setAuthMode("signup");
+    setAuthRedirectTo(undefined);
     setShowAuthModal(true);
   }
 
@@ -57,7 +74,10 @@ export default function HomePage() {
     <div className="space-y-8 py-4">
       {/* Search param watcher wrapped in Suspense for Next.js App Router static compliance */}
       <Suspense fallback={null}>
-        <AuthErrorQueryWatcher onTriggerGate={handleTriggerGate} />
+        <AuthErrorQueryWatcher
+          onTriggerGate={handleTriggerGate}
+          onTriggerFeedbackSignIn={handleTriggerFeedbackSignIn}
+        />
       </Suspense>
 
       {/* =========================================================================
@@ -168,11 +188,12 @@ export default function HomePage() {
         onClose={() => setShowGateModal(false)}
       />
 
-      {/* Auth Modal Triggered by Sign Up */}
+      {/* Auth Modal Triggered by Sign Up or Feedback Auth Redirect */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         initialMode={authMode}
+        redirectTo={authRedirectTo}
       />
     </div>
   );
