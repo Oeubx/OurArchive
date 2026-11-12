@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useLayoutEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
@@ -88,11 +88,13 @@ export default function ReaderPage() {
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
+  const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
   const [theme, setTheme] = useState<ThemeMode>("light");
+  const [themeReady, setThemeReady] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ReaderViewMode>("formatted");
 
-  // Synchronize initial theme and view mode with global stored preferences
-  useEffect(() => {
+  // Synchronize initial theme and view mode with global stored preferences before first paint
+  useIsomorphicLayoutEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("ourarchive_theme");
       const isSystemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -108,12 +110,13 @@ export default function ReaderPage() {
       if (storedViewMode === "formatted" || storedViewMode === "plain" || storedViewMode === "drive") {
         setViewMode(storedViewMode);
       }
+      setThemeReady(true);
     }
   }, []);
 
   // Synchronize document body and root background with reader theme to eliminate margin gutters on wide screens
-  useEffect(() => {
-    if (typeof document === "undefined") return;
+  useIsomorphicLayoutEffect(() => {
+    if (typeof document === "undefined" || !themeReady) return;
     const prevBodyBg = document.body.style.backgroundColor;
     const prevBodyColor = document.body.style.color;
     const prevDocBg = document.documentElement.style.backgroundColor;
@@ -141,7 +144,7 @@ export default function ReaderPage() {
       document.body.style.color = prevBodyColor;
       document.documentElement.style.backgroundColor = prevDocBg;
     };
-  }, [theme]);
+  }, [theme, themeReady]);
 
   // Authenticate Supabase user session & role cleanly
   useEffect(() => {
@@ -583,7 +586,11 @@ export default function ReaderPage() {
   const currentTheme = themeClasses[theme];
 
   return (
-    <div className={`min-h-screen overflow-x-clip transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
+    <div
+      className={`min-h-screen overflow-x-clip -mx-4 -my-4 p-4 ${
+        themeReady ? `transition-colors duration-200 ${currentTheme.container}` : "bg-transparent"
+      }`}
+    >
       {/* Sticky Reader Toolbar docked under the main Header without overlapping */}
       <header className={`sticky top-[53px] sm:top-[57px] z-30 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-xs">
