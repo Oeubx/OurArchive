@@ -19,10 +19,10 @@ export function AboutContent() {
             Hello! I am an on-call data encoder, a software developer, and a fellow fanfiction reader.
           </p>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            The idea behind OurArchive started quite simply: I was lazing around one afternoon while my girlfriend was whining about major fanfic platforms experiencing downtime and being completely unable to read her comfort stories.
+            The idea behind OurArchive started quite simply: I was lazing around one afternoon while my girlfriend was whining about a major fanfic platform experiencing downtime and being completely unable to read her comfort stories.
           </p>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            To cheer her up and solve her immediate dilemma, I sat down and started planning a lightweight system just for her—a safe, organized way to discover and read cloud drive mirrors without the clutter of spreadsheets or the risks of downloading raw files.
+            To cheer her up and solve her immediate dilemma, I sat down and started planning a lightweight system just for her, turning her local storage and saved drive compilation of backup stories into a safe, organized way to read online without the clutter of spreadsheets or the risks of downloading raw files.
           </p>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             Since this seemed like a genuinely good idea and an exciting technical challenge, I decided to take the leap and turn it into a full-blown system for the entire reading community: <strong>OurArchive</strong>.
@@ -40,7 +40,7 @@ export function AboutContent() {
             <span>🛡️ 100% Creator Sovereignty</span>
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            Fanfiction authors own all rights to their stories. OurArchive makes no intellectual property claims, never monetizes works, and honors instant removal requests with no questions asked.
+            Fanfiction authors own all rights to their stories. OurArchive makes no intellectual property claims, never monetizes works, and takes action on removal requests within 24 hours with no questions asked.
           </p>
         </div>
 
@@ -49,7 +49,7 @@ export function AboutContent() {
             <span>🚫 Zero-Download Architecture</span>
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            Our platform does not download or store copies of drive files on our servers. The text is rendered ephemerally through cloud export APIs into a clean viewer.
+            Our platform does not download or store copies of drive files on our servers. The text is streamed temporarily in memory through cloud export APIs into a clean, view-only reader.
           </p>
         </div>
 
@@ -103,7 +103,7 @@ export function AboutContent() {
           <span>📬 Author Takedown & Direct Reach-Out</span>
         </h2>
         <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-          If you are a writer and see your story mirrored here that you wish removed, please email us directly with the link. We honor all requests immediately.
+          If you are a writer and see your story mirrored here that you wish removed, please email us directly or submit a takedown request. Action will be taken within the next 24 hours of receiving your takedown request.
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <button

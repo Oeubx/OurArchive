@@ -294,7 +294,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="text-[11px] text-gray-600 dark:text-gray-400 bg-subtle-light dark:bg-subtle-dark/50 p-4 border border-border-light dark:border-border-dark rounded-xl leading-relaxed">
-        <strong>Zero-Download Privacy Notice:</strong> Google Drive links and fanfiction files submitted via OurArchive are streamed ephemerally. Direct Drive URLs are masked from public listings to protect against mass copying and scraping.
+        <strong>Zero-Download Privacy Notice:</strong> Google Drive links and fanfiction files submitted via OurArchive are opened in a temporary view-only stream. Direct Drive URLs are masked from public listings to protect against mass copying and scraping.
       </div>
     </div>
   );

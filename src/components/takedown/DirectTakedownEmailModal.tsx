@@ -30,7 +30,7 @@ export function DirectTakedownEmailModal({
 Work Screenshot (/search): [Attach a basic screenshot showing the work card on /search]
 My Role: [Original Author / Google Drive Owner / Submitter / Community Reporter]
 Proof of Ownership or Credibility: [Link to original author profile, account proof, or explanation]
-Requested Action: [Permanent Database Purge / Temporary Hide]
+Requested Action: [Permanent Removal / Temporary Hide]
 Additional Notes: [Optional context]`;
 
   async function handleCopy(text: string, field: string) {

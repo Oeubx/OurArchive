@@ -39,13 +39,16 @@ interface ReaderData {
   isFolder?: boolean;
   collectionWorks?: CollectionChildWork[];
   pdfPreviewUrl?: string | null;
+  drivePreviewUrl?: string | null;
   contentHtml?: string | null;
+  plainContentHtml?: string | null;
   rawDriveUrl?: string;
   uploaderUserId?: string;
 }
 
 type FontFamily = "serif" | "sans" | "mono";
 type ThemeMode = "light" | "warm" | "dark";
+type ReaderViewMode = "formatted" | "plain" | "drive";
 
 export default function ReaderPage() {
   const params = useParams();
@@ -86,8 +89,9 @@ export default function ReaderPage() {
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
   const [theme, setTheme] = useState<ThemeMode>("light");
+  const [viewMode, setViewMode] = useState<ReaderViewMode>("formatted");
 
-  // Synchronize initial theme with global stored site theme (prevent unwanted reset to lightmode)
+  // Synchronize initial theme and view mode with global stored preferences
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("ourarchive_theme");
@@ -98,6 +102,11 @@ export default function ReaderPage() {
         setTheme("warm");
       } else {
         setTheme("light");
+      }
+
+      const storedViewMode = localStorage.getItem("ourarchive_reader_view_mode");
+      if (storedViewMode === "formatted" || storedViewMode === "plain" || storedViewMode === "drive") {
+        setViewMode(storedViewMode);
       }
     }
   }, []);
@@ -297,7 +306,9 @@ export default function ReaderPage() {
                   isNativePdf: json.isNativePdf,
                   totalPages: json.totalPages,
                   pdfPreviewUrl: json.pdfPreviewUrl,
+                  drivePreviewUrl: json.drivePreviewUrl,
                   contentHtml: json.contentHtml,
+                  plainContentHtml: json.plainContentHtml,
                 }
               : json
           );
@@ -575,8 +586,8 @@ export default function ReaderPage() {
     <div className={`min-h-screen overflow-x-clip transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
       {/* Sticky Reader Toolbar docked under the main Header without overlapping */}
       <header className={`sticky top-[53px] sm:top-[57px] z-30 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
-        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-xs">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
             <Link
               href="/"
               className={`font-semibold flex items-center gap-1 transition ${currentTheme.brandLink}`}
@@ -584,10 +595,23 @@ export default function ReaderPage() {
               <span>&larr;</span> Library Index
             </Link>
             {data && (
-              <span className={`truncate max-w-[180px] sm:max-w-[260px] font-medium hidden xs:inline ${currentTheme.textMuted}`}>
+              <span className={`truncate max-w-[160px] sm:max-w-[260px] font-medium hidden xs:inline ${currentTheme.textMuted}`}>
                 {data.title}
               </span>
             )}
+            <button
+              onClick={() => {
+                if (userId) {
+                  setShowTakedownModal(true);
+                } else {
+                  setShowDirectEmailModal(true);
+                }
+              }}
+              className="sm:hidden px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition shrink-0"
+              title="Report copyright concern or author takedown"
+            >
+              Takedown
+            </button>
           </div>
 
           {/* Reader Preferences Bar */}
@@ -749,7 +773,58 @@ export default function ReaderPage() {
               </button>
             </div>
 
-            {/* Report Takedown Button: Signed-in -> Instant Form, Unsigned -> Method 2 Direct Email */}
+            {/* Reader View Mode Selector: Formatted | Plain | Drive */}
+            {!data?.isFolder && (data?.contentHtml || data?.drivePreviewUrl || data?.pdfPreviewUrl) && (
+              <div className={`flex items-center border rounded overflow-hidden shadow-2xs ${currentTheme.toolbarGroup}`}>
+                {data?.contentHtml && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode("formatted");
+                      localStorage.setItem("ourarchive_reader_view_mode", "formatted");
+                    }}
+                    className={`px-2 py-1 text-[11px] font-medium transition ${
+                      viewMode === "formatted" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
+                    }`}
+                    title="Formatted native view (preserves spacing and paragraphs)"
+                  >
+                    Formatted
+                  </button>
+                )}
+                {data?.plainContentHtml && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode("plain");
+                      localStorage.setItem("ourarchive_reader_view_mode", "plain");
+                    }}
+                    className={`px-2 py-1 text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                      viewMode === "plain" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
+                    }`}
+                    title="Compact plain text stream"
+                  >
+                    Plain
+                  </button>
+                )}
+                {(data?.drivePreviewUrl || data?.pdfPreviewUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode("drive");
+                      localStorage.setItem("ourarchive_reader_view_mode", "drive");
+                    }}
+                    className={`px-2 py-1 text-[11px] font-medium border-l transition ${currentTheme.toolbarDivider} ${
+                      viewMode === "drive" ? currentTheme.toolbarBtnActive : currentTheme.toolbarBtn
+                    }`}
+                    title="Original Google Drive file preview"
+                  >
+                    Drive
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Report Takedown Button (Desktop): Signed-in -> Instant Form, Unsigned -> Method 2 Direct Email */}
             <button
               onClick={() => {
                 if (userId) {
@@ -758,7 +833,7 @@ export default function ReaderPage() {
                   setShowDirectEmailModal(true);
                 }
               }}
-              className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
+              className="hidden sm:inline-flex px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
               title="Report copyright concern or author takedown"
             >
               Takedown
@@ -882,7 +957,7 @@ export default function ReaderPage() {
 
               <div className={`pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-2 border-t ${currentTheme.metaBorder} ${currentTheme.textMuted}`}>
                 <div>
-                  🔒 <em>Ephemeral Read-Only Stream: No files are persisted on server disks.</em>
+                  🔒 <em>Live View-Only Stream: No files are saved on our servers.</em>
                 </div>
                 {/* Gated Drive URL for Admins/Verifiers Only */}
                 {canRevealDrive && data.rawDriveUrl && (
@@ -1008,19 +1083,33 @@ export default function ReaderPage() {
                     style={{ fontSize: `${fontSizePx}px` }}
                     className={`pt-4 ${fontClasses[fontFamily]} ${currentTheme.text}`}
                   >
-                    {data.contentHtml ? (
+                    {viewMode === "drive" && (data.drivePreviewUrl || data.pdfPreviewUrl) ? (
+                      <div className={`w-full h-[80vh] border rounded overflow-hidden shadow-xs ${currentTheme.metaBorder}`}>
+                        <iframe
+                          src={(data.drivePreviewUrl || data.pdfPreviewUrl) as string}
+                          title={data.title}
+                          className="w-full h-full"
+                          sandbox="allow-scripts allow-same-origin"
+                        />
+                      </div>
+                    ) : viewMode === "plain" && data.plainContentHtml ? (
+                      <div
+                        dangerouslySetInnerHTML={{ __html: data.plainContentHtml }}
+                        className="prose prose-neutral dark:prose-invert max-w-none space-y-4 reader-content"
+                      />
+                    ) : data.contentHtml ? (
                       <div
                         dangerouslySetInnerHTML={{ __html: data.contentHtml }}
                         className="prose prose-neutral dark:prose-invert max-w-none space-y-4 reader-content"
                       />
-                    ) : data.isPdf && data.pdfPreviewUrl ? (
+                    ) : data.isPdf && (data.drivePreviewUrl || data.pdfPreviewUrl) ? (
                       <div className="space-y-2">
                         <div className={`text-[11px] px-3 py-1.5 rounded border ${currentTheme.collectionBanner} ${currentTheme.collectionBannerText}`}>
                           Scanned/Image PDF fallback active — font controls apply to text-extractable works.
                         </div>
                         <div className={`w-full h-[80vh] border rounded overflow-hidden shadow-xs ${currentTheme.metaBorder}`}>
                           <iframe
-                            src={data.pdfPreviewUrl}
+                            src={(data.drivePreviewUrl || data.pdfPreviewUrl) as string}
                             title={data.title}
                             className={`w-full h-full transition ${
                               theme === "dark"

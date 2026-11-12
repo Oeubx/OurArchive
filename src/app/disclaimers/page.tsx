@@ -59,7 +59,7 @@ export default function DisclaimersPage() {
           <div className="flex items-center gap-2">
             <span className="text-lg">🛡️</span>
             <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              2. Zero-Download Architecture & Ephemeral Streaming
+              2. Zero-Download Architecture &amp; Live View-Only Streaming
             </h2>
           </div>
           <p>
@@ -70,7 +70,7 @@ export default function DisclaimersPage() {
               <strong>No Permanent Hosting:</strong> The platform does not host, duplicate, or save drive files (`.pdf`, `.html`, `.docx`) on its serverless disks or cloud object buckets.
             </li>
             <li>
-              <strong>Ephemeral Streaming:</strong> Works are rendered on-the-fly in an ephemeral, memory-only reader sandbox with script-stripping sanitization.
+              <strong>Temporary View-Only Streaming:</strong> Works are rendered on-the-fly in a temporary, memory-only viewer with script-stripping safety checks.
             </li>
             <li>
               <strong>Read-Only Verification:</strong> All links submitted are programmatically inspected to ensure public edit permissions are disabled.
@@ -138,7 +138,7 @@ export default function DisclaimersPage() {
           <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
             <li><strong>Zero Bureaucracy:</strong> Formal legal notices or notarized claims are not required.</li>
             <li><strong>Zero Resistance:</strong> We do not contest, debate, or delay author removal requests.</li>
-            <li><strong>Immediate Action:</strong> Visibility is instantly suppressed, and all cascading database records are purged.</li>
+            <li><strong>Prompt Action:</strong> The listing is hidden right away, and all related database records are permanently deleted within 24 hours.</li>
           </ul>
           <div className="pt-2">
             <Link
