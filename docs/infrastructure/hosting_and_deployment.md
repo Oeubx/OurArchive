@@ -1,7 +1,7 @@
 # Hosting & Deployment Infrastructure (Vercel & Edge)
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
@@ -11,7 +11,7 @@ OurArchive is deployed as a modern, serverless Next.js web application hosted on
 
 Deploying on Vercel enables:
 - **Global Edge Network**: Low-latency static asset delivery and edge middleware execution for readers worldwide.
-- **Serverless API Routes**: Auto-scaling ingestion handlers and reader proxies that scale with sudden community traffic spikes during AO3 outages without manual server provisioning.
+- **Serverless API Routes**: Auto-scaling ingestion handlers and reader proxies that scale with sudden community traffic spikes during primary archive outages without manual server provisioning.
 - **Zero-Download Ephemeral Streaming**: Serverless memory buffers incoming text from Google Drive without persisting files to disk.
 
 ---

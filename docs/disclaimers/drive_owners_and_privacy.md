@@ -1,13 +1,13 @@
 # Google Drive Owners & Privacy Notice
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
 ## 1. Scope for Drive Link Owners
 
-Community members and archivists who maintain Google Drive folders or files often share public links so others can read saved fanfiction during AO3 downtime. This document outlines how OurArchive interacts with Google Drive links and protects Drive owners.
+Community members and archivists who maintain Google Drive folders or files often share public links so others can read saved fanfiction during primary archive downtime. This document outlines how OurArchive interacts with Google Drive links and protects Drive owners.
 
 ---
 

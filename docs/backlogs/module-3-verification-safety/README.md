@@ -16,7 +16,7 @@ Module 3 guarantees the safety, authenticity, and legal/ethical governance of th
    - **HIDE**: Instantly toggle visibility off from search.
    - **CONTACT**: Prompt or email link submitter/Drive owner.
    - **REMOVE**: Permanent cascade database purge.
-3. **Community Disclaimers**: Affirms 100% author ownership, transformative non-commercial fair use, and solidarity with AO3/OTW.
+3. **Community Disclaimers**: Affirms 100% author ownership, transformative non-commercial fair use, and solidarity with community fanwork archives.
 4. **Immediate Takedown Policy**: Zero-barrier removal ("reach out and it is removed immediately").
 
 ---

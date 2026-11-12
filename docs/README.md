@@ -1,7 +1,7 @@
 # OurArchive Documentation Hub
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 > 
 > All creative works belong 100% to their original creators. The system operates on a strict **Read-Only / Zero-Download** principle: files are never stored or downloaded onto OurArchive servers. If any author or Drive owner wishes to have their work or link removed, please contact the administrator, and it will be removed immediately.
 
@@ -19,7 +19,7 @@ docs/
 │   ├── README.md                                  # Disclaimers Index & Mission Charter
 │   ├── fanfic_authors_and_ownership.md           # Creator Rights & 100% Intellectual Property
 │   ├── drive_owners_and_privacy.md                # View-Only Guidance & Owner Privacy Masking
-│   ├── copyright_and_ao3_temporary_aid.md         # Transformative Fair Use & OTW Solidarity
+│   ├── copyright_and_temporary_aid.md             # Transformative Fair Use & Community Archive Solidarity
 │   └── takedown_and_removal_request.md            # Immediate Takedown Policy & Contact Guide
 ├── architecture/                                  # Technical & System Design Specifications
 │   ├── system_overview.md                         # Architecture Topology & Sequence Lifecycle
