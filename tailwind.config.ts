@@ -35,14 +35,6 @@ const config: Config = {
           parchment: "#faf7f2", // Wood pulp surface
           border: "#d8cbbe",
         },
-        // Mapped to tree trunk palette for instant uniform theme styling
-        ao3: {
-          red: "#5c3a21",
-          darkred: "#3d2314",
-          lightred: "#d4a373",
-          light: "#faf7f2",
-          border: "#d8cbbe",
-        },
       },
     },
   },

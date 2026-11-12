@@ -131,7 +131,7 @@ export function TriageActionModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full border border-gray-200 overflow-hidden text-xs">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 text-xs">
         {/* Header */}
         <div className="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
           <div>
