@@ -8,6 +8,7 @@ interface TakedownModalProps {
   isOpen: boolean;
   workId?: string | null;
   workTitle?: string | null;
+  userEmail?: string | null;
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -16,11 +17,11 @@ export function TakedownModal({
   isOpen,
   workId,
   workTitle,
+  userEmail,
   onClose,
   onSuccess,
 }: TakedownModalProps) {
   const [targetQuery, setTargetQuery] = useState("");
-  const [submittedDriveUrl, setSubmittedDriveUrl] = useState("");
   const [role, setRole] = useState("author");
   const [requesterEmail, setRequesterEmail] = useState("");
   const [ownershipProof, setOwnershipProof] = useState("");
@@ -39,23 +40,22 @@ export function TakedownModal({
   useEffect(() => {
     if (isOpen) {
       setTargetQuery(workTitle || workId || "");
-      setSubmittedDriveUrl("");
       setRole("author");
-      setRequesterEmail("");
+      setRequesterEmail(userEmail || "");
       setOwnershipProof("");
       setReason("");
       setPreference("permanent");
       setError(null);
       setSubmitted(false);
     }
-  }, [isOpen, workId, workTitle]);
+  }, [isOpen, workId, workTitle, userEmail]);
 
   if (!isOpen || !mounted) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!targetQuery.trim() && !submittedDriveUrl.trim() && !workId) {
-      setError("Please specify the Google Drive URL, Work Title, or Reference ID.");
+    if (!targetQuery.trim() && !workId) {
+      setError("Please specify the Work Title, File Name, or Reference ID.");
       return;
     }
     if (!ownershipProof.trim()) {
@@ -73,7 +73,6 @@ export function TakedownModal({
         body: JSON.stringify({
           workId: workId || null,
           targetQuery: targetQuery.trim(),
-          submittedDriveUrl: submittedDriveUrl.trim() || null,
           role,
           requesterEmail: requesterEmail.trim() || null,
           ownershipProof: ownershipProof.trim(),
@@ -161,35 +160,18 @@ export function TakedownModal({
                   </div>
                 )}
 
-                {/* Target Work Title / Reference */}
+                {/* Target Work Title / File Name / Reference */}
                 <div className="space-y-1">
                   <label className="block font-semibold text-gray-700 dark:text-gray-300">
-                    Work Title or Reference ID <span className="text-red-500">*</span>
+                    Work Title, File Name, or Reference ID <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={targetQuery}
                     onChange={(e) => setTargetQuery(e.target.value)}
-                    placeholder="e.g. Story Title or OurArchive Reference ID"
+                    placeholder="e.g. Story Title, File Name, or Reference ID"
                     required
                     className="w-full p-2 border border-border-light dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs"
-                  />
-                </div>
-
-                {/* Pointed Google Drive Link */}
-                <div className="space-y-1">
-                  <label className="block font-semibold text-gray-700 dark:text-gray-300">
-                    Pointed Google Drive Link (File or Folder URL){" "}
-                    <span className="text-gray-400 font-normal">
-                      {workId ? "(Optional if pre-selected above)" : "(Recommended for exact match)"}
-                    </span>
-                  </label>
-                  <input
-                    type="url"
-                    value={submittedDriveUrl}
-                    onChange={(e) => setSubmittedDriveUrl(e.target.value)}
-                    placeholder="https://drive.google.com/file/d/... or https://drive.google.com/drive/folders/..."
-                    className="w-full p-2 border border-border-light dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs font-mono"
                   />
                 </div>
 

@@ -104,8 +104,20 @@ export function sanitizeReaderHtml(rawHtml: string, options: SanitizeOptions = {
         allowedAttrs.push(`${name}="${val}"`);
       } else if (name === "style" && !options.stripStyles) {
         // Disallow CSS expressions, external url(), or javascript execution in styles
+        // Also strip typography and color overrides so reader font/size/theme controls work natively
         if (!/expression|javascript|url\s*\(/i.test(val)) {
-          allowedAttrs.push(`style="${val}"`);
+          const cleanedDecl = val
+            .split(";")
+            .map((decl) => decl.trim())
+            .filter((decl) => {
+              if (!decl) return false;
+              const prop = decl.split(":")[0]?.trim().toLowerCase();
+              return !["font-family", "font-size", "color", "background-color", "background"].includes(prop);
+            })
+            .join("; ");
+          if (cleanedDecl) {
+            allowedAttrs.push(`style="${cleanedDecl}"`);
+          }
         }
       }
     }
