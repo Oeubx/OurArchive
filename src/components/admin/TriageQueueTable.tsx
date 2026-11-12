@@ -281,7 +281,7 @@ export function TriageQueueTable({ initialItems }: TriageQueueTableProps) {
                           <button
                             onClick={() => handleActionClick(item, "REMOVE")}
                             className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded font-medium text-[11px] transition"
-                            title="Expunge fanwork record"
+                            title="Permanently delete fanwork record"
                           >
                             🗑️ Remove
                           </button>

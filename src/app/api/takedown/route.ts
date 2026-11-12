@@ -227,8 +227,8 @@ export async function POST(request: NextRequest) {
         success: true,
         matched: Boolean(targetLinkId),
         message: targetLinkId
-          ? "This fanwork has been immediately hidden from public view and logged in the Supabase Takedown Queue for final admin verification and purge."
-          : "Your takedown request and ownership verification details have been logged in the Supabase Takedown Queue for immediate admin review.",
+          ? "This fanwork has been hidden from public view right away and logged in the Takedown Queue for final admin review and permanent removal."
+          : "Your takedown request and ownership details have been logged in the Takedown Queue for admin review within 24 hours.",
       },
       { status: 200 }
     );

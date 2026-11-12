@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { extractText } from "unpdf";
+import { extractText, extractTextItems, type StructuredTextItem } from "unpdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
@@ -40,6 +40,151 @@ function buildNativePdfHtml(pages: string[]): string {
       if (!paragraphs) return "";
 
       return `<div data-pdf-page="${pageNumber}" class="mb-6"><div class="text-xs opacity-60 border-b pb-1 mb-3">Page ${pageNumber} of ${totalPages}</div>${paragraphs}</div>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+interface VisualLine {
+  y: number;
+  leftX: number;
+  rightX: number;
+  fontSize: number;
+  text: string;
+}
+
+function isSceneOrHeaderLine(text: string): boolean {
+  const trimmed = text.trim();
+  return (
+    /^[_*\-=~]{3,}$/.test(trimmed) ||
+    /^\*{2,}.*\*{2,}$/.test(trimmed) ||
+    /^(Title|Summary|Status|Author|Fandom|Pairing|Rating|Warnings?|Chapter)\s*:/i.test(trimmed)
+  );
+}
+
+function buildFormattedPdfHtml(pageItems: StructuredTextItem[][]): string {
+  const totalPages = pageItems.length;
+
+  return pageItems
+    .map((rawItems, index) => {
+      const pageNumber = index + 1;
+      const items = rawItems.filter((item) => item.str && item.str.trim().length > 0);
+      if (items.length === 0) return "";
+
+      // 1. Cluster spans into visual lines by baseline Y coordinate
+      const lineBuckets: Array<{ y: number; items: StructuredTextItem[] }> = [];
+      for (const item of items) {
+        const tol = Math.max(2, (item.fontSize || 12) * 0.35);
+        const existing = lineBuckets.find((b) => Math.abs(b.y - item.y) <= tol);
+        if (existing) {
+          existing.items.push(item);
+        } else {
+          lineBuckets.push({ y: item.y, items: [item] });
+        }
+      }
+
+      // Sort lines top-to-bottom (PDF origin y=0 is bottom-left)
+      lineBuckets.sort((a, b) => b.y - a.y);
+
+      const lines: VisualLine[] = lineBuckets
+        .map((bucket) => {
+          bucket.items.sort((a, b) => a.x - b.x);
+          let lineText = "";
+          let prevEnd = 0;
+          let prevFontSize = 12;
+
+          for (let i = 0; i < bucket.items.length; i++) {
+            const span = bucket.items[i];
+            const fontSize = span.fontSize || 12;
+            const part = span.str;
+            if (i === 0) {
+              lineText = part;
+            } else {
+              const gap = span.x - prevEnd;
+              const needsSpace =
+                gap > Math.max(1.5, prevFontSize * 0.18) &&
+                !lineText.endsWith(" ") &&
+                !part.startsWith(" ");
+              lineText += (needsSpace ? " " : "") + part;
+            }
+            prevEnd = span.x + (span.width || 0);
+            prevFontSize = fontSize;
+          }
+
+          const first = bucket.items[0];
+          const last = bucket.items[bucket.items.length - 1];
+          const avgFont =
+            bucket.items.reduce((acc, s) => acc + (s.fontSize || 12), 0) / bucket.items.length;
+
+          return {
+            y: bucket.y,
+            leftX: first.x,
+            rightX: last.x + (last.width || 0),
+            fontSize: avgFont,
+            text: lineText.trim(),
+          };
+        })
+        .filter((line) => line.text.length > 0);
+
+      if (lines.length === 0) return "";
+
+      // 2. Estimate normal line spacing (median vertical delta within typical range)
+      const typicalFont =
+        lines.reduce((acc, l) => acc + l.fontSize, 0) / lines.length || 12;
+      const normalGaps: number[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const dy = lines[i - 1].y - lines[i].y;
+        if (dy >= typicalFont * 0.8 && dy <= typicalFont * 2.5) {
+          normalGaps.push(dy);
+        }
+      }
+      normalGaps.sort((a, b) => a - b);
+      const medianGap =
+        normalGaps.length > 0
+          ? normalGaps[Math.floor(normalGaps.length / 2)]
+          : typicalFont * 1.35;
+
+      const pageMaxRight = Math.max(...lines.map((l) => l.rightX), 1);
+
+      // 3. Reconstruct paragraphs preserving blank-line spacing and intentional short breaks
+      const blocks: Array<{ text: string; extraSpace: boolean }> = [];
+      let currentLines: string[] = [lines[0].text];
+      let currentExtraSpace = false;
+
+      for (let i = 1; i < lines.length; i++) {
+        const prev = lines[i - 1];
+        const curr = lines[i];
+        const dy = prev.y - curr.y;
+
+        const hasBlankLineGap = dy > medianGap * 1.45;
+        const hasLargeGap = dy > medianGap * 2.2;
+        const isMarkerBreak =
+          isSceneOrHeaderLine(prev.text) || isSceneOrHeaderLine(curr.text);
+        const isShortIntentionalBreak =
+          prev.rightX < pageMaxRight * 0.72 &&
+          /[.!?:;"'”’)\]]$/.test(prev.text);
+
+        if (hasBlankLineGap || isMarkerBreak || isShortIntentionalBreak) {
+          blocks.push({ text: currentLines.join(" "), extraSpace: currentExtraSpace });
+          currentLines = [curr.text];
+          currentExtraSpace = hasLargeGap;
+        } else {
+          currentLines.push(curr.text);
+        }
+      }
+
+      if (currentLines.length > 0) {
+        blocks.push({ text: currentLines.join(" "), extraSpace: currentExtraSpace });
+      }
+
+      const paragraphsHtml = blocks
+        .map((b) => {
+          const marginClass = b.extraSpace ? ' class="mt-6"' : "";
+          return `<p${marginClass}>${escapeHtmlText(b.text)}</p>`;
+        })
+        .join("");
+
+      return `<div data-pdf-page="${pageNumber}" class="mb-6"><div class="text-xs opacity-60 border-b pb-1 mb-3">Page ${pageNumber} of ${totalPages}</div>${paragraphsHtml}</div>`;
     })
     .filter(Boolean)
     .join("");
@@ -308,19 +453,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
       }
 
+      const drivePreviewUrl = `https://drive.google.com/file/d/${activeFileId}/preview`;
+
       if (pdfBytes) {
         try {
-          const extracted = await extractText(new Uint8Array(pdfBytes), {
-            mergePages: false,
-          });
+          const [structured, extracted] = await Promise.all([
+            extractTextItems(new Uint8Array(pdfBytes.slice(0))),
+            extractText(new Uint8Array(pdfBytes.slice(0)), {
+              mergePages: false,
+            }),
+          ]);
+
           const pages = Array.isArray(extracted.text) ? extracted.text : [];
           const hasSelectableText = pages.some((p) => p.trim().length > 0);
 
           if (hasSelectableText) {
-            const rawPdfHtml = buildNativePdfHtml(pages);
-            const sanitizedPdfHtml = sanitizeReaderHtml(rawPdfHtml);
+            const plainRawHtml = buildNativePdfHtml(pages);
+            const plainSanitizedHtml = sanitizeReaderHtml(plainRawHtml);
 
-            if (sanitizedPdfHtml) {
+            const formattedRawHtml = Array.isArray(structured.items)
+              ? buildFormattedPdfHtml(structured.items)
+              : "";
+            const formattedSanitizedHtml = formattedRawHtml
+              ? sanitizeReaderHtml(formattedRawHtml)
+              : plainSanitizedHtml;
+
+            if (formattedSanitizedHtml || plainSanitizedHtml) {
               return NextResponse.json({
                 success: true,
                 workId: link.id,
@@ -334,9 +492,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 tags: metadata?.tags || [],
                 isPdf: true,
                 isNativePdf: true,
-                totalPages: extracted.totalPages || pages.length,
-                pdfPreviewUrl: null,
-                contentHtml: sanitizedPdfHtml,
+                totalPages: structured.totalPages || extracted.totalPages || pages.length,
+                pdfPreviewUrl: drivePreviewUrl,
+                drivePreviewUrl,
+                contentHtml: formattedSanitizedHtml || plainSanitizedHtml,
+                plainContentHtml: plainSanitizedHtml || formattedSanitizedHtml,
               });
             }
           }
@@ -358,8 +518,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         tags: metadata?.tags || [],
         isPdf: true,
         isNativePdf: false,
-        pdfPreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
+        pdfPreviewUrl: drivePreviewUrl,
+        drivePreviewUrl,
         contentHtml: null,
+        plainContentHtml: null,
       });
     }
 
@@ -439,7 +601,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       summary: metadata?.summary || null,
       tags: metadata?.tags || [],
       isPdf: false,
+      drivePreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
       contentHtml: sanitizedHtml,
+      plainContentHtml: null,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";

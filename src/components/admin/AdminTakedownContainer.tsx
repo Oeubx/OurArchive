@@ -123,7 +123,7 @@ export function AdminTakedownContainer({
         }
         setStatusFeedback({
           type: "success",
-          text: `Permanently purged "${matched.title}" from Supabase and exported compliance CSV.`,
+          text: `Permanently deleted "${matched.title}" from the database and exported compliance CSV.`,
         });
       }
 
@@ -183,7 +183,7 @@ export function AdminTakedownContainer({
         }
         setStatusFeedback({
           type: "success",
-          text: `Purged targeted work "${req.work_title_snapshot || req.target_query}" and exported CSV tombstone.`,
+          text: `Permanently deleted targeted work "${req.work_title_snapshot || req.target_query}" and exported compliance CSV.`,
         });
       } else if (action === "quarantine" && req.link_id) {
         await callAdminAction(
@@ -388,7 +388,7 @@ export function AdminTakedownContainer({
                           onClick={() => handleRequestResolution(req, "purge")}
                           className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-bold transition disabled:opacity-50"
                         >
-                          {isBusy ? "Purging..." : "Purge & Export CSV"}
+                          {isBusy ? "Deleting..." : "Permanently Delete & Export CSV"}
                         </button>
                       )}
                       <button
@@ -415,7 +415,7 @@ export function AdminTakedownContainer({
           <span>Granular Single-Work Takedown (Direct Admin Action)</span>
         </div>
         <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
-          Enter a Work ID or Title below to quarantine or permanently purge a specific fanwork directly in Supabase without affecting sibling entries.
+          Enter a Work ID or Title below to hide or permanently delete a specific fanwork directly in Supabase without affecting other entries.
         </p>
 
         <form
@@ -458,8 +458,8 @@ export function AdminTakedownContainer({
                 }
                 className="w-1/2 px-2 py-1.5 text-xs border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100"
               >
-                <option value="hide">Quarantine (Hide)</option>
-                <option value="remove">Expunge (Purge)</option>
+                <option value="hide">Hide (Quarantine)</option>
+                <option value="remove">Permanently Delete</option>
               </select>
               <button
                 type="submit"

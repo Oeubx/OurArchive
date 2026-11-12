@@ -64,7 +64,7 @@ export default function TakedownPage() {
           If you are the author, drive owner, or copyright holder of any fanwork indexed on this platform, you have the right to request its immediate, no-questions-asked removal.
         </p>
         <p className="text-gray-600 dark:text-gray-400 text-[11px] leading-relaxed">
-          We require no legal notices, cease-and-desist forms, or bureaucratic delay. Simply submit the story title, Work ID, or cloud drive URL below and the link will be permanently purged or suppressed within minutes.
+          We require no legal notices, cease-and-desist forms, or bureaucratic delay. Simply submit the story title, file name, or reference ID below and action will be taken within 24 hours of receiving your request.
         </p>
       </div>
 
@@ -148,7 +148,7 @@ export default function TakedownPage() {
               How quickly is a work taken down?
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Immediate form submissions suppress the item from search queries instantly. Administrative purge of cached reader state occurs in under 24 hours.
+              In-system submissions hide the item from search queries right away, and full removal of cached reader data is completed within 24 hours of receiving your request.
             </p>
           </div>
 
