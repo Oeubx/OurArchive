@@ -1,7 +1,7 @@
 # OurArchive Documentation Hub
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 > 
 > All creative works belong 100% to their original creators. The system operates on a strict **Read-Only / Zero-Download** principle: files are never stored or downloaded onto OurArchive servers. If any author or Drive owner wishes to have their work or link removed, please contact the administrator, and it will be removed immediately.
 
@@ -15,11 +15,14 @@ This documentation hub provides the architectural, operational, and development 
 docs/
 ├── README.md                                      # This Documentation Hub
 ├── ci_cd.md                                       # CI/CD Architecture & GitHub Actions Contract
+├── version_history/                               # Release Alignment & Version Records
+│   ├── README.md                                  # Release Index & Active Alignment Matrix
+│   └── v1.0.0.md                                  # v1.0.0 Production Release Snapshot
 ├── disclaimers/                                   # Community Governance & Legal Protection
 │   ├── README.md                                  # Disclaimers Index & Mission Charter
 │   ├── fanfic_authors_and_ownership.md           # Creator Rights & 100% Intellectual Property
 │   ├── drive_owners_and_privacy.md                # View-Only Guidance & Owner Privacy Masking
-│   ├── copyright_and_ao3_temporary_aid.md         # Transformative Fair Use & OTW Solidarity
+│   ├── copyright_and_temporary_aid.md             # Transformative Fair Use & Community Archive Solidarity
 │   └── takedown_and_removal_request.md            # Immediate Takedown Policy & Contact Guide
 ├── architecture/                                  # Technical & System Design Specifications
 │   ├── system_overview.md                         # Architecture Topology & Sequence Lifecycle
@@ -67,6 +70,8 @@ docs/
 - **Supabase BaaS, Discord OAuth & Webhooks**: Read [Supabase Platform Architecture](infrastructure/supabase_architecture.md).
 
 ### Development & Delivery
+- **Version History & Alignment**: Read [Version History & Release Alignment](version_history/README.md) (Latest: [v1.0.0](version_history/v1.0.0.md)).
+- **Release Changelog**: Read [CHANGELOG.md](../CHANGELOG.md).
 - **Commit Code Grammar & Backlogs**: Read [OurArchive Sprint Backlogs & Commit Reference](backlogs/OA_Sprint_Backlogs_Commit_Reference.md).
 - **CI/CD Pipelines**: Read [OurArchive CI/CD & Delivery Architecture](ci_cd.md).
 - **Git Commit Drafting Skill**: See [`.agents/skills/git-commits/SKILL.md`](../.agents/skills/git-commits/SKILL.md).

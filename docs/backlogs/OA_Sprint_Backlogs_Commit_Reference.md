@@ -1,7 +1,7 @@
 # OurArchive Sprint Backlogs — Commit Reference & Feature Catalog
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 This document is the canonical commit and backlog reference for the **OurArchive** ecosystem across documentation, backend, and frontend delivery.
 
@@ -97,6 +97,6 @@ All commits touching OurArchive must adhere to Conventional Commits grammar and 
 | `OA-M3-F1` | 2-Tier Automated Threat Scanner | Metadata MIME allowlist, Google Safe Browsing API, and risk scoring | [module-3-verification-safety/verification_lifecycle_spec.md](module-3-verification-safety/verification_lifecycle_spec.md) |
 | `OA-M3-F2` | Administrator 6-Action Suite | Review queue actions: **VERIFY**, **APPROVE**, **REJECT**, **HIDE**, **CONTACT**, **REMOVE** | [module-3-verification-safety/verification_lifecycle_spec.md](module-3-verification-safety/verification_lifecycle_spec.md) |
 | `OA-M3-F3` | Quarantine & Flagging State Machine | Automatic threat quarantine and status transition state machine | [module-3-verification-safety/verification_lifecycle_spec.md](module-3-verification-safety/verification_lifecycle_spec.md) |
-| `OA-M3-F4` | Community Disclaimers & Legal Notice | Creator rights, fair use, and solidarity with AO3 / OTW | [../disclaimers/README.md](../disclaimers/README.md) |
+| `OA-M3-F4` | Community Disclaimers & Legal Notice | Creator rights, fair use, and solidarity with community fanwork archives | [../disclaimers/README.md](../disclaimers/README.md) |
 | `OA-M3-F5` | Immediate Takedown Protocol | Fast-track removal policy ("reach out and it is removed immediately") | [../disclaimers/takedown_and_removal_request.md](../disclaimers/takedown_and_removal_request.md) |
 | `OA-M3-F6` | Reader Anti-Bot Defense | Edge rate limiting, Cloudflare Turnstile, and masked Drive reveal modal | [../architecture/reader_and_anti_bot_protection.md](../architecture/reader_and_anti_bot_protection.md) |

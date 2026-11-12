@@ -1,7 +1,7 @@
 # OurArchive CI/CD & Delivery Architecture
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
@@ -13,48 +13,57 @@ All automated pipelines are hosted via **GitHub Actions** and deploy preview and
 
 ---
 
-## 2. Dual-Tier Verification Strategy
+## 2. Progressive Three-Stage Delivery & Verification Pipeline
 
-Adapted from the enterprise testing standard of `TRACE_Backend`, OurArchive employs a dual-tier verification pipeline to optimize developer feedback speed without compromising release reliability:
+Adapted from the enterprise testing standard of `TRACE_Backend`, OurArchive employs a progressive three-stage pipeline to optimize development agility while securing live production releases:
 
 ```mermaid
 flowchart TD
-    subgraph Tier1["Tier 1: Fast Feature Checks (PRs to development)"]
-        A[Push or PR Event] --> B[Checkout & Setup Node.js]
+    subgraph Stage1["Stage 1: Working Branch (development)"]
+        A[Feature Branch Push or PR] --> B[Checkout & Setup Node.js]
         B --> C[Markdown Relative Link Validation]
         C --> D[Absolute Path Audit - Block C:/]
         D --> E[TypeScript Typecheck & ESLint]
-        E --> F[Unit & Component Tests]
+        E --> F[PR Merge into development]
     end
 
-    subgraph Tier2["Tier 2: Full Promotion Gate (PRs to staging / main)"]
-        G[Promotion PR Event] --> H[Enforce Branch Flow Rules]
+    subgraph Stage2["Stage 2: Local & Localhost Testing (staging)"]
+        F --> G[PR: development -> staging]
+        G --> H[Enforce Branch Flow Rules]
         H --> I[Vercel Preview Build Verification]
-        I --> J[Supabase Migration & Schema Audit]
-        J --> K[End-to-End Search & Reader Smoke Tests]
-        K --> L[Publish to Production on Merge]
+        I --> J[Local / Localhost Testing & Smoke Suite]
+        J --> K[Staging Approval & Merge]
     end
 
-    Tier1 -->|PR Approved & Merged| Tier2
+    subgraph Stage3["Stage 3: Production Deployment (production)"]
+        K --> L[PR: staging -> production]
+        L --> M[Production Migration & Security Audit]
+        M --> N[Publish to Live Vercel Production]
+    end
 ```
 
-### Tier 1: Fast Development Checks
-- **Trigger**: Every push and Pull Request targeting `development`.
-- **Target Execution Time**: Under 3 minutes.
+### Stage 1: Active Working Branch Checks (`development`)
+- **Role**: `development` is the primary integration working branch.
+- **Trigger**: Every push and Pull Request targeting `development` from feature branches.
 - **Jobs**:
   1. **Documentation Link Integrity**: Parses all Markdown files to verify relative file paths and validate that internal links point to existing files.
-  2. **Absolute Path Shield**: Verifies that documentation links do not contain local absolute file paths or machine-specific drive letters to ensure zero-defect portability.
+  2. **Absolute Path Shield**: Verifies that documentation links do not contain local absolute file paths or machine-specific drive letters (`C:\`, `D:\`) to ensure zero-defect portability.
   3. **Code Syntax & Static Analysis**: Runs TypeScript type-checking (`tsc --noEmit`) and ESLint.
 
-### Tier 2: Full Promotion Regression Gate
-- **Trigger**: Pull Requests targeting `staging` or `main`.
-- **Jobs**:
-  1. **Branch Flow Enforcement**:
-     - PRs to `staging` **must** originate from `development`.
-     - PRs to `main` **must** originate from `staging` (or emergency hotfixes from `development`).
-     - Directly merging unverified feature branches into `main` fails immediately.
-  2. **Vercel Build Simulation**: Verifies that Next.js edge builds compile without missing environment variables or bundler failures.
-  3. **Database Migration Synchronization**: Verifies that SQL migration scripts in `db/migrations/` match Supabase production schemas.
+### Stage 2: Staging Gate for Local/Localhost Testing (`staging`)
+- **Role**: Intermediate verification gate for pre-release validation.
+- **Trigger**: Pull Request from `development` into `staging`.
+- **Purpose**:
+  1. Allows archivists and developers to pull the `staging` branch locally and conduct rigorous localhost testing (`pnpm dev`, smoke tests, and manual scenario walk-throughs).
+  2. Ensures that all combined changes on `development` execute cleanly together before live deployment.
+
+### Stage 3: Live Production Deployment Gate (`production`)
+- **Role**: Production branch powering live community users on Vercel.
+- **Trigger**: Pull Request from `staging` into `production`.
+- **Jobs & Safeguards**:
+  1. **Strict Branch Flow**: Production PRs must originate from a verified `staging` branch.
+  2. **Vercel Build Verification**: Validates production Next.js compilation, route bundling, and Edge middleware sizing.
+  3. **Database Migration Audit**: Confirms Supabase production migrations (schema DDL, triggers, and RLS policies) are applied.
 
 ---
 
@@ -63,9 +72,10 @@ flowchart TD
 The repository uses the following GitHub Actions workflows under [`.github/workflows/`](../.github/workflows/):
 
 ### 1. `ci.yml` (Core CI Gate)
-- Enforces branch flow validation.
+- Enforces branch flow validation across `development`, `staging`, and `production`.
 - Audits documentation for hardcoded absolute paths.
 - Validates internal relative markdown link integrity.
+- Executes TypeScript typechecking and ESLint gates.
 
 ### 2. `sync-prs.yml` (Stakeholder Tracking - Optional Integration)
 - Adapted from the TRACE ecosystem: uses `actions/github-script@v7` on PR lifecycle events (`opened`, `synchronize`, `closed`, `merged`).
@@ -78,9 +88,9 @@ The repository uses the following GitHub Actions workflows under [`.github/workf
 
 | Branch | Role | Direct Push Allowed? | Required PR Base | Deployment Target |
 | :--- | :--- | :--- | :--- | :--- |
-| **`main`** | Production Release | Only for Phase 0 bootstrap | `staging` | Vercel Production (`ourarchive.org` / live domain) |
-| **`staging`** | Integration Testing | No | `development` | Vercel Staging (`staging.ourarchive...`) |
-| **`development`** | Active Development | No | Feature branch | Vercel Preview |
+| **`production`** | Live Production Release | No | `staging` | Vercel Production (`ourarchive.org` / live domain) |
+| **`staging`** | Local / Localhost Testing & Pre-Release | No | `development` | Localhost Testing / Vercel Staging |
+| **`development`** | Active Working Branch | No | Feature branch | Local Dev / Vercel Preview |
 | **`docs/*` / `<type>/<changes>`** | Feature & Spec Work | Yes (feature branch only) | `development` | Local / Ephemeral branch preview |
 
 ---

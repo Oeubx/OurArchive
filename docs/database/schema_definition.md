@@ -1,7 +1,7 @@
 # Database Schema Definition & DDL Contracts
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.link_metadata (
     word_count INTEGER DEFAULT 0,
     summary TEXT,
     tags TEXT[] DEFAULT '{}'::TEXT[],
-    canonical_ao3_url TEXT,
+    canonical_source_url TEXT,
     
     -- Drive file descriptors
     file_name VARCHAR(255) NOT NULL,

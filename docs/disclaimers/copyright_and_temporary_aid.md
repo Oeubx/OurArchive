@@ -1,24 +1,24 @@
-# Copyright, Fair Use & AO3 Solidarity
+# Copyright, Fair Use & Community Solidarity
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
-## 1. Solidarity with Archive of Our Own (AO3) & OTW
+## 1. Solidarity with Existing Fanwork Archives
 
-Archive of Our Own (AO3), operated by the non-profit Organization for Transformative Works (OTW), is the premier, gold-standard archive for transformative fan fiction, culture, and preservation.
+Established non-profit fanwork archives are the premier, gold-standard home for transformative fan fiction, culture, and preservation.
 
-**OurArchive stands in total solidarity with AO3, the OTW, and the global fan community.**
-- OurArchive does **NOT** seek to replace AO3.
-- OurArchive does **NOT** compete with AO3.
-- OurArchive does **NOT** duplicate AO3's permanent archiving mission or infrastructure.
+**OurArchive stands in total solidarity with existing fanwork archives and the global fan community.**
+- OurArchive does **NOT** seek to replace established fanwork archives.
+- OurArchive does **NOT** compete with established fanwork archives.
+- OurArchive does **NOT** duplicate permanent community archiving missions or infrastructure.
 
-OurArchive exists exclusively as a transient, emergency community bridge during unexpected periods of AO3 infrastructure downtime or extended maintenance. Once AO3 returns to stable, accessible operational status, emergency link ingestion into OurArchive will be sunsetted.
+OurArchive exists exclusively as a transient, emergency community bridge during unexpected periods of archive infrastructure downtime or extended maintenance. Once primary archives return to stable, accessible operational status, emergency link ingestion into OurArchive will be sunsetted.
 
 ---
 
-## 2. Transformative Works & Fair Use
+## 2. Creative Remix Fiction & Fair Use
 
 Transformative fanfiction has long been recognized as fair use under copyright law:
 1. **Non-Commercial Nature**: OurArchive is completely non-commercial. It earns no ad revenue, charges no subscription fees, accepts no donations, and operates on free-tier community infrastructure.

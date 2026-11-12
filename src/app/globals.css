@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-canvas: #f7f5f0;
+  --bg-surface: #ffffff;
+  --bg-subtle: #efeae3;
+  --border-color: #e2dacd;
+  --text-primary: #2b2520;
+  --text-secondary: #6e645a;
+  --brand-trunk: #5c3a21;
+}
+
+html.dark {
+  --bg-canvas: #141210;
+  --bg-surface: #1c1917;
+  --bg-subtle: #26221f;
+  --border-color: #332d27;
+  --text-primary: #ede8e1;
+  --text-secondary: #a3988c;
+  --brand-trunk: #d4a373;
+}
+
+body {
+  color: var(--text-primary);
+  background-color: var(--bg-canvas);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.reader-content,
+.reader-content * {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.reader-content h1 {
+  font-size: 1.5em !important;
+}
+
+.reader-content h2 {
+  font-size: 1.25em !important;
+}
+
+.reader-content h3 {
+  font-size: 1.125em !important;
+}

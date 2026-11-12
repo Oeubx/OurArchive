@@ -31,6 +31,10 @@ pnpm-debug.log*
 *.pem
 service-account*.json
 credentials.json
+test-accounts.local.md
+supabase-seeded-accounts.local.md
+*.local.md
+supabase/seeds/
 
 # Vercel
 .vercel
