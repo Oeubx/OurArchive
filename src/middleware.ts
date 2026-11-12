@@ -196,6 +196,31 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Rate-limiting Rule 6: User Feedback Submissions (POST /api/feedback) -> max 10 req/hour
+  if (pathname.startsWith("/api/feedback") && request.method === "POST") {
+    const limit = 10;
+    const windowMs = 60 * 60 * 1000;
+    const result = checkRateLimit(`feedback:${ip}`, limit, windowMs);
+
+    if (!result.allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "Feedback submission rate limit reached. Please wait before submitting again.",
+          retryAfterSeconds: result.reset,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": result.reset.toString(),
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+  }
+
   // Refresh Supabase auth session cookies
   const { supabaseResponse, user } = await updateSession(request);
 
@@ -232,6 +257,16 @@ export async function middleware(request: NextRequest) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/";
       redirectUrl.searchParams.set("auth_error", "login_required");
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // Production RBAC Rule 5: /feedback requires authenticated user
+  if (pathname.startsWith("/feedback")) {
+    if (!user) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.searchParams.set("auth_error", "feedback_login_required");
       return NextResponse.redirect(redirectUrl);
     }
   }

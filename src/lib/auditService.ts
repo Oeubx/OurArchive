@@ -72,7 +72,39 @@ export function getAllAuditRecords(): LinkAuditRecord[] {
 }
 
 /**
- * Retrieve chronological audit history for a specific link ID.
+ * Fetch live system audit records (including tombstones) from Supabase via `/api/admin/audit`.
+ */
+export async function fetchAllAuditRecordsFromApi(): Promise<LinkAuditRecord[]> {
+  const res = await fetch("/api/admin/audit", { cache: "no-store" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch audit logs.");
+  }
+  const data = await res.json();
+  return Array.isArray(data.records) ? data.records : [];
+}
+
+/**
+ * Fetch chronological audit history for a specific link ID from Supabase via `/api/admin/audit`.
+ */
+export async function fetchLinkAuditHistoryFromApi(
+  linkId: string
+): Promise<LinkAuditRecord[]> {
+  if (!linkId) return [];
+  const res = await fetch(
+    `/api/admin/audit?linkId=${encodeURIComponent(linkId)}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch link audit history.");
+  }
+  const data = await res.json();
+  return Array.isArray(data.records) ? data.records : [];
+}
+
+/**
+ * Retrieve audit history for a specific link ID (legacy helper).
  */
 export function getAuditHistoryForLink(linkId: string): LinkAuditRecord[] {
   if (!linkId) return [];
@@ -129,9 +161,13 @@ export function recordExpungeTombstone(data: {
 
 /**
  * Export audit history to a formatted CSV spreadsheet file.
+ * Returns true if a CSV file was generated, or false if there were no records.
  */
-export function exportAuditToCsv(records: LinkAuditRecord[], filenamePrefix: string = "ourarchive_audit"): void {
-  if (typeof window === "undefined" || records.length === 0) return;
+export function exportAuditToCsv(
+  records: LinkAuditRecord[],
+  filenamePrefix: string = "ourarchive_audit"
+): boolean {
+  if (typeof window === "undefined" || records.length === 0) return false;
 
   const headers = [
     "Log ID",
@@ -179,15 +215,32 @@ export function exportAuditToCsv(records: LinkAuditRecord[], filenamePrefix: str
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  return true;
+}
+
+function escapeHtml(value: string | undefined | null): string {
+  if (!value) return "";
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
  * Generates an official printable PDF / print compliance report window for a link's audit trail.
  */
-export function printAuditReport(linkId: string): void {
+export function printAuditReport(
+  linkId: string,
+  providedHistory?: LinkAuditRecord[]
+): void {
   if (typeof window === "undefined") return;
 
-  const history = getAuditHistoryForLink(linkId);
+  const history =
+    providedHistory && providedHistory.length > 0
+      ? providedHistory
+      : getAuditHistoryForLink(linkId);
   if (history.length === 0) {
     alert("No audit history found for this link.");
     return;
@@ -201,7 +254,7 @@ export function printAuditReport(linkId: string): void {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>OurArchive Audit Report - ${primary.workTitle}</title>
+        <title>OurArchive Audit Report - ${escapeHtml(primary.workTitle)}</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -288,11 +341,11 @@ export function printAuditReport(linkId: string): void {
 
         <div class="meta-box">
           <div class="meta-grid">
-            <div><strong>Work Title:</strong> ${primary.workTitle}</div>
-            <div><strong>Author Name:</strong> ${primary.authorName}</div>
-            <div><strong>Fandom:</strong> ${primary.fandom}</div>
-            <div><strong>Masked Link:</strong> <code>${primary.maskedDriveUrl}</code></div>
-            <div><strong>Link ID:</strong> <code>${primary.linkId}</code></div>
+            <div><strong>Work Title:</strong> ${escapeHtml(primary.workTitle)}</div>
+            <div><strong>Author Name:</strong> ${escapeHtml(primary.authorName)}</div>
+            <div><strong>Fandom:</strong> ${escapeHtml(primary.fandom)}</div>
+            <div><strong>Masked Link:</strong> <code>${escapeHtml(primary.maskedDriveUrl)}</code></div>
+            <div><strong>Link ID:</strong> <code>${escapeHtml(primary.linkId)}</code></div>
             <div><strong>Status:</strong> ${primary.isTombstone ? "PERMANENTLY EXPUNGED (TOMBSTONE)" : "ACTIVE CATALOG RECORD"}</div>
           </div>
         </div>
@@ -313,11 +366,11 @@ export function printAuditReport(linkId: string): void {
               .map(
                 (h) => `
               <tr>
-                <td>${new Date(h.timestamp).toLocaleString()}</td>
-                <td><span class="badge badge-${h.actionType}">${h.actionType}</span></td>
-                <td><strong>${h.actorName}</strong></td>
-                <td>${h.actorRole}</td>
-                <td>${h.notes || "(None recorded)"}</td>
+                <td>${escapeHtml(new Date(h.timestamp).toLocaleString())}</td>
+                <td><span class="badge badge-${escapeHtml(h.actionType)}">${escapeHtml(h.actionType)}</span></td>
+                <td><strong>${escapeHtml(h.actorName)}</strong></td>
+                <td>${escapeHtml(h.actorRole)}</td>
+                <td>${escapeHtml(h.notes || "(None recorded)")}</td>
               </tr>
             `
               )

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       rating,
       summary,
       tags,
-      canonicalAo3Url,
+      canonicalSourceUrl,
       notes,
       turnstileToken,
     } = body;
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       word_count: 0,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
-      canonical_ao3_url: canonicalAo3Url ? canonicalAo3Url.trim() : null,
+      canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
 
       file_name: metadata.name,
       mime_type: metadata.mimeType,

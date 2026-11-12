@@ -1,8 +1,12 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import { TAKEDOWN_EMAIL } from "@/lib/config";
+import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
 
 export function AboutContent() {
+  const [showEmailModal, setShowEmailModal] = useState(false);
   return (
     <div className="space-y-6">
       {/* Origin Story & Mission */}
@@ -102,12 +106,13 @@ export function AboutContent() {
           If you are a writer and see your story mirrored here that you wish removed, please email us directly with the link. We honor all requests immediately.
         </p>
         <div className="flex flex-wrap items-center gap-3 pt-1">
-          <a
-            href={`mailto:${TAKEDOWN_EMAIL}`}
+          <button
+            type="button"
+            onClick={() => setShowEmailModal(true)}
             className="px-4 py-2 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded shadow-xs transition"
           >
-            Email: {TAKEDOWN_EMAIL}
-          </a>
+            Copy Takedown Email: {TAKEDOWN_EMAIL}
+          </button>
           <Link
             href="/takedown"
             className="px-4 py-2 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 text-xs font-semibold rounded hover:bg-subtle-light dark:hover:bg-subtle-dark transition"
@@ -122,6 +127,11 @@ export function AboutContent() {
           </Link>
         </div>
       </section>
+
+      <DirectTakedownEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+      />
     </div>
   );
 }

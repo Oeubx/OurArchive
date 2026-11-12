@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
-  getAuditHistoryForLink,
+  fetchLinkAuditHistoryFromApi,
   exportAuditToCsv,
   printAuditReport,
-  subscribeToAuditLogs,
   LinkAuditRecord,
 } from "@/lib/auditService";
 
@@ -24,6 +23,8 @@ export function AuditHistoryModal({
   onClose,
 }: AuditHistoryModalProps) {
   const [history, setHistory] = useState<LinkAuditRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -31,19 +32,31 @@ export function AuditHistoryModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen && linkId) {
-      setHistory(getAuditHistoryForLink(linkId));
-    }
-  }, [isOpen, linkId]);
+    if (!isOpen || !linkId) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    const unsubscribe = subscribeToAuditLogs(() => {
-      if (linkId) {
-        setHistory(getAuditHistoryForLink(linkId));
-      }
-    });
-    return unsubscribe;
-  }, [linkId]);
+    fetchLinkAuditHistoryFromApi(linkId)
+      .then((records) => {
+        if (active) setHistory(records);
+      })
+      .catch((err) => {
+        if (active) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load audit logs."
+          );
+          setHistory([]);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, linkId]);
 
   if (!isOpen || !linkId || !mounted) return null;
 
@@ -120,7 +133,7 @@ export function AuditHistoryModal({
 
             <button
               type="button"
-              onClick={() => printAuditReport(linkId)}
+              onClick={() => printAuditReport(linkId, history)}
               disabled={history.length === 0}
               className="px-2.5 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs disabled:opacity-50"
               title="Generate printable PDF compliance certificate"
@@ -132,7 +145,15 @@ export function AuditHistoryModal({
 
         {/* Timeline Content */}
         <div className="p-5 overflow-y-auto space-y-4">
-          {history.length === 0 ? (
+          {loading ? (
+            <div className="py-12 text-center text-gray-500 dark:text-gray-400 text-xs">
+              Loading Supabase audit history...
+            </div>
+          ) : error ? (
+            <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg text-red-700 dark:text-red-300 text-xs">
+              {error}
+            </div>
+          ) : history.length === 0 ? (
             <div className="py-12 text-center text-gray-500 dark:text-gray-400 text-xs">
               No audit records logged for this link yet.
             </div>

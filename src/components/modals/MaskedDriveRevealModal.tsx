@@ -73,7 +73,7 @@ export function MaskedDriveRevealModal({ isOpen, workId, onClose }: MaskedDriveR
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-200">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-base font-bold">🔗 View Verified Google Drive Link</span>

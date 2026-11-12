@@ -3,10 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
 import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 export default function TakedownPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const adminEmail = TAKEDOWN_EMAIL;
 
   return (
@@ -75,18 +77,19 @@ export default function TakedownPage() {
               </h2>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
-              Prefer writing directly? Send an email to our administrator mailbox. Please include the story title or cloud link so we can locate the record.
+              Prefer writing directly? Open our copyable takedown email template containing the address, subject format, Drive link field, and ownership verification fields.
             </p>
             <div className="p-3 bg-canvas-light dark:bg-canvas-dark rounded border border-border-light dark:border-border-dark font-mono text-[11px] text-brand-trunk dark:text-brand-light select-all">
               {adminEmail}
             </div>
           </div>
-          <a
-            href={`mailto:${adminEmail}?subject=[TAKEDOWN]%20Author%20Removal%20Request`}
+          <button
+            type="button"
+            onClick={() => setEmailModalOpen(true)}
             className="w-full py-2.5 px-4 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-800 dark:text-gray-200 rounded-lg font-bold hover:bg-subtle-light dark:hover:bg-subtle-dark transition text-center"
           >
-            Compose Email in Mail Client &rarr;
-          </a>
+            Copy Email Address &amp; Template &rarr;
+          </button>
         </section>
       </div>
 
@@ -126,8 +129,12 @@ export default function TakedownPage() {
         </div>
       </section>
 
-      {/* Modal Container */}
+      {/* Modal Containers */}
       <TakedownModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <DirectTakedownEmailModal
+        isOpen={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+      />
     </div>
   );
 }

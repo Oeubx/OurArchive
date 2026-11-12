@@ -122,7 +122,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               file_name,
               mime_type,
               file_size_bytes,
-              canonical_ao3_url
+              canonical_source_url
             )
           `)
           .neq("id", workId)
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             const meta = Array.isArray(item.link_metadata)
               ? item.link_metadata[0]
               : item.link_metadata;
-            if (meta?.canonical_ao3_url === link.drive_url) {
+            if (meta?.canonical_source_url === link.drive_url) {
               collectionWorks.push({
                 id: item.google_file_id || item.id,
                 title: meta.title,

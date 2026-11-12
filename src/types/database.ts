@@ -24,6 +24,44 @@ export type AdminActionType =
   | "CONTACT"
   | "REMOVE";
 
+export type TakedownStatus = "pending" | "quarantined" | "purged" | "dismissed";
+
+export type TakedownRequestRecord = {
+  id: string;
+  link_id: string | null;
+  target_query: string;
+  submitted_drive_url: string | null;
+  resolved_drive_url: string | null;
+  work_title_snapshot: string | null;
+  requester_role: "author" | "drive_owner" | "uploader" | "community";
+  requester_email: string | null;
+  ownership_proof: string;
+  removal_preference: "permanent" | "hide";
+  reason: string | null;
+  status: TakedownStatus;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserBookmarkRecord = {
+  id: string;
+  user_id: string;
+  link_id: string;
+  work_title: string;
+  author_name: string;
+  fandom: string | null;
+  scroll_percent: number;
+  last_page: number;
+  is_pdf: boolean;
+  child_id: string | null;
+  child_title: string | null;
+  child_mime_type: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type UserProfileRecord = {
   id: string;
   display_name: string;
@@ -57,7 +95,7 @@ export type LinkMetadataRecord = {
   word_count: number;
   summary: string | null;
   tags: string[];
-  canonical_ao3_url: string | null;
+  canonical_source_url: string | null;
 
   // Google Drive file properties
   file_name: string;
@@ -86,11 +124,26 @@ export type LinkVerificationRecord = {
 
 export type AdminActionRecord = {
   id: string;
-  link_id: string;
+  link_id: string | null;
   admin_id: string;
   action_type: AdminActionType;
   reason: string;
+  work_title_snapshot: string | null;
+  author_name_snapshot: string | null;
+  fandom_snapshot: string | null;
+  masked_url_snapshot: string | null;
+  is_tombstone: boolean;
   executed_at: string;
+};
+
+export type FeedbackRecord = {
+  id: string;
+  user_id: string;
+  subject: string;
+  description: string;
+  rating: number;
+  is_anonymous: boolean;
+  created_at: string;
 };
 
 export type PublicSearchFeedRecord = {
@@ -178,11 +231,61 @@ export type Database = {
       };
       admin_actions: {
         Row: AdminActionRecord;
-        Insert: Omit<AdminActionRecord, "id" | "executed_at"> & {
+        Insert: Omit<
+          AdminActionRecord,
+          | "id"
+          | "executed_at"
+          | "work_title_snapshot"
+          | "author_name_snapshot"
+          | "fandom_snapshot"
+          | "masked_url_snapshot"
+          | "is_tombstone"
+        > & {
           id?: string;
           executed_at?: string;
+          work_title_snapshot?: string | null;
+          author_name_snapshot?: string | null;
+          fandom_snapshot?: string | null;
+          masked_url_snapshot?: string | null;
+          is_tombstone?: boolean;
         };
         Update: Partial<Omit<AdminActionRecord, "id">>;
+        Relationships: [];
+      };
+      feedback: {
+        Row: FeedbackRecord;
+        Insert: Omit<FeedbackRecord, "id" | "created_at"> & {
+          id?: string;
+          is_anonymous?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Omit<FeedbackRecord, "id" | "user_id">>;
+        Relationships: [];
+      };
+      takedown_requests: {
+        Row: TakedownRequestRecord;
+        Insert: Omit<
+          TakedownRequestRecord,
+          "id" | "created_at" | "updated_at" | "resolved_by" | "resolved_at" | "status"
+        > & {
+          id?: string;
+          status?: TakedownStatus;
+          resolved_by?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<TakedownRequestRecord, "id">>;
+        Relationships: [];
+      };
+      user_bookmarks: {
+        Row: UserBookmarkRecord;
+        Insert: Omit<UserBookmarkRecord, "id" | "created_at" | "updated_at"> & {
+          id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Omit<UserBookmarkRecord, "id">>;
         Relationships: [];
       };
     };
