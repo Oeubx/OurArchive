@@ -586,8 +586,8 @@ export default function ReaderPage() {
     <div className={`min-h-screen overflow-x-clip transition-colors duration-200 -mx-4 -my-4 p-4 ${currentTheme.container}`}>
       {/* Sticky Reader Toolbar docked under the main Header without overlapping */}
       <header className={`sticky top-[53px] sm:top-[57px] z-30 border-b py-2.5 px-4 backdrop-blur-md shadow-xs ${currentTheme.header}`}>
-        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 text-xs">
+          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
             <Link
               href="/"
               className={`font-semibold flex items-center gap-1 transition ${currentTheme.brandLink}`}
@@ -595,10 +595,23 @@ export default function ReaderPage() {
               <span>&larr;</span> Library Index
             </Link>
             {data && (
-              <span className={`truncate max-w-[180px] sm:max-w-[260px] font-medium hidden xs:inline ${currentTheme.textMuted}`}>
+              <span className={`truncate max-w-[160px] sm:max-w-[260px] font-medium hidden xs:inline ${currentTheme.textMuted}`}>
                 {data.title}
               </span>
             )}
+            <button
+              onClick={() => {
+                if (userId) {
+                  setShowTakedownModal(true);
+                } else {
+                  setShowDirectEmailModal(true);
+                }
+              }}
+              className="sm:hidden px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition shrink-0"
+              title="Report copyright concern or author takedown"
+            >
+              Takedown
+            </button>
           </div>
 
           {/* Reader Preferences Bar */}
@@ -811,7 +824,7 @@ export default function ReaderPage() {
               </div>
             )}
 
-            {/* Report Takedown Button: Signed-in -> Instant Form, Unsigned -> Method 2 Direct Email */}
+            {/* Report Takedown Button (Desktop): Signed-in -> Instant Form, Unsigned -> Method 2 Direct Email */}
             <button
               onClick={() => {
                 if (userId) {
@@ -820,7 +833,7 @@ export default function ReaderPage() {
                   setShowDirectEmailModal(true);
                 }
               }}
-              className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
+              className="hidden sm:inline-flex px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
               title="Report copyright concern or author takedown"
             >
               Takedown
@@ -944,7 +957,7 @@ export default function ReaderPage() {
 
               <div className={`pt-2 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] gap-2 border-t ${currentTheme.metaBorder} ${currentTheme.textMuted}`}>
                 <div>
-                  🔒 <em>Ephemeral Read-Only Stream: No files are persisted on server disks.</em>
+                  🔒 <em>Live View-Only Stream: No files are saved on our servers.</em>
                 </div>
                 {/* Gated Drive URL for Admins/Verifiers Only */}
                 {canRevealDrive && data.rawDriveUrl && (
