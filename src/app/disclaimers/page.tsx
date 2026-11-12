@@ -152,9 +152,9 @@ export default function DisclaimersPage() {
       </div>
 
       {/* Footer navigation */}
-      <div className="border-t border-border-light dark:border-border-dark pt-4 flex items-center justify-between text-gray-500 dark:text-gray-400">
-        <span>OurArchive Community Safety & Governance</span>
-        <div className="flex items-center gap-4">
+      <div className="border-t border-border-light dark:border-border-dark pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-gray-500 dark:text-gray-400">
+        <span>OurArchive Community Safety &amp; Governance</span>
+        <div className="flex flex-wrap items-center gap-4">
           <Link href="/" className="hover:underline">
             Home Index
           </Link>

@@ -88,7 +88,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           wordCount: parsedWordCount || undefined,
           summary: summary.trim() || undefined,
           tags,
-          canonicalAo3Url: canonicalSourceUrl.trim() || undefined,
+          canonicalSourceUrl: canonicalSourceUrl.trim() || undefined,
           isOwnerMasked,
         }),
       });

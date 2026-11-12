@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       wordCount,
       summary,
       tags,
-      canonicalAo3Url,
+      canonicalSourceUrl,
       isOwnerMasked,
       turnstileToken,
       isPriorVerified,
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       word_count: typeof wordCount === "number" && wordCount >= 0 ? wordCount : 0,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
-      canonical_ao3_url: canonicalAo3Url ? canonicalAo3Url.trim() : null,
+      canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
 
       file_name: metadata.name,
       mime_type: metadata.mimeType,
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
                 ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
                 : `Part of collection: ${detectedCollectionName || "Curated Archive"}`,
               tags: Array.from(new Set([...sanitizedTags, collectionTag])),
-              canonical_ao3_url: canonicalAo3Url ? canonicalAo3Url.trim() : urlValidation.canonicalUrl,
+              canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : urlValidation.canonicalUrl,
               file_name: child.name,
               mime_type: child.mimeType,
               file_size_bytes: child.sizeBytes,

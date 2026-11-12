@@ -20,8 +20,8 @@ export function EmergencyNoticeBanner() {
 
   if (dismissed) {
     return (
-      <div className="bg-amber-100/70 border-b border-amber-200 text-amber-950 px-4 py-1 text-[11px] flex items-center justify-between">
-        <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-2">
+      <div className="bg-amber-100/70 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-900/60 text-amber-950 dark:text-amber-100 px-4 py-1.5 text-[11px]">
+        <div className="max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center flex-wrap justify-between gap-2">
           <span>
             <strong>Emergency Temporary Service:</strong> Respecting creator sovereignty under zero-download guidelines.
           </span>
@@ -30,7 +30,7 @@ export function EmergencyNoticeBanner() {
               Governance Charter
             </Link>
             <span>•</span>
-            <Link href="/takedown" className="hover:underline text-brand-trunk font-semibold">
+            <Link href="/takedown" className="hover:underline text-brand-trunk dark:text-brand-light font-semibold">
               Immediate Takedown
             </Link>
           </div>
@@ -40,24 +40,24 @@ export function EmergencyNoticeBanner() {
   }
 
   return (
-    <div className="bg-amber-50 border-b-2 border-amber-300 text-amber-950 px-4 py-2.5 text-xs shadow-xs transition-all">
+    <div className="bg-amber-50 dark:bg-amber-950/35 border-b-2 border-amber-300 dark:border-amber-900/60 text-amber-950 dark:text-amber-100 px-4 py-2.5 text-xs shadow-xs transition-all">
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <span className="text-base">📢</span>
-            <span className="font-bold tracking-tight text-amber-900 uppercase text-[11px]">
+            <span className="font-bold tracking-tight text-amber-900 dark:text-amber-200 uppercase text-[11px]">
               Emergency Community Notice & Platform Scope
             </span>
           </div>
-          <p className="text-amber-900/90 leading-relaxed text-[11px]">
+          <p className="text-amber-900/90 dark:text-amber-100/85 leading-relaxed text-[11px]">
             <strong>OurArchive</strong> is a temporary emergency reading aid during service disruptions. It operates under strict zero-download, read-only principles with author-sovereign takedowns.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 text-xs">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 text-xs">
           <Link
             href="/disclaimers"
-            className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded font-medium transition"
+            className="px-2.5 py-1 bg-amber-200 dark:bg-amber-900/70 hover:bg-amber-300 dark:hover:bg-amber-800/80 text-amber-950 dark:text-amber-100 rounded font-medium transition"
           >
             Read Disclaimers
           </Link>
@@ -69,7 +69,7 @@ export function EmergencyNoticeBanner() {
           </Link>
           <button
             onClick={handleDismiss}
-            className="p-1 text-amber-800 hover:text-amber-950 rounded transition font-bold"
+            className="p-1 text-amber-800 dark:text-amber-200 hover:text-amber-950 dark:hover:text-white rounded transition font-bold"
             title="Dismiss notice"
             aria-label="Dismiss notice"
           >

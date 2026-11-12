@@ -11,6 +11,12 @@ import type {
   VerificationBadge,
   VerificationStatus,
 } from "@/types/database";
+import type { LinkAuditRecord } from "@/lib/auditService";
+import {
+  mapAdminActionRowToAuditRecord,
+  type RawAdminActionJoinRow,
+} from "@/lib/audit-mapper";
+import { maskWorkId } from "@/lib/utils/idMasker";
 import { fetchDriveFileMetadata } from "@/lib/services/drive-api";
 import { performFullThreatScan } from "@/lib/security/threat-scanner";
 import {
@@ -34,6 +40,7 @@ export interface AdminActionResult {
   badge?: VerificationBadge;
   isHidden?: boolean;
   isRemoved?: boolean;
+  auditRecords?: LinkAuditRecord[];
   contactInfo?: {
     ownerEmail?: string | null;
     ownerName?: string | null;
@@ -73,6 +80,7 @@ export async function executeAdminAction({
       link_metadata (
         title,
         author_name,
+        fandom,
         drive_owner_name,
         drive_owner_email
       ),
@@ -107,13 +115,24 @@ export async function executeAdminAction({
 
   const now = new Date().toISOString();
 
-  // Helper to record immutable audit log in admin_actions
-  const recordAuditLog = async (action: AdminActionType, logReason: string) => {
+  const maskedSnapshotUrl = `/reader/${maskWorkId(linkId)}`;
+
+  // Helper to record immutable audit log in admin_actions with tombstone snapshots
+  const recordAuditLog = async (
+    action: AdminActionType,
+    logReason: string,
+    isTombstone: boolean = false
+  ) => {
     await adminSupabase.from("admin_actions").insert({
       link_id: linkId,
       admin_id: adminId,
       action_type: action,
       reason: logReason,
+      work_title_snapshot: metadata?.title || "Untitled Fanwork",
+      author_name_snapshot: metadata?.author_name || "Unknown Author",
+      fandom_snapshot: metadata?.fandom || "General",
+      masked_url_snapshot: maskedSnapshotUrl,
+      is_tombstone: isTombstone,
     });
   };
 
@@ -250,6 +269,17 @@ export async function executeAdminAction({
         reason || "Marked as ineligible for public directory."
       );
 
+      await adminSupabase
+        .from("takedown_requests")
+        .update({
+          status: "quarantined",
+          resolved_by: adminId,
+          resolved_at: now,
+          updated_at: now,
+        })
+        .eq("link_id", linkId)
+        .eq("status", "pending");
+
       return {
         success: true,
         action: "REJECT",
@@ -270,6 +300,17 @@ export async function executeAdminAction({
         .eq("id", linkId);
 
       await recordAuditLog("HIDE", reason || "Link visibility toggled off.");
+
+      await adminSupabase
+        .from("takedown_requests")
+        .update({
+          status: "quarantined",
+          resolved_by: adminId,
+          resolved_at: now,
+          updated_at: now,
+        })
+        .eq("link_id", linkId)
+        .eq("status", "pending");
 
       return {
         success: true,
@@ -324,7 +365,7 @@ export async function executeAdminAction({
       };
     }
 
-        case "REMOVE": {
+    case "REMOVE": {
       // Security Policy: Only works in 'hidden' state (author takedown), 'rejected' state,
       // or if deemed malicious by the automated threat scanner (flagged or risk score >= 70)
       const isMalicious =
@@ -343,8 +384,53 @@ export async function executeAdminAction({
         };
       }
 
+      const removalReason =
+        reason || "Permanent removal satisfied per administrator protocol.";
+
+      // Record immutable purge tombstone BEFORE delete (ON DELETE SET NULL keeps it forever)
+      await recordAuditLog("REMOVE", removalReason, true);
+
+      // Update any linked takedown requests to 'purged' before link deletion
+      await adminSupabase
+        .from("takedown_requests")
+        .update({
+          status: "purged",
+          resolved_by: adminId,
+          resolved_at: now,
+          updated_at: now,
+        })
+        .eq("link_id", linkId)
+        .in("status", ["pending", "quarantined"]);
+
+      // Fetch full audit history (including the newly inserted tombstone) for immediate CSV export
+      const { data: linkAuditRows } = await adminSupabase
+        .from("admin_actions")
+        .select(`
+          id,
+          link_id,
+          admin_id,
+          action_type,
+          reason,
+          executed_at,
+          work_title_snapshot,
+          author_name_snapshot,
+          fandom_snapshot,
+          masked_url_snapshot,
+          is_tombstone,
+          user_profiles (
+            display_name,
+            role
+          )
+        `)
+        .eq("link_id", linkId)
+        .order("executed_at", { ascending: true });
+
+      const auditRecords = (
+        (linkAuditRows || []) as unknown as RawAdminActionJoinRow[]
+      ).map(mapAdminActionRowToAuditRecord);
+
       if (hardDelete) {
-        // Cascade delete from PostgreSQL
+        // Hard delete link; ON DELETE SET NULL preserves admin_actions tombstones & takedown_requests
         const { error: deleteError } = await adminSupabase
           .from("drive_links")
           .delete()
@@ -364,10 +450,11 @@ export async function executeAdminAction({
           action: "REMOVE",
           linkId,
           isRemoved: true,
+          auditRecords,
         };
       }
 
-      // Soft-delete + Hide (preserves audit log record in admin_actions)
+      // Soft-delete + Hide
       await adminSupabase
         .from("drive_links")
         .update({
@@ -377,14 +464,13 @@ export async function executeAdminAction({
         })
         .eq("id", linkId);
 
-      await recordAuditLog("REMOVE", reason || "Permanent removal satisfied per administrator protocol.");
-
       return {
         success: true,
         action: "REMOVE",
         linkId,
         isRemoved: true,
         isHidden: true,
+        auditRecords,
       };
     }
 

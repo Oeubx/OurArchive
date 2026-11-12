@@ -1,7 +1,7 @@
 # Search & Display Projection Architecture
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 
 ---
 
@@ -134,7 +134,7 @@ When a reader performs a search, the backend returns payloads structured to matc
   "system_header": {
     "platform_title": "OurArchive Emergency Mirror",
     "status": "Temporary Read-Only Operation",
-    "notice": "Community emergency bridge during AO3 downtime. Works belong 100% to authors."
+    "notice": "Community emergency bridge during archive downtime. Works belong 100% to authors."
   },
   "displayed_file": {
     "work_id": "7f891b2c-3d4e-5f6a-7b8c-9d0e1f2a3b4c",

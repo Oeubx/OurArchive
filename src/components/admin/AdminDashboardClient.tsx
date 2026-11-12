@@ -11,7 +11,7 @@ import {
   setSimulatedRole,
   subscribeToRbacUpdates,
 } from "@/lib/rbacService";
-import { getAllAuditRecords, exportAuditToCsv } from "@/lib/auditService";
+import { fetchAllAuditRecordsFromApi, exportAuditToCsv } from "@/lib/auditService";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { VerifierRequestsModal } from "./VerifierRequestsModal";
 import { AdminDirectUploadModal } from "./AdminDirectUploadModal";
@@ -55,6 +55,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
   const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
+  const [exportingAudit, setExportingAudit] = useState(false);
 
   async function handleTriageAction(actionKey: string, actionFn: () => Promise<unknown> | unknown) {
     if (processingActionId) return;
@@ -81,11 +82,12 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         hardDelete: actionType === "REMOVE",
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to execute action ${actionType}`);
+      throw new Error(data.error || `Failed to execute action ${actionType}`);
     }
     await refresh();
+    return data;
   }
 
   async function refresh() {
@@ -148,15 +150,51 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
 
   async function handleConfirmRemove() {
     if (!itemToRemove) return;
-    await handleTriageAction(`${itemToRemove.id}-remove`, () =>
-      executeAction(itemToRemove.id, "REMOVE", `Expunged by ${adminDisplayName}`)
-    );
-    setItemToRemove(null);
+    const target = itemToRemove;
+    await handleTriageAction(`${target.id}-remove`, async () => {
+      try {
+        const result = await executeAction(
+          target.id,
+          "REMOVE",
+          `Expunged by ${adminDisplayName}`
+        );
+        if (result?.auditRecords && result.auditRecords.length > 0) {
+          exportAuditToCsv(
+            result.auditRecords,
+            `ourarchive_purge_${target.id.slice(0, 8)}`
+          );
+        } else {
+          const allRecords = await fetchAllAuditRecordsFromApi();
+          if (allRecords.length > 0) {
+            exportAuditToCsv(allRecords, "ourarchive_system_audit_purge");
+          }
+        }
+        setItemToRemove(null);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Failed to purge record.");
+      }
+    });
   }
 
-  function handleExportAllAudit() {
-    const allRecords = getAllAuditRecords();
-    exportAuditToCsv(allRecords, "ourarchive_system_audit_all");
+  async function handleExportAllAudit() {
+    if (exportingAudit) return;
+    setExportingAudit(true);
+    try {
+      const allRecords = await fetchAllAuditRecordsFromApi();
+      const exported = exportAuditToCsv(
+        allRecords,
+        "ourarchive_system_audit_all"
+      );
+      if (!exported) {
+        alert("No audit logs have been recorded in Supabase yet.");
+      }
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Failed to export audit logs."
+      );
+    } finally {
+      setExportingAudit(false);
+    }
   }
 
   return (
@@ -175,10 +213,11 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           <button
             type="button"
             onClick={handleExportAllAudit}
-            className="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition shadow-2xs flex items-center gap-1.5"
+            disabled={exportingAudit}
+            className="px-3 py-1.5 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark text-gray-700 dark:text-gray-200 rounded-lg font-semibold transition shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
             title="Export all system audit logs including deleted tombstones to CSV"
           >
-            <span>📥</span> Export Audit Log (CSV)
+            <span>📥</span> {exportingAudit ? "Exporting..." : "Export Audit Log (CSV)"}
           </button>
           <button
             type="button"
@@ -750,7 +789,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           role="dialog"
           aria-modal="true"
         >
-          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark p-6 rounded-xl max-w-md w-full shadow-2xl space-y-4">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark p-6 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-red-600">
               <span className="text-2xl">
                 {itemToRemove.status === "flagged" || (itemToRemove.automatedRiskScore ?? 0) >= 70
@@ -767,14 +806,18 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
               {itemToRemove.status === "flagged" || (itemToRemove.automatedRiskScore ?? 0) >= 70 ? (
                 <>
-                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently erase this hazard from the system and database? A permanent tombstone audit log will be retained.
+                  This link was deemed <strong className="text-red-600">malicious or dangerous</strong> by the automated threat scanner (Risk Score: {itemToRemove.automatedRiskScore}%). Are you sure you want to permanently erase this hazard from the system and database? A permanent tombstone audit log will be retained in Supabase.
                 </>
               ) : (
                 <>
-                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently expunge &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All public records will be erased and a permanent immutable tombstone will be recorded in the audit history.
+                  This fanwork is currently in quarantine (<strong>{itemToRemove.status}</strong>). Are you sure you want to permanently expunge &ldquo;<strong>{itemToRemove.title}</strong>&rdquo; per author takedown request? All public records will be erased and a permanent immutable tombstone will be recorded in Supabase.
                 </>
               )}
             </p>
+
+            <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-900 dark:text-amber-200">
+              <strong>Automatic Audit Compliance Export:</strong> Confirming this purge will automatically download the full compliance audit &amp; tombstone CSV record.
+            </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
@@ -786,10 +829,13 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
               </button>
               <button
                 type="button"
+                disabled={Boolean(processingActionId)}
                 onClick={handleConfirmRemove}
-                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold transition shadow-xs"
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold transition shadow-xs disabled:opacity-50"
               >
-                Permanently Remove
+                {processingActionId === `${itemToRemove.id}-remove`
+                  ? "Purging & Exporting CSV..."
+                  : "Purge & Export CSV"}
               </button>
             </div>
           </div>

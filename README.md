@@ -1,7 +1,7 @@
 # OurArchive
 
 > **Emergency Community Notice & Platform Scope Disclaimer**  
-> **OurArchive** is an emergency, temporary measure to aid Archive of Our Own (AO3) users during service outages and is strictly not intended to replace, compete with, or replicate the permanent operations of Archive of Our Own (AO3) or the Organization for Transformative Works (OTW).
+> **OurArchive** is an emergency, temporary measure to aid fanfiction readers and authors during service outages on primary fanwork archives, and is strictly not intended to replace, compete with, or replicate the permanent operations of existing community fanfiction platforms.
 > 
 > All creative works and fanfiction belong 100% to their original creators. The system operates on a strict **Read-Only / Zero-Download** principle: files are never stored or downloaded onto OurArchive servers. If any author or Drive owner wishes to have their work or link removed, please contact the administrator, and it will be removed immediately.
 
@@ -9,7 +9,7 @@
 
 ## 1. Project Purpose
 
-During extended or unexpected outages of Archive of Our Own (AO3), readers and authors lose access to bookmarked works, continuing stories, and community archives. **OurArchive** bridges this gap as a temporary, non-commercial community hub where:
+During extended or unexpected outages on primary fanwork archives, readers and authors lose access to bookmarked works, continuing stories, and community archives. **OurArchive** bridges this gap as a temporary, non-commercial community hub where:
 - Users can submit public, view-only Google Drive links containing fanfiction backups.
 - Readers can search and read works in a clean, distraction-free reader interface without downloading raw files.
 - Internal automated safety filters and system administrators verify submitted links to prevent malicious file distribution.
@@ -33,7 +33,7 @@ All system specifications, architecture diagrams, and backlogs are maintained un
 - **Disclaimers & Legal Notice**: [`docs/disclaimers/`](docs/disclaimers/README.md)
   - [Fanfic Authors & Ownership Rights](docs/disclaimers/fanfic_authors_and_ownership.md)
   - [Drive Owners & Privacy Notice](docs/disclaimers/drive_owners_and_privacy.md)
-  - [Copyright, Fair Use & AO3 Solidarity](docs/disclaimers/copyright_and_ao3_temporary_aid.md)
+  - [Copyright, Fair Use & Community Archive Solidarity](docs/disclaimers/copyright_and_temporary_aid.md)
   - [Immediate Takedown & Removal Procedure](docs/disclaimers/takedown_and_removal_request.md)
 - **Architecture**: [`docs/architecture/`](docs/architecture/)
 - **Database Specifications**: [`docs/database/`](docs/database/)

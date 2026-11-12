@@ -1,9 +1,13 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { TAKEDOWN_EMAIL, DEV_CONNECT, isLiveUrl } from "@/lib/config";
+import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
 
 export function Footer() {
+  const [showEmailModal, setShowEmailModal] = useState(false);
   return (
     <footer className="border-t border-border-light dark:border-border-dark py-8 px-4 text-xs bg-surface-light dark:bg-surface-dark transition-colors duration-150">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -150,12 +154,13 @@ export function Footer() {
             <div className="flex flex-col gap-1 text-[11px]">
               <div>
                 <span className="text-gray-500 dark:text-gray-400">Email: </span>
-                <a
-                  href={`mailto:${TAKEDOWN_EMAIL}`}
-                  className="text-brand-trunk dark:text-brand-light hover:underline font-mono"
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(true)}
+                  className="text-brand-trunk dark:text-brand-light hover:underline font-mono text-left"
                 >
                   {TAKEDOWN_EMAIL}
-                </a>
+                </button>
               </div>
               <div>
                 <Link
@@ -204,6 +209,11 @@ export function Footer() {
           </div>
         </div>
       </div>
+
+      <DirectTakedownEmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+      />
     </footer>
   );
 }

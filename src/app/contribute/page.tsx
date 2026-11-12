@@ -146,7 +146,7 @@ export default function ContributePage() {
   return (
     <div className="py-6 max-w-5xl mx-auto space-y-6">
       {/* Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 border-b border-border-light dark:border-border-dark pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 border-b border-border-light dark:border-border-dark pb-3">
         <div className="flex items-center gap-1.5">
           <Link href="/" className="hover:underline">Home</Link>
           <span>&rarr;</span>

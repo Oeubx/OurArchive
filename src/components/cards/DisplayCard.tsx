@@ -52,7 +52,7 @@ export function DisplayCard({
   return (
     <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-xs overflow-hidden transition hover:border-gray-400 dark:hover:border-gray-600">
       {/* SYSTEM HEADER */}
-      <div className="bg-subtle-light dark:bg-subtle-dark border-b border-border-light dark:border-border-dark px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+      <div className="bg-subtle-light dark:bg-subtle-dark border-b border-border-light dark:border-border-dark px-4 py-1.5 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-gray-600 dark:text-gray-400">
         <span className="font-semibold tracking-wide text-gray-700 dark:text-gray-300">
           SYSTEM HEADER: OurArchive Emergency Mirror (Temporary Read-Only Library)
         </span>
@@ -147,7 +147,7 @@ export function DisplayCard({
           <span>{showDetails ? "Hide Details & Diagnostics" : "File Details & Verification Diagnostics"}</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* PRIMARY READING ACCESS */}
           <Link
             href={`/reader/${maskWorkId(work.work_id)}`}
