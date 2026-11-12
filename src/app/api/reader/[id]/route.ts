@@ -7,11 +7,43 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { extractText } from "unpdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
 import { fetchDriveFolderChildren } from "@/lib/services/drive-api";
+
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildNativePdfHtml(pages: string[]): string {
+  const totalPages = pages.length;
+  return pages
+    .map((pageText, index) => {
+      const pageNumber = index + 1;
+      const trimmed = pageText.trim();
+      if (!trimmed) return "";
+
+      const paragraphs = trimmed
+        .split(/\n{2,}|\r\n\r\n/)
+        .map((block) => block.replace(/\s*\n\s*/g, " ").trim())
+        .filter(Boolean)
+        .map((block) => `<p>${escapeHtmlText(block)}</p>`)
+        .join("");
+
+      if (!paragraphs) return "";
+
+      return `<div data-pdf-page="${pageNumber}" class="mb-6"><div class="text-xs opacity-60 border-b pb-1 mb-3">Page ${pageNumber} of ${totalPages}</div>${paragraphs}</div>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 15;
@@ -219,8 +251,100 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Handling PDF Documents: Stream via isolated view-only preview frame
+    // Handling PDF Documents: Ephemeral In-Memory Text Extraction (Zero-Download) with Preview Fallback
     if (activeMimeType.includes("pdf")) {
+      let pdfBytes: ArrayBuffer | null = null;
+      const maxPdfBytes = 15 * 1024 * 1024; // 15 MB in-memory safety cap
+
+      if (apiKey) {
+        try {
+          const mediaUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(
+            activeFileId
+          )}?alt=media&key=${apiKey}`;
+          const mediaRes = await withTimeout(
+            fetch(mediaUrl, { cache: "no-store" }),
+            6000,
+            "Drive PDF stream timed out."
+          );
+          if (mediaRes.ok) {
+            const contentLength = Number(mediaRes.headers.get("content-length") || "0");
+            if (!contentLength || contentLength <= maxPdfBytes) {
+              const buf = await mediaRes.arrayBuffer();
+              if (buf.byteLength <= maxPdfBytes) {
+                pdfBytes = buf;
+              }
+            }
+          }
+        } catch {
+          // Fall back to public download endpoint
+        }
+      }
+
+      if (!pdfBytes) {
+        try {
+          const publicPdfUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(
+            activeFileId
+          )}`;
+          const publicRes = await withTimeout(
+            fetch(publicPdfUrl, {
+              headers: { "User-Agent": "OurArchive-Emergency-Reader/1.0" },
+              cache: "no-store",
+            }),
+            6000,
+            "Public PDF stream timed out."
+          );
+          const contentType = (publicRes.headers.get("content-type") || "").toLowerCase();
+          if (publicRes.ok && !contentType.includes("text/html")) {
+            const contentLength = Number(publicRes.headers.get("content-length") || "0");
+            if (!contentLength || contentLength <= maxPdfBytes) {
+              const buf = await publicRes.arrayBuffer();
+              if (buf.byteLength <= maxPdfBytes) {
+                pdfBytes = buf;
+              }
+            }
+          }
+        } catch {
+          // Ignored; fall back to iframe preview
+        }
+      }
+
+      if (pdfBytes) {
+        try {
+          const extracted = await extractText(new Uint8Array(pdfBytes), {
+            mergePages: false,
+          });
+          const pages = Array.isArray(extracted.text) ? extracted.text : [];
+          const hasSelectableText = pages.some((p) => p.trim().length > 0);
+
+          if (hasSelectableText) {
+            const rawPdfHtml = buildNativePdfHtml(pages);
+            const sanitizedPdfHtml = sanitizeReaderHtml(rawPdfHtml);
+
+            if (sanitizedPdfHtml) {
+              return NextResponse.json({
+                success: true,
+                workId: link.id,
+                title: activeTitle,
+                authorName: metadata?.author_name || "Unknown Author",
+                fandom: metadata?.fandom || "General",
+                pairing: metadata?.pairing || null,
+                rating: metadata?.rating || "Not Rated",
+                wordCount: metadata?.word_count ?? 0,
+                summary: metadata?.summary || null,
+                tags: metadata?.tags || [],
+                isPdf: true,
+                isNativePdf: true,
+                totalPages: extracted.totalPages || pages.length,
+                pdfPreviewUrl: null,
+                contentHtml: sanitizedPdfHtml,
+              });
+            }
+          }
+        } catch (pdfErr) {
+          console.warn("Ephemeral PDF text extraction failed, falling back to iframe:", pdfErr);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         workId: link.id,
@@ -233,6 +357,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         summary: metadata?.summary || null,
         tags: metadata?.tags || [],
         isPdf: true,
+        isNativePdf: false,
         pdfPreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
         contentHtml: null,
       });
