@@ -1,22 +1,21 @@
 /**
  * Reading Bookmark & Page Progress Persistence Engine
- * Saves and restores reading position for authenticated users (Contributors, Verifiers, Admins).
- * Gracefully disabled for anonymous Guests.
+ * Persists authenticated user reading bookmarks in Supabase (`public.user_bookmarks` via `/api/bookmarks`).
  */
 
 export interface ReaderBookmark {
   workId: string;
-  workTitle: string;
+  title: string;
   authorName: string;
   fandom: string;
-  rating: string;
-  lastPage: number;
-  totalPages?: number;
-  scrollPercent: number; // 0 - 100
-  lastReadAt: string;
+  scrollPercent: number; // 0 to 100
+  lastPage: number; // Estimated reading page or manual PDF page checkpoint
+  updatedAt: string;
+  isPdf?: boolean;
+  childId?: string;
+  childTitle?: string;
+  childMimeType?: string;
 }
-
-const STORAGE_KEY_PREFIX = "ourarchive_bookmarks_";
 
 type BookmarkListener = () => void;
 const listeners = new Set<BookmarkListener>();
@@ -38,91 +37,87 @@ export function subscribeToBookmarks(listener: BookmarkListener): () => void {
   };
 }
 
-function getStorageKey(userId?: string): string {
-  return `${STORAGE_KEY_PREFIX}${userId || "authenticated_user"}`;
-}
-
 /**
- * Retrieve all saved bookmarks for the active user.
- * Returns empty array for anonymous guests.
+ * Fetch all Supabase-saved bookmarks for the currently signed-in user.
  */
-export function getSavedBookmarks(userId?: string, isGuest: boolean = false): ReaderBookmark[] {
-  if (isGuest || typeof window === "undefined") return [];
-
-  try {
-    const raw = localStorage.getItem(getStorageKey(userId));
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
+export async function fetchSavedBookmarksFromApi(): Promise<ReaderBookmark[]> {
+  if (typeof window === "undefined") return [];
+  const res = await fetch("/api/bookmarks", { cache: "no-store" });
+  if (res.status === 401) return [];
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch bookmarks.");
   }
+  const data = await res.json();
+  return Array.isArray(data.bookmarks) ? data.bookmarks : [];
 }
 
 /**
- * Retrieve bookmark for a specific work ID.
+ * Fetch the Supabase-saved bookmark for a specific work ID.
  */
-export function getBookmarkForWork(
-  workId: string,
-  userId?: string,
-  isGuest: boolean = false
-): ReaderBookmark | null {
-  if (isGuest || !workId) return null;
-  const bookmarks = getSavedBookmarks(userId, isGuest);
-  return bookmarks.find((b) => b.workId === workId) || null;
+export async function fetchBookmarkForWorkFromApi(
+  workId: string
+): Promise<ReaderBookmark | null> {
+  if (typeof window === "undefined" || !workId) return null;
+  const res = await fetch(
+    `/api/bookmarks?workId=${encodeURIComponent(workId)}`,
+    { cache: "no-store" }
+  );
+  if (res.status === 401 || !res.ok) return null;
+  const data = await res.json();
+  return data.bookmark || null;
 }
 
 /**
- * Save or update reading progress for a work.
- * Skips saving if the user is an anonymous guest.
+ * Save or update a reading bookmark in Supabase.
  */
-export function saveReadingProgress(
-  bookmark: ReaderBookmark,
-  userId?: string,
-  isGuest: boolean = false
-): boolean {
-  if (isGuest || typeof window === "undefined") return false;
-
-  try {
-    const key = getStorageKey(userId);
-    const existing = getSavedBookmarks(userId, isGuest);
-    const filtered = existing.filter((b) => b.workId !== bookmark.workId);
-
-    const updated = [
-      {
-        ...bookmark,
-        lastReadAt: new Date().toISOString(),
-      },
-      ...filtered,
-    ];
-
-    // Cap saved bookmarks at 50 most recent
-    const capped = updated.slice(0, 50);
-    localStorage.setItem(key, JSON.stringify(capped));
-    notifyBookmarkListeners();
-    return true;
-  } catch {
-    return false;
+export async function saveBookmarkToApi(
+  bookmark: ReaderBookmark
+): Promise<ReaderBookmark | null> {
+  if (typeof window === "undefined" || !bookmark.workId) return null;
+  const res = await fetch("/api/bookmarks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bookmark),
+  });
+  if (res.status === 401) return null;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to save bookmark.");
   }
+  const data = await res.json();
+  notifyBookmarkListeners();
+  return data.bookmark || null;
 }
 
 /**
- * Remove a bookmark for a specific work.
+ * Delete a saved bookmark from Supabase.
  */
-export function removeBookmark(
-  workId: string,
-  userId?: string,
-  isGuest: boolean = false
-): boolean {
-  if (isGuest || typeof window === "undefined") return false;
-
-  try {
-    const key = getStorageKey(userId);
-    const existing = getSavedBookmarks(userId, isGuest);
-    const filtered = existing.filter((b) => b.workId !== workId);
-    localStorage.setItem(key, JSON.stringify(filtered));
-    notifyBookmarkListeners();
-    return true;
-  } catch {
-    return false;
+export async function removeBookmarkFromApi(workId: string): Promise<boolean> {
+  if (typeof window === "undefined" || !workId) return false;
+  const res = await fetch(
+    `/api/bookmarks?workId=${encodeURIComponent(workId)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to remove bookmark.");
   }
+  notifyBookmarkListeners();
+  return true;
+}
+
+/**
+ * Helper to generate resume URL for a bookmark (supporting collection child checkpoints).
+ */
+export function buildBookmarkResumeUrl(
+  maskedOrRawWorkId: string,
+  bookmark: Pick<ReaderBookmark, "childId" | "childTitle" | "childMimeType">
+): string {
+  const base = `/reader/${maskedOrRawWorkId}`;
+  if (!bookmark.childId) return base;
+  const params = new URLSearchParams({ childId: bookmark.childId });
+  if (bookmark.childTitle) params.set("childTitle", bookmark.childTitle);
+  if (bookmark.childMimeType) params.set("mimeType", bookmark.childMimeType);
+  return `${base}?${params.toString()}`;
 }

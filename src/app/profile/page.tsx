@@ -6,8 +6,9 @@ import type { UserProfileRecord } from "@/types/database";
 import Link from "next/link";
 import { maskWorkId } from "@/lib/utils/idMasker";
 import {
-  getSavedBookmarks,
-  removeBookmark,
+  fetchSavedBookmarksFromApi,
+  removeBookmarkFromApi,
+  buildBookmarkResumeUrl,
   subscribeToBookmarks,
   ReaderBookmark,
 } from "@/lib/bookmarkService";
@@ -19,15 +20,24 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Bookmarks State
+  // Bookmarks State (Supabase-persisted)
   const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
 
   useEffect(() => {
-    getCurrentProfile().then((data) => {
+    getCurrentProfile().then(async (data) => {
       if (data) {
         setProfile(data);
         setDisplayName(data.display_name);
-        setBookmarks(getSavedBookmarks(data.id, false));
+        setBookmarksLoading(true);
+        try {
+          const remoteBookmarks = await fetchSavedBookmarksFromApi();
+          setBookmarks(remoteBookmarks);
+        } catch {
+          setBookmarks([]);
+        } finally {
+          setBookmarksLoading(false);
+        }
       }
       setLoading(false);
     });
@@ -36,7 +46,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!profile) return;
     const unsubscribe = subscribeToBookmarks(() => {
-      setBookmarks(getSavedBookmarks(profile.id, false));
+      fetchSavedBookmarksFromApi()
+        .then(setBookmarks)
+        .catch(() => {});
     });
     return unsubscribe;
   }, [profile]);
@@ -56,15 +68,19 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  function handleRemoveBookmark(workId: string) {
+  async function handleRemoveBookmark(workId: string) {
     if (!profile) return;
-    removeBookmark(workId, profile.id);
-    setBookmarks(getSavedBookmarks(profile.id, false));
+    try {
+      await removeBookmarkFromApi(workId);
+      setBookmarks((prev) => prev.filter((b) => b.workId !== workId));
+    } catch {
+      // Ignore transient errors
+    }
   }
 
   if (loading) {
     return (
-      <div className="py-12 text-center text-sm text-gray-500">
+      <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
         Loading archivist profile...
       </div>
     );
@@ -72,10 +88,10 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="py-12 max-w-md mx-auto text-center space-y-4">
-        <h1 className="text-xl font-bold text-gray-900">Sign In Required</h1>
-        <p className="text-xs text-gray-600">
-          You must be authenticated to view and manage your contributor profile and reading bookmarks.
+      <div className="py-12 px-4 max-w-md mx-auto text-center space-y-4">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sign In Required</h1>
+        <p className="text-xs text-gray-600 dark:text-gray-400">
+          You must be authenticated to view and manage your contributor profile and Supabase reading bookmarks.
         </p>
         <Link
           href="/"
@@ -89,7 +105,7 @@ export default function ProfilePage() {
 
   return (
     <div className="py-8 max-w-2xl mx-auto space-y-6">
-      <div className="border-b border-border-light dark:border-border-dark pb-4 flex items-center justify-between">
+      <div className="border-b border-border-light dark:border-border-dark pb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Archivist Profile</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -180,7 +196,7 @@ export default function ProfilePage() {
 
       {/* SAVED READING BOOKMARKS SECTION */}
       <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs space-y-4 text-gray-900 dark:text-gray-100">
-        <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light dark:border-border-dark pb-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">🔖</span>
             <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Saved Reading Bookmarks</h2>
@@ -188,66 +204,91 @@ export default function ProfilePage() {
               {bookmarks.length}
             </span>
           </div>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">Auto-saved reading progress</span>
+          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+            Synced with Supabase
+          </span>
         </div>
 
-        {bookmarks.length === 0 ? (
+        {bookmarksLoading ? (
+          <div className="text-center py-8 text-xs text-gray-500 dark:text-gray-400">
+            Loading synced bookmarks from Supabase...
+          </div>
+        ) : bookmarks.length === 0 ? (
           <div className="text-center py-8 text-xs text-gray-500 dark:text-gray-400 space-y-2">
             <p className="text-2xl">📖</p>
             <p className="font-semibold text-gray-700 dark:text-gray-300">No saved bookmarks yet</p>
             <p className="max-w-xs mx-auto text-gray-500 dark:text-gray-400">
-              When reading fanworks in the emergency reader mode, your reading progress and last-read page are saved automatically right here.
+              When reading fanworks in the emergency reader mode, click Bookmark (or scroll in HTML stories) to sync checkpoints to your Supabase profile.
             </p>
           </div>
         ) : (
           <div className="divide-y divide-border-light dark:divide-border-dark">
-            {bookmarks.map((b) => (
-              <div key={b.workId} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="space-y-1 max-w-md">
-                  <div className="flex items-center gap-2 flex-wrap">
+            {bookmarks.map((b) => {
+              const resumeHref = buildBookmarkResumeUrl(maskWorkId(b.workId), b);
+              return (
+                <div key={b.workId} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="space-y-1 max-w-md">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={resumeHref}
+                        className="font-bold text-brand-trunk dark:text-brand-light hover:underline text-sm"
+                      >
+                        {b.title}
+                      </Link>
+                      <span className="text-gray-500 dark:text-gray-400">by {b.authorName}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                      <span className="bg-subtle-light dark:bg-subtle-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">
+                        {b.fandom}
+                      </span>
+                      {b.childTitle && (
+                        <span className="bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                          Chapter: {b.childTitle}
+                        </span>
+                      )}
+                      <span>•</span>
+                      <span>
+                        {b.isPdf ? `PDF Page ${b.lastPage}` : `Page ${b.lastPage}`}
+                      </span>
+                      {!b.isPdf && (
+                        <>
+                          <span>•</span>
+                          <span className="text-brand-trunk dark:text-brand-light font-semibold">
+                            {b.scrollPercent}% read
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {!b.isPdf && (
+                      <div className="w-full bg-subtle-light dark:bg-subtle-dark rounded-full h-1.5 mt-1.5 overflow-hidden border border-border-light/40 dark:border-border-dark/40">
+                        <div
+                          className="bg-brand-trunk h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${b.scrollPercent}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
                     <Link
-                      href={`/reader/${maskWorkId(b.workId)}`}
-                      className="font-bold text-brand-trunk dark:text-brand-light hover:underline text-sm"
+                      href={resumeHref}
+                      className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded text-xs transition shadow-2xs"
                     >
-                      {b.workTitle}
+                      Resume &rarr;
                     </Link>
-                    <span className="text-gray-500 dark:text-gray-400">by {b.authorName}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-                    <span className="bg-subtle-light dark:bg-subtle-dark px-2 py-0.5 rounded border border-border-light dark:border-border-dark">{b.fandom}</span>
-                    <span>•</span>
-                    <span>Page {b.lastPage} {b.totalPages ? `of ${b.totalPages}` : ""}</span>
-                    <span>•</span>
-                    <span className="text-brand-trunk dark:text-brand-light font-semibold">{b.scrollPercent}% read</span>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-subtle-light dark:bg-subtle-dark rounded-full h-1.5 mt-1.5 overflow-hidden border border-border-light/40 dark:border-border-dark/40">
-                    <div
-                      className="bg-brand-trunk h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${b.scrollPercent}%` }}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveBookmark(b.workId)}
+                      className="p-1 text-gray-400 hover:text-red-600 rounded transition"
+                      title="Remove bookmark"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href={`/reader/${maskWorkId(b.workId)}`}
-                    className="px-3 py-1 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded text-xs transition shadow-2xs"
-                  >
-                    Resume &rarr;
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBookmark(b.workId)}
-                    className="p-1 text-gray-400 hover:text-red-600 rounded transition"
-                    title="Remove bookmark"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
