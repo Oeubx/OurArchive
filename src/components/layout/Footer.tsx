@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { TAKEDOWN_EMAIL, DEV_CONNECT, isLiveUrl } from "@/lib/config";
+import { APP_VERSION, TAKEDOWN_EMAIL, DEV_CONNECT, isLiveUrl } from "@/lib/config";
 import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
 
 export function Footer() {
@@ -187,7 +187,7 @@ export function Footer() {
               />
             </div>
             <span>
-              &copy; {new Date().getFullYear()} OurArchive. Non-commercial, zero-download fanwork streaming index.
+              &copy; {new Date().getFullYear()} OurArchive &middot; v{APP_VERSION}. Non-commercial, zero-download fanwork streaming index.
             </span>
           </div>
           <div className="flex items-center gap-4">

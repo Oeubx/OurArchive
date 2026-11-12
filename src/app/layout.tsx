@@ -11,6 +11,24 @@ export const metadata: Metadata = {
     "An emergency, non-commercial reading directory and cloud mirror index for the fanfiction community. Zero-download, read-only streaming.",
 };
 
+const themeInitScript = `
+(function() {
+  try {
+    var stored = localStorage.getItem("ourarchive_theme");
+    var isDark = stored === "dark" || (!stored && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    if (window.location.pathname.indexOf("/reader/") === 0) {
+      root.style.backgroundColor = isDark ? "#121214" : (stored === "warm" || stored === "sepia") ? "#f7edd5" : "#f8f9fa";
+    }
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,6 +36,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-screen flex flex-col bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 antialiased transition-colors duration-150">
         <ThemeProvider>
           <Header />

@@ -2,6 +2,8 @@
  * Global Platform Configuration
  */
 
+export const APP_VERSION = "1.0.0";
+
 export const TAKEDOWN_EMAIL =
   process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me";
 
