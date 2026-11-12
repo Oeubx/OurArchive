@@ -26,10 +26,10 @@ export function DirectTakedownEmailModal({
 
   if (!isOpen || !mounted) return null;
 
-  const emailBodyTemplate = `Target Work Title: ${workTitle || "[Insert Story Title or Reference ID]"}
-Pointed Google Drive Link: [Paste the Google Drive File or Folder URL]
+  const emailBodyTemplate = `Target Work Title / File Name: ${workTitle || "[Insert Story Title or File Name]"}
+Work Screenshot (/search): [Attach a basic screenshot showing the work card on /search]
 My Role: [Original Author / Google Drive Owner / Submitter / Community Reporter]
-Proof of Ownership or Credibility: [Link to original work profile, account proof, or explanation]
+Proof of Ownership or Credibility: [Link to original author profile, account proof, or explanation]
 Requested Action: [Permanent Database Purge / Temporary Hide]
 Additional Notes: [Optional context]`;
 
@@ -73,6 +73,10 @@ Additional Notes: [Optional context]`;
           <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
             Copy the takedown email address and structured template below, then send it directly from Gmail, Proton, Outlook, or your preferred email provider.
           </p>
+
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 text-[11px] leading-relaxed">
+            <strong>Required Attachment for Unsigned Requests:</strong> Please attach a basic screenshot of the work listing inside <strong>/search</strong> (or the reader page) so administrators can locate and verify the exact work without exposing Google Drive links.
+          </div>
 
           {/* Copy Email Address */}
           <div className="space-y-1">
