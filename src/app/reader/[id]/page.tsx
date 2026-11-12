@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
+import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
@@ -33,9 +34,11 @@ interface ReaderData {
   summary: string | null;
   tags: string[];
   isPdf: boolean;
+  isNativePdf?: boolean;
+  totalPages?: number;
   isFolder?: boolean;
   collectionWorks?: CollectionChildWork[];
-  pdfPreviewUrl?: string;
+  pdfPreviewUrl?: string | null;
   contentHtml?: string | null;
   rawDriveUrl?: string;
   uploaderUserId?: string;
@@ -55,6 +58,7 @@ export default function ReaderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
+  const [showDirectEmailModal, setShowDirectEmailModal] = useState(false);
 
   // Realtime Takedown/Suppression Interruption Modal State
   const [interruptedReason, setInterruptedReason] = useState<string | null>(null);
@@ -62,6 +66,7 @@ export default function ReaderPage() {
 
   // Authentic Supabase Auth State
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole | "guest">("guest");
 
   // Collection State (Solution A: Folder Indexing & Table of Contents)
@@ -138,6 +143,7 @@ export default function ReaderPage() {
       .then(async ({ data: { user } }) => {
         if (!active || !user) return;
         setUserId(user.id);
+        setUserEmail(user.email ?? null);
         const { data: profile } = await supabase
           .from("user_profiles")
           .select("role")
@@ -149,6 +155,7 @@ export default function ReaderPage() {
       .catch(() => {
         if (active) {
           setUserId(null);
+          setUserEmail(null);
           setRole("guest");
         }
       });
@@ -287,6 +294,8 @@ export default function ReaderPage() {
                   ...prev,
                   title: child.title,
                   isPdf: json.isPdf,
+                  isNativePdf: json.isNativePdf,
+                  totalPages: json.totalPages,
                   pdfPreviewUrl: json.pdfPreviewUrl,
                   contentHtml: json.contentHtml,
                 }
@@ -740,9 +749,15 @@ export default function ReaderPage() {
               </button>
             </div>
 
-            {/* Report Takedown Button */}
+            {/* Report Takedown Button: Signed-in -> Instant Form, Unsigned -> Method 2 Direct Email */}
             <button
-              onClick={() => setShowTakedownModal(true)}
+              onClick={() => {
+                if (userId) {
+                  setShowTakedownModal(true);
+                } else {
+                  setShowDirectEmailModal(true);
+                }
+              }}
               className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-500/10 rounded text-xs font-medium transition"
               title="Report copyright concern or author takedown"
             >
@@ -993,20 +1008,31 @@ export default function ReaderPage() {
                     style={{ fontSize: `${fontSizePx}px` }}
                     className={`pt-4 ${fontClasses[fontFamily]} ${currentTheme.text}`}
                   >
-                    {data.isPdf && data.pdfPreviewUrl ? (
-                      <div className={`w-full h-[80vh] border rounded overflow-hidden shadow-xs ${currentTheme.metaBorder}`}>
-                        <iframe
-                          src={data.pdfPreviewUrl}
-                          title={data.title}
-                          className="w-full h-full"
-                          sandbox="allow-scripts allow-same-origin"
-                        />
-                      </div>
-                    ) : data.contentHtml ? (
+                    {data.contentHtml ? (
                       <div
                         dangerouslySetInnerHTML={{ __html: data.contentHtml }}
                         className="prose prose-neutral dark:prose-invert max-w-none space-y-4 reader-content"
                       />
+                    ) : data.isPdf && data.pdfPreviewUrl ? (
+                      <div className="space-y-2">
+                        <div className={`text-[11px] px-3 py-1.5 rounded border ${currentTheme.collectionBanner} ${currentTheme.collectionBannerText}`}>
+                          Scanned/Image PDF fallback active — font controls apply to text-extractable works.
+                        </div>
+                        <div className={`w-full h-[80vh] border rounded overflow-hidden shadow-xs ${currentTheme.metaBorder}`}>
+                          <iframe
+                            src={data.pdfPreviewUrl}
+                            title={data.title}
+                            className={`w-full h-full transition ${
+                              theme === "dark"
+                                ? "invert-[0.9] hue-rotate-180"
+                                : theme === "warm"
+                                ? "sepia-[0.25]"
+                                : ""
+                            }`}
+                            sandbox="allow-scripts allow-same-origin"
+                          />
+                        </div>
+                      </div>
                     ) : (
                       <div className="text-center py-12 opacity-60 text-sm">
                         No text content available in stream.
@@ -1044,12 +1070,20 @@ export default function ReaderPage() {
         )}
       </main>
 
-      {/* Takedown Modal in Reader */}
+      {/* Takedown Modal in Reader (Signed-in Users) */}
       <TakedownModal
         isOpen={showTakedownModal}
         workId={workId}
-        workTitle={data?.title}
+        workTitle={selectedChildWork ? selectedChildWork.title || selectedChildWork.fileName : data?.title}
+        userEmail={userEmail}
         onClose={() => setShowTakedownModal(false)}
+      />
+
+      {/* Direct Email Takedown Modal in Reader (Unsigned Users - Method 2) */}
+      <DirectTakedownEmailModal
+        isOpen={showDirectEmailModal}
+        onClose={() => setShowDirectEmailModal(false)}
+        workTitle={selectedChildWork ? selectedChildWork.title || selectedChildWork.fileName : data?.title}
       />
 
       {/* Real-Time Reader Interruption Modal (When Admin Hides or Purges Mid-Read) */}

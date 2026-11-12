@@ -1,15 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
 import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
+import { createClient } from "@/lib/supabase/client";
 import { TAKEDOWN_EMAIL } from "@/lib/config";
 
 export default function TakedownPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const adminEmail = TAKEDOWN_EMAIL;
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (!active) return;
+        setIsAuthenticated(Boolean(user));
+        setUserEmail(user?.email ?? null);
+      })
+      .catch(() => {
+        if (active) {
+          setIsAuthenticated(false);
+          setUserEmail(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-4 text-xs text-gray-800 dark:text-gray-200 leading-relaxed">
@@ -46,25 +70,44 @@ export default function TakedownPage() {
 
       {/* Two Intake Pathways */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Pathway 1: Fast-Track Portal */}
+        {/* Pathway 1: Fast-Track Portal (Signed-In Users) */}
         <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs flex flex-col justify-between space-y-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">⚡</span>
-              <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-                Method 1: Instant Takedown Form
-              </h2>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                  Method 1: Instant Takedown Form
+                </h2>
+              </div>
+              {!isAuthenticated && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60">
+                  Sign-In Required
+                </span>
+              )}
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
-              Use our interactive form to target a specific Work ID or cloud drive URL. This immediately flags the item in our system and initiates suppression from public search.
+              {isAuthenticated
+                ? "Submit an instant takedown using the work title or file name. Your account email is prefilled automatically and matched works are suppressed right away."
+                : "Signed-in users can submit instant in-system takedowns. If you are not signed in, please use Method 2 (Direct Email to Admin) with a screenshot from /search."}
             </p>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg font-bold shadow-xs transition text-center"
-          >
-            Open Interactive Takedown Form &rarr;
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg font-bold shadow-xs transition text-center"
+            >
+              Open Interactive Takedown Form &rarr;
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEmailModalOpen(true)}
+              className="w-full py-2.5 px-4 bg-brand-trunk hover:bg-brand-bark text-white rounded-lg font-bold shadow-xs transition text-center"
+            >
+              Use Method 2: Direct Email to Admin &rarr;
+            </button>
+          )}
         </section>
 
         {/* Pathway 2: Direct Email Desk */}
@@ -77,7 +120,7 @@ export default function TakedownPage() {
               </h2>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
-              Prefer writing directly? Open our copyable takedown email template containing the address, subject format, Drive link field, and ownership verification fields.
+              For unsigned users or direct correspondence: open our copyable email template and attach a basic screenshot of the work inside <strong>/search</strong> along with your ownership verification.
             </p>
             <div className="p-3 bg-canvas-light dark:bg-canvas-dark rounded border border-border-light dark:border-border-dark font-mono text-[11px] text-brand-trunk dark:text-brand-light select-all">
               {adminEmail}
@@ -130,7 +173,11 @@ export default function TakedownPage() {
       </section>
 
       {/* Modal Containers */}
-      <TakedownModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <TakedownModal
+        isOpen={modalOpen}
+        userEmail={userEmail}
+        onClose={() => setModalOpen(false)}
+      />
       <DirectTakedownEmailModal
         isOpen={emailModalOpen}
         onClose={() => setEmailModalOpen(false)}

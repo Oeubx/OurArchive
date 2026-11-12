@@ -29,9 +29,11 @@ export async function POST(request: NextRequest) {
       fandom,
       pairing,
       rating,
+      wordCount,
       summary,
       tags,
       canonicalSourceUrl,
+      isOwnerMasked,
       notes,
       turnstileToken,
     } = body;
@@ -114,6 +116,11 @@ export async function POST(request: NextRequest) {
           .filter((t) => t.length > 0)
       : [];
 
+    const parsedWordCount =
+      typeof wordCount === "number" && Number.isFinite(wordCount) && wordCount >= 0
+        ? Math.floor(wordCount)
+        : 0;
+
     const { error: metadataError } = await adminSupabase.from("link_metadata").insert({
       link_id: newLink.id,
       title: (title || metadata.name).trim(),
@@ -121,7 +128,7 @@ export async function POST(request: NextRequest) {
       fandom: (fandom || "General").trim(),
       pairing: pairing ? pairing.trim() : null,
       rating: rating ? rating.trim() : "Not Rated",
-      word_count: 0,
+      word_count: parsedWordCount,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
       canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest) {
       file_size_bytes: metadata.sizeBytes,
       drive_owner_name: metadata.ownerName,
       drive_owner_email: metadata.ownerEmail,
-      is_owner_masked: true,
+      is_owner_masked: typeof isOwnerMasked === "boolean" ? isOwnerMasked : true,
     });
 
     if (metadataError) {
