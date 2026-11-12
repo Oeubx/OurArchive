@@ -78,11 +78,13 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
 
     try {
-      const cookieStore = cookies();
-      const devRole = cookieStore.get("ourarchive_dev_role")?.value;
-      if (devRole) {
-        userRole = devRole;
-        userId = `dev-${devRole}-user`;
+      if (process.env.NODE_ENV === "development") {
+        const cookieStore = cookies();
+        const devRole = cookieStore.get("ourarchive_dev_role")?.value;
+        if (devRole) {
+          userRole = devRole;
+          userId = `dev-${devRole}-user`;
+        }
       }
 
       const supabase = createClient();

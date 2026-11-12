@@ -104,14 +104,14 @@ export default function HomePage() {
                   OurArchive
                 </h1>
                 <span className="text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-brand-bark dark:text-amber-200 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Emergency Service
+                  Read-Only Index
                 </span>
                 <span className="text-[11px] font-medium bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark px-2 py-0.5 rounded-full tracking-wide">
                   v{APP_VERSION}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                This system&apos;s purpose is to compile cloud drive links into one centralized, searchable index. Enjoy distraction-free online reading, verified safety diagnostics, and direct redirection to the author&apos;s original drive mirror.
+                A zero-download, read-only cloud drive directory and document viewer. Compile view-only drive links into one centralized, searchable index with automated safety diagnostics.
               </p>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3 px-1">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <span>📖</span>
-            <span>About OurArchive & The Initiative</span>
+            <span>About OurArchive</span>
           </h2>
           <Link
             href="/disclaimers"

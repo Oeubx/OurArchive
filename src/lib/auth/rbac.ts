@@ -16,23 +16,25 @@ export function isAdminUser(user: User | null | undefined): boolean {
  * If unauthenticated or unauthorized, redirects immediately.
  */
 export async function requireAdmin(): Promise<{ user: User }> {
-  try {
-    const cookieStore = cookies();
-    const devRole = cookieStore.get("ourarchive_dev_role")?.value;
-    if (devRole === "admin") {
-      return {
-        user: {
-          id: "dev-admin-user",
-          email: "admin@ourarchive.aid",
-          app_metadata: { role: "admin" },
-          user_metadata: { full_name: "Lead System Administrator" },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
-        } as unknown as User,
-      };
+  if (process.env.NODE_ENV === "development") {
+    try {
+      const cookieStore = cookies();
+      const devRole = cookieStore.get("ourarchive_dev_role")?.value;
+      if (devRole === "admin") {
+        return {
+          user: {
+            id: "dev-admin-user",
+            email: "admin@example.com",
+            app_metadata: { role: "admin" },
+            user_metadata: { full_name: "Lead System Administrator" },
+            aud: "authenticated",
+            created_at: new Date().toISOString(),
+          } as unknown as User,
+        };
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
   try {

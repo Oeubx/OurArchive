@@ -26,13 +26,13 @@ export default function DisclaimersPage() {
         </p>
       </div>
 
-      {/* Emergency Scope Box */}
+      {/* Platform Scope Box */}
       <div className="p-4 bg-amber-50/80 dark:bg-amber-950/20 border-l-4 border-amber-600 rounded-r text-gray-800 dark:text-gray-200 space-y-1">
         <h2 className="font-bold text-sm text-brand-bark dark:text-brand-light">
-          Emergency Platform Scope & Community Charter
+          Platform Scope &amp; Governance Charter
         </h2>
         <p>
-          <strong>OurArchive</strong> was created as an emergency, temporary measure to aid fanfiction readers and authors during service disruptions. It is strictly not intended to replace, compete with, or replicate permanent operations of primary fanwork archives.
+          <strong>OurArchive</strong> is a zero-download, read-only cloud drive directory and document viewer. It is designed to index and stream shared, view-only drive links safely without hosting files locally.
         </p>
       </div>
 
@@ -43,14 +43,14 @@ export default function DisclaimersPage() {
           <div className="flex items-center gap-2">
             <span className="text-lg">✍️</span>
             <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              1. Respect for Fanfiction Creator Sovereignty
+              1. Respect for Creator Sovereignty
             </h2>
           </div>
           <p>
-            Fanfiction authors retain <strong>100% intellectual and moral ownership</strong> over their works. OurArchive does not claim any copyright, trademark, licensing, or commercial rights to any text, character, plotline, or fanwork indexed on this site.
+            Original creators retain <strong>100% intellectual and moral ownership</strong> over their works. OurArchive does not claim any copyright, trademark, licensing, or commercial rights to any text or document indexed on this site.
           </p>
           <p>
-            OurArchive functions strictly as an emergency directory and read-only proxy for view-only cloud drive backups that community volunteers or authors have made available.
+            OurArchive functions strictly as an indexed directory and read-only proxy for view-only cloud drive links that contributors or owners have made available.
           </p>
         </section>
 
@@ -93,7 +93,7 @@ export default function DisclaimersPage() {
             <li>We do not run advertisements, affiliate links, or promotional sponsorships.</li>
             <li>We do not solicit, accept, or process monetary donations.</li>
             <li>We do not sell, rent, or monetize reader or contributor telemetry data.</li>
-            <li>All infrastructure runs on community-tier serverless services purely for the benefit of fans and readers during outages.</li>
+            <li>All infrastructure runs on serverless services without commercial monetization.</li>
           </ul>
         </section>
 

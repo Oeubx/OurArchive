@@ -32,16 +32,15 @@ You can request immediate removal if you are:
 To request an immediate removal, contact the administrator through any of the following channels:
 
 ### Option A: Email (Fastest)
-- **Send an email to:** `takedown-ourarchive@proton.me` *(or configured admin address)*
-- **Subject Line:** `[TAKEDOWN] Removal Request - {Story Title or Drive URL}`
+- **Send an email to:** `takedown@example.com` *(or configured `NEXT_PUBLIC_TAKEDOWN_EMAIL`)*
+- **Subject Line:** `[TAKEDOWN] Removal Request - {Document Title or Drive URL}`
 - **Information to Include:**
   - The URL of the Google Drive link, OR
-  - The Title and Fandom of the work as displayed on OurArchive.
-  - (Optional) Confirmation of author or owner status, or reason for removal.
+  - The Title and Category of the entry as displayed on the platform.
+  - (Optional) Confirmation of creator or owner status, or reason for removal.
 
-### Option B: Community Discord / Admin Direct Message
-- Reach out directly to the Administrator on Discord: `@biboy` (or the OurArchive Discord community support channel).
-- Send the link or title in a direct message requesting immediate removal.
+### Option B: Direct Takedown Portal
+- Use the built-in `/takedown` portal on the platform to submit an immediate removal request.
 
 ### Option C: GitHub Issue
 - Open an issue in this repository with the label `takedown` (or use a private issue/email if you prefer not to publicize the request).

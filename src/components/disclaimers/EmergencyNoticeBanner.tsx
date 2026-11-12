@@ -23,7 +23,7 @@ export function EmergencyNoticeBanner() {
       <div className="bg-amber-100/70 dark:bg-amber-950/50 border-b border-amber-200 dark:border-amber-900/60 text-amber-950 dark:text-amber-100 px-4 py-1.5 text-[11px]">
         <div className="max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center flex-wrap justify-between gap-2">
           <span>
-            <strong>Emergency Temporary Service:</strong> Respecting creator sovereignty under zero-download guidelines.
+            <strong>Read-Only Directory:</strong> Respecting creator sovereignty under zero-download guidelines.
           </span>
           <div className="flex items-center gap-3 font-medium">
             <Link href="/disclaimers" className="hover:underline">
@@ -46,11 +46,11 @@ export function EmergencyNoticeBanner() {
           <div className="flex items-center gap-2">
             <span className="text-base">📢</span>
             <span className="font-bold tracking-tight text-amber-900 dark:text-amber-200 uppercase text-[11px]">
-              Emergency Community Notice & Platform Scope
+              Platform Notice &amp; Scope
             </span>
           </div>
           <p className="text-amber-900/90 dark:text-amber-100/85 leading-relaxed text-[11px]">
-            <strong>OurArchive</strong> is a temporary emergency reading aid during service disruptions. It operates under strict zero-download, read-only principles with author-sovereign takedowns.
+            <strong>OurArchive</strong> is a zero-download, read-only cloud drive directory and document viewer with creator-sovereign takedowns.
           </p>
         </div>
 

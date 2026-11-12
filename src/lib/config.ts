@@ -5,12 +5,12 @@
 export const APP_VERSION = "1.0.0";
 
 export const TAKEDOWN_EMAIL =
-  process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown-ourarchive@proton.me";
+  process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown@example.com";
 
 export const DEV_CONNECT = {
   personalEmail: process.env.NEXT_PUBLIC_DEV_EMAIL || "",
   twitterX: process.env.NEXT_PUBLIC_DEV_TWITTER || "",
-  github: process.env.NEXT_PUBLIC_DEV_GITHUB || "https://github.com/Oeubx",
+  github: process.env.NEXT_PUBLIC_DEV_GITHUB || "",
   linkedIn: process.env.NEXT_PUBLIC_DEV_LINKEDIN || "",
   portfolio: process.env.NEXT_PUBLIC_DEV_PORTFOLIO || "under-development",
 };

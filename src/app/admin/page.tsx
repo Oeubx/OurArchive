@@ -7,7 +7,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <AdminDashboardClient adminEmail={user.email || "admin@ourarchive.aid"} />
+      <AdminDashboardClient adminEmail={user.email || "admin@example.com"} />
     </div>
   );
 }

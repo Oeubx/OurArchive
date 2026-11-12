@@ -9,27 +9,18 @@ export function AboutContent() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   return (
     <div className="space-y-6">
-      {/* Origin Story & Mission */}
+      {/* System Overview & Mission */}
       <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-6 space-y-4 shadow-xs">
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>📖 The Origin Story</span>
+            <span>📖 Platform Overview</span>
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Hello! I am an on-call data encoder, a software developer, and a fellow fanfiction reader.
-          </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            The idea behind OurArchive started quite simply: I was lazing around one afternoon while my girlfriend was whining about a major fanfic platform experiencing downtime and being completely unable to read her comfort stories.
-          </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            To cheer her up and solve her immediate dilemma, I sat down and started planning a lightweight system just for her, turning her local storage and saved drive compilation of backup stories into a safe, organized way to read online without the clutter of spreadsheets or the risks of downloading raw files.
-          </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Since this seemed like a genuinely good idea and an exciting technical challenge, I decided to take the leap and turn it into a full-blown system for the entire reading community: <strong>OurArchive</strong>.
+            <strong>OurArchive</strong> is a lightweight, zero-download cloud drive compilation and read-only document viewing platform. It turns scattered, shared drive links into a clean, searchable directory without requiring users to download raw files.
           </p>
         </div>
         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium bg-canvas-light dark:bg-canvas-dark p-3.5 rounded border border-border-light dark:border-border-dark">
-          <strong>OurArchive</strong> solves this exact problem: compile author-approved cloud drive links into a single searchable index, provide a distraction-free online reader, and protect readers through metadata verification.
+          <strong>Core Workflow:</strong> Compile view-only cloud drive links into a single searchable index, stream content through a distraction-free online reader, and protect users through automated metadata and threat verification.
         </p>
       </section>
 
@@ -40,7 +31,7 @@ export function AboutContent() {
             <span>🛡️ 100% Creator Sovereignty</span>
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            Fanfiction authors own all rights to their stories. OurArchive makes no intellectual property claims, never monetizes works, and takes action on removal requests within 24 hours with no questions asked.
+            Original creators retain full rights to their works. The platform makes no intellectual property claims, never monetizes indexed content, and processes removal requests promptly.
           </p>
         </div>
 
@@ -49,16 +40,16 @@ export function AboutContent() {
             <span>🚫 Zero-Download Architecture</span>
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            Our platform does not download or store copies of drive files on our servers. The text is streamed temporarily in memory through cloud export APIs into a clean, view-only reader.
+            The platform does not download or store copies of drive files on its servers. Text is streamed ephemerally in memory through cloud export APIs into a clean, view-only reader.
           </p>
         </div>
 
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-5 space-y-2 shadow-xs">
           <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm flex items-center gap-2">
-            <span>🤝 Community Solidarity</span>
+            <span>🤝 Verified Indexing</span>
           </h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-            We are an emergency, temporary measure designed to support community reading continuity without competing with or replacing primary creator platforms.
+            Submissions pass through automated link validation, threat scanning, and moderator review before appearing in the public directory.
           </p>
         </div>
 

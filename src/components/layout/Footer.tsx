@@ -16,35 +16,35 @@ export function Footer() {
           {/* Section 1: Disclaimers */}
           <div className="space-y-2">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px]">
-              Emergency Disclaimers
+              Platform Disclaimers
             </h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-[11px]">
-              OurArchive is an emergency, temporary measure to aid fanfiction readers and authors during service disruptions. It operates under strict zero-download, read-only principles.
+              OurArchive is a zero-download, read-only cloud drive directory and document viewer. All indexed content remains the property of its original creators.
             </p>
             <div>
               <Link
                 href="/disclaimers"
                 className="text-brand-trunk dark:text-brand-light hover:underline font-medium text-[11px]"
               >
-                Read full community disclaimers & creator charter &rarr;
+                Read full disclaimers &amp; creator charter &rarr;
               </Link>
             </div>
           </div>
 
-          {/* Section 2: About Developer & Reach-out Socials */}
+          {/* Section 2: About Platform & Reach-out Socials */}
           <div className="space-y-2.5">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px]">
-              About The Developer
+              About The Platform
             </h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-[11px]">
-              Built with open-source care by an on-call data encoder, developer, and fellow reader to keep stories readable when major servers are down.
+              Built as a lightweight, zero-download system for compiling, verifying, and reading shared cloud drive documents online.
             </p>
             <div>
               <Link
                 href="/about-developer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-800 dark:text-gray-200 hover:bg-subtle-light dark:hover:bg-subtle-dark font-medium transition text-[11px]"
               >
-                <span>About Developer & Platform Architecture</span>
+                <span>About &amp; Platform Architecture</span>
                 <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
@@ -187,7 +187,7 @@ export function Footer() {
               />
             </div>
             <span>
-              &copy; {new Date().getFullYear()} OurArchive &middot; v{APP_VERSION}. Non-commercial, zero-download fanwork streaming index.
+              &copy; {new Date().getFullYear()} OurArchive &middot; v{APP_VERSION}. Zero-download cloud drive directory &amp; viewer.
             </span>
           </div>
           <div className="flex items-center gap-4">
