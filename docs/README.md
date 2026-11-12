@@ -15,6 +15,9 @@ This documentation hub provides the architectural, operational, and development 
 docs/
 ├── README.md                                      # This Documentation Hub
 ├── ci_cd.md                                       # CI/CD Architecture & GitHub Actions Contract
+├── version_history/                               # Release Alignment & Version Records
+│   ├── README.md                                  # Release Index & Active Alignment Matrix
+│   └── v1.0.0.md                                  # v1.0.0 Production Release Snapshot
 ├── disclaimers/                                   # Community Governance & Legal Protection
 │   ├── README.md                                  # Disclaimers Index & Mission Charter
 │   ├── fanfic_authors_and_ownership.md           # Creator Rights & 100% Intellectual Property
@@ -67,6 +70,8 @@ docs/
 - **Supabase BaaS, Discord OAuth & Webhooks**: Read [Supabase Platform Architecture](infrastructure/supabase_architecture.md).
 
 ### Development & Delivery
+- **Version History & Alignment**: Read [Version History & Release Alignment](version_history/README.md) (Latest: [v1.0.0](version_history/v1.0.0.md)).
+- **Release Changelog**: Read [CHANGELOG.md](../CHANGELOG.md).
 - **Commit Code Grammar & Backlogs**: Read [OurArchive Sprint Backlogs & Commit Reference](backlogs/OA_Sprint_Backlogs_Commit_Reference.md).
 - **CI/CD Pipelines**: Read [OurArchive CI/CD & Delivery Architecture](ci_cd.md).
 - **Git Commit Drafting Skill**: See [`.agents/skills/git-commits/SKILL.md`](../.agents/skills/git-commits/SKILL.md).

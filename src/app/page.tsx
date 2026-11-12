@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { AboutContent } from "@/components/about/AboutContent";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { ContributorAuthGateModal } from "@/components/contribute/ContributorAuthGateModal";
+import { APP_VERSION } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
 
 function AuthErrorQueryWatcher({
@@ -104,6 +105,9 @@ export default function HomePage() {
                 </h1>
                 <span className="text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-brand-bark dark:text-amber-200 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Emergency Service
+                </span>
+                <span className="text-[11px] font-medium bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark px-2 py-0.5 rounded-full tracking-wide">
+                  v{APP_VERSION}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
