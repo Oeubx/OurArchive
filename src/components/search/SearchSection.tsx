@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { AdultContentAdvisoryModal } from "./AdultContentAdvisoryModal";
 
 export interface SearchFilters {
   q: string;
@@ -18,6 +19,7 @@ interface SearchSectionProps {
 export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   const [q, setQ] = useState("");
   const [contentFilter, setContentFilter] = useState<"all" | "sfw" | "nsfw">("all");
+  const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,8 +27,28 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   }
 
   function handleFilterChange(filter: "all" | "sfw" | "nsfw") {
+    if (filter === "nsfw") {
+      const hasConsent =
+        typeof window !== "undefined" &&
+        localStorage.getItem("ourarchive_nsfw_consent") === "true";
+
+      if (!hasConsent) {
+        setShowAdvisoryModal(true);
+        return;
+      }
+    }
+
     setContentFilter(filter);
     onSearch({ q: q.trim(), fandom: "", rating: "All", tag: "", contentFilter: filter });
+  }
+
+  function handleConfirmAdultContent() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ourarchive_nsfw_consent", "true");
+    }
+    setShowAdvisoryModal(false);
+    setContentFilter("nsfw");
+    onSearch({ q: q.trim(), fandom: "", rating: "All", tag: "", contentFilter: "nsfw" });
   }
 
   function handleReset() {
@@ -120,6 +142,13 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
           Instant search across indexed Google Drive and OneDrive document file names.
         </p>
       </form>
+
+      {/* Adult Content (18+) Confirmation Gate Modal */}
+      <AdultContentAdvisoryModal
+        isOpen={showAdvisoryModal}
+        onClose={() => setShowAdvisoryModal(false)}
+        onConfirm={handleConfirmAdultContent}
+      />
     </div>
   );
 }
