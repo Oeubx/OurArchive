@@ -88,10 +88,28 @@ export default function ReaderPage() {
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
+  const [nsfwAcknowledged, setNsfwAcknowledged] = useState(false);
   const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [themeReady, setThemeReady] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ReaderViewMode>("formatted");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const consent = localStorage.getItem("ourarchive_nsfw_consent") === "true";
+      if (consent) {
+        setNsfwAcknowledged(true);
+      }
+    }
+  }, []);
+
+  const isAdultWork = Boolean(
+    data &&
+      (data.rating === "Mature" ||
+        data.rating === "Explicit" ||
+        (Array.isArray(data.tags) &&
+          data.tags.some((t) => ["nsfw", "mature", "explicit"].includes(t.toLowerCase()))))
+  );
 
   // Synchronize initial theme and view mode with global stored preferences before first paint
   useIsomorphicLayoutEffect(() => {
@@ -913,7 +931,58 @@ export default function ReaderPage() {
           </div>
         )}
 
-        {data && (
+        {data && isAdultWork && !nsfwAcknowledged ? (
+          <div className="max-w-xl mx-auto my-10 p-6 sm:p-8 rounded-2xl border border-red-300 dark:border-red-900/60 bg-surface-light dark:bg-surface-dark shadow-xl text-center space-y-5 animate-in fade-in duration-200">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-3xl">
+              🔞
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/60 px-2.5 py-0.5 rounded-full inline-block">
+                Adult Content Advisory (18+)
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {data.title}
+              </h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                by <strong className="text-gray-900 dark:text-gray-100">{data.authorName}</strong>
+              </p>
+            </div>
+
+            <div className="p-4 bg-red-50/70 dark:bg-red-950/20 border-l-4 border-red-500 rounded text-left text-xs text-gray-700 dark:text-gray-300 space-y-1.5 leading-relaxed">
+              <p>
+                This fanwork is marked as <strong className="text-red-700 dark:text-red-400 font-semibold">{data.rating}</strong> and is intended exclusively for adult audiences (18 years of age or older).
+              </p>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                <span><strong>Fandom:</strong> {data.fandom}</span>
+                {data.pairing && <span>• <strong>Pairing:</strong> {data.pairing}</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/search")}
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark transition cursor-pointer"
+              >
+                &larr; Return to Safety
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNsfwAcknowledged(true);
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("ourarchive_nsfw_consent", "true");
+                  }
+                }}
+                className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Proceed to Adult Work</span>
+                <span>&rarr;</span>
+              </button>
+            </div>
+          </div>
+        ) : data ? (
           <article className="space-y-6">
             {/* Work Metadata Header */}
             <header className={`p-6 rounded-lg border space-y-3 transition-colors ${currentTheme.metaBox}`}>
@@ -1163,7 +1232,7 @@ export default function ReaderPage() {
               </div>
             </footer>
           </article>
-        )}
+        ) : null}
       </main>
 
       {/* Takedown Modal in Reader (Signed-in Users) */}
