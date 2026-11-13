@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getCurrentProfile, updateDisplayName } from "@/lib/services/profile";
+import { getCurrentProfile, updateDisplayName, getLiveSubmissionMetrics, type SubmissionMetrics } from "@/lib/services/profile";
 import type { UserProfileRecord } from "@/types/database";
 import Link from "next/link";
 import { maskWorkId } from "@/lib/utils/idMasker";
@@ -15,6 +15,7 @@ import {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfileRecord | null>(null);
+  const [metrics, setMetrics] = useState<SubmissionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -29,6 +30,7 @@ export default function ProfilePage() {
       if (data) {
         setProfile(data);
         setDisplayName(data.display_name);
+        getLiveSubmissionMetrics(data.id).then(setMetrics).catch(() => {});
         setBookmarksLoading(true);
         try {
           const remoteBookmarks = await fetchSavedBookmarksFromApi();
@@ -147,7 +149,19 @@ export default function ProfilePage() {
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400 block">Total Submissions</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{profile.submission_count}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              {metrics ? (
+                <>
+                  {metrics.totalSubmissions}{" "}
+                  {metrics.totalSubmissions === 1 ? "submission" : "submissions"}{" "}
+                  <span className="text-gray-500 dark:text-gray-400 font-normal">
+                    ({metrics.totalWorks} indexed {metrics.totalWorks === 1 ? "work" : "works"})
+                  </span>
+                </>
+              ) : (
+                profile.submission_count
+              )}
+            </span>
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400 block">Member Since</span>

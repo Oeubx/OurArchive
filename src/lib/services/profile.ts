@@ -88,3 +88,60 @@ export async function checkContributorEligibility(): Promise<{
 
   return { eligible: true, profile };
 }
+
+export interface SubmissionMetrics {
+  totalSubmissions: number;
+  totalWorks: number;
+}
+
+/**
+ * Client-Side: Fetches authentic live submission metrics from public.drive_links.
+ * Distinguishes between top-level folder/standalone submissions and total unpacked works.
+ */
+export async function getLiveSubmissionMetrics(
+  userId: string
+): Promise<SubmissionMetrics> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("drive_links")
+    .select("id, drive_url, link_metadata(mime_type, tags, summary)")
+    .eq("uploader_user_id", userId)
+    .eq("is_removed", false);
+
+  if (error || !data) {
+    return { totalSubmissions: 0, totalWorks: 0 };
+  }
+
+  let folderCount = 0;
+  let childWorksCount = 0;
+  let standaloneCount = 0;
+
+  for (const item of data) {
+    const meta = (
+      Array.isArray(item.link_metadata) ? item.link_metadata[0] : item.link_metadata
+    ) as { mime_type?: string; tags?: string[]; summary?: string } | null;
+
+    const isFolder =
+      meta?.mime_type === "application/vnd.google-apps.folder" ||
+      item.drive_url.includes("/folders/");
+    const isChild =
+      (meta?.tags && Array.isArray(meta.tags) && meta.tags.some((t: string) => t.startsWith("collection:"))) ||
+      Boolean(meta?.summary && meta.summary.includes("Part of collection:"));
+
+    if (isFolder) {
+      folderCount += 1;
+    } else if (isChild) {
+      childWorksCount += 1;
+    } else {
+      standaloneCount += 1;
+    }
+  }
+
+  const totalSubmissions = folderCount + standaloneCount;
+  const totalWorks = childWorksCount + standaloneCount;
+
+  return {
+    totalSubmissions: Math.max(totalSubmissions, totalWorks > 0 ? 1 : 0),
+    totalWorks,
+  };
+}
