@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       turnstileToken,
       isPriorVerified,
       uploadMode,
+      isNsfw,
     } = body;
 
     // 1. Cloudflare Turnstile Bot Defense (Gracefully non-blocking if unconfigured)
@@ -179,11 +180,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Insert Link Metadata Record
-    const sanitizedTags = Array.isArray(tags)
+    const classificationTag = isNsfw ? "nsfw" : "sfw";
+    const initialTags = Array.isArray(tags)
       ? tags
           .map((t) => (typeof t === "string" ? t.trim() : ""))
           .filter((t) => t.length > 0)
       : [];
+    const sanitizedTags = Array.from(new Set([...initialTags, classificationTag]));
+    const effectiveRating = rating ? rating.trim() : isNsfw ? "Mature" : "General Audiences";
 
     const effectiveDisplayName = profile?.display_name || (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "Contributor";
 
@@ -193,7 +197,7 @@ export async function POST(request: NextRequest) {
       author_name: (authorName || effectiveDisplayName).trim(),
       fandom: (fandom || "General Fanworks").trim(),
       pairing: pairing ? pairing.trim() : null,
-      rating: rating ? rating.trim() : "General Audiences",
+      rating: effectiveRating,
       word_count: typeof wordCount === "number" && wordCount >= 0 ? wordCount : 0,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
@@ -266,7 +270,7 @@ export async function POST(request: NextRequest) {
               author_name: (authorName || effectiveDisplayName).trim(),
               fandom: (fandom || "General Fanworks").trim(),
               pairing: pairing ? pairing.trim() : null,
-              rating: rating ? rating.trim() : "General Audiences",
+              rating: effectiveRating,
               word_count: 0,
               summary: summary
                 ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`

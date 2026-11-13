@@ -7,6 +7,7 @@ export interface SearchFilters {
   fandom?: string;
   rating?: string;
   tag?: string;
+  contentFilter?: "all" | "sfw" | "nsfw";
 }
 
 interface SearchSectionProps {
@@ -16,15 +17,22 @@ interface SearchSectionProps {
 
 export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   const [q, setQ] = useState("");
+  const [contentFilter, setContentFilter] = useState<"all" | "sfw" | "nsfw">("all");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSearch({ q: q.trim(), fandom: "", rating: "All", tag: "" });
+    onSearch({ q: q.trim(), fandom: "", rating: "All", tag: "", contentFilter });
+  }
+
+  function handleFilterChange(filter: "all" | "sfw" | "nsfw") {
+    setContentFilter(filter);
+    onSearch({ q: q.trim(), fandom: "", rating: "All", tag: "", contentFilter: filter });
   }
 
   function handleReset() {
     setQ("");
-    onSearch({ q: "", fandom: "", rating: "All", tag: "" });
+    setContentFilter("all");
+    onSearch({ q: "", fandom: "", rating: "All", tag: "", contentFilter: "all" });
   }
 
   return (
@@ -64,6 +72,48 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               </button>
             )}
           </div>
+        </div>
+
+        {/* SFW / NSFW Content Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-light dark:border-border-dark text-xs">
+          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mr-1">
+            Filter:
+          </span>
+          <button
+            type="button"
+            onClick={() => handleFilterChange("all")}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
+              contentFilter === "all"
+                ? "bg-brand-trunk text-white shadow-2xs font-semibold"
+                : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+            }`}
+          >
+            All Works
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFilterChange("sfw")}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+              contentFilter === "sfw"
+                ? "bg-emerald-600 text-white shadow-2xs font-semibold"
+                : "bg-canvas-light dark:bg-canvas-dark text-emerald-700 dark:text-emerald-400 border border-border-light dark:border-border-dark hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            }`}
+          >
+            <span>🟢</span>
+            <span>SFW Only</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleFilterChange("nsfw")}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+              contentFilter === "nsfw"
+                ? "bg-red-600 text-white shadow-2xs font-semibold"
+                : "bg-canvas-light dark:bg-canvas-dark text-red-600 dark:text-red-400 border border-border-light dark:border-border-dark hover:bg-red-50 dark:hover:bg-red-950/30"
+            }`}
+          >
+            <span>🔴</span>
+            <span>NSFW (18+)</span>
+          </button>
         </div>
 
         <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-1">
