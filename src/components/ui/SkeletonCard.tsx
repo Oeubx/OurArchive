@@ -9,12 +9,6 @@ export function SkeletonCard() {
       aria-label="Loading fanwork item..."
       className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-xs overflow-hidden animate-pulse transition-colors duration-150"
     >
-      {/* SYSTEM HEADER BAR SKELETON */}
-      <div className="bg-subtle-light dark:bg-subtle-dark border-b border-border-light dark:border-border-dark px-4 py-2 flex items-center justify-between">
-        <div className="h-2.5 bg-gray-300 dark:bg-zinc-700 rounded w-1/3" />
-        <div className="h-3.5 bg-gray-300 dark:bg-zinc-700 rounded w-16" />
-      </div>
-
       {/* CARD CONTENT */}
       <div className="p-4 sm:p-5 space-y-3.5">
         {/* Title and Author */}

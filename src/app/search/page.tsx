@@ -33,6 +33,7 @@ export default function SearchPage() {
     fandom: "",
     rating: "All",
     tag: "",
+    contentFilter: "all",
   });
 
   const [pagination, setPagination] = useState({
@@ -51,6 +52,9 @@ export default function SearchPage() {
       if (filters.fandom) params.set("fandom", filters.fandom);
       if (filters.rating && filters.rating !== "All") params.set("rating", filters.rating);
       if (filters.tag) params.set("tag", filters.tag);
+      if (filters.contentFilter && filters.contentFilter !== "all") {
+        params.set("contentFilter", filters.contentFilter);
+      }
       params.set("page", page.toString());
       params.set("limit", limit.toString());
 

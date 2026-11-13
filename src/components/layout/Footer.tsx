@@ -16,10 +16,10 @@ export function Footer() {
           {/* Section 1: Disclaimers */}
           <div className="space-y-2">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-[11px]">
-              Emergency Disclaimers
+              Temporary Project Disclaimers
             </h3>
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed text-[11px]">
-              OurArchive is an emergency, temporary measure to aid fanfiction readers and authors during service disruptions. It operates under strict zero-download, read-only principles.
+              OurArchive is a temporary project to aid fanfiction readers and authors during service disruptions. It operates under strict zero-download, read-only principles.
             </p>
             <div>
               <Link
@@ -66,8 +66,25 @@ export function Footer() {
                     title="Developer GitHub Profile"
                   >
                     <span>🐙</span>
-                    <span>GitHub</span>
+                    <span>Developer</span>
                   </a>
+                )}
+
+                {/* Project Repository */}
+                {DEV_CONNECT.repository && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <a
+                      href={DEV_CONNECT.repository}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                      title="OurArchive GitHub Project Repository"
+                    >
+                      <span>📦</span>
+                      <span>Project Repo</span>
+                    </a>
+                  </>
                 )}
 
                 {/* X (Twitter) */}
