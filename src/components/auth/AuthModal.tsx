@@ -28,6 +28,7 @@ export function AuthModal({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [isAdultConfirmed, setIsAdultConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
@@ -58,6 +59,7 @@ export function AuthModal({
     setPassword("");
     setShowPassword(false);
     setDisclaimerAccepted(false);
+    setIsAdultConfirmed(false);
     setErrorMsg(null);
     setShowResend(false);
     setResendStatus(null);
@@ -98,6 +100,12 @@ export function AuthModal({
       return;
     }
 
+    // Sign up mode: enforce mandatory 18+ age certification
+    if (!isAdultConfirmed) {
+      setErrorMsg("You must certify that you are at least 18 years of age to register.");
+      return;
+    }
+
     // Show interstitial confirmation view for sign up
     setShowConfirmationScreen(true);
   }
@@ -116,7 +124,16 @@ export function AuthModal({
           window.location.reload();
         }
       } else {
-        const { session } = await signUpWithEmailPassword(email, password, redirectTo, displayName.trim());
+        const { session } = await signUpWithEmailPassword(
+          email,
+          password,
+          redirectTo,
+          displayName.trim(),
+          isAdultConfirmed
+        );
+        if (isAdultConfirmed && typeof window !== "undefined") {
+          localStorage.setItem("ourarchive_nsfw_consent", "true");
+        }
         if (!session) {
           // Supabase has 'Confirm email' enabled (Option B) -> Confirmation email sent
           setConfirmationPendingEmail(email);
@@ -213,7 +230,7 @@ export function AuthModal({
                 Are you sure you&apos;ve checked out the disclaimer?
               </h2>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed text-left bg-canvas-light dark:bg-canvas-dark p-3.5 rounded-lg border border-border-light dark:border-border-dark">
-                OurArchive operates as an emergency reading directory under strict <strong>Zero-Download</strong> and <strong>Creator Sovereignty</strong> principles. Authors retain 100% intellectual rights and immediate removal rights.
+                OurArchive operates as a temporary project and reading directory under strict <strong>Zero-Download</strong> and <strong>Creator Sovereignty</strong> principles. Authors retain 100% intellectual rights and immediate removal rights.
               </p>
             </div>
 
@@ -369,7 +386,7 @@ export function AuthModal({
 
               {/* Disclaimer Checkbox & Link (Exclusively mandatory for Sign Up registration) */}
               {mode === "signup" && (
-                <div className="pt-1">
+                <div className="pt-1 space-y-2.5">
                   <label className="flex items-start gap-2.5 cursor-pointer select-none">
                     <input
                       type="checkbox"
@@ -387,6 +404,19 @@ export function AuthModal({
                       >
                         Community Disclaimers & Charter
                       </Link>
+                    </span>
+                  </label>
+
+                  {/* 18+ Age Affirmation Checkbox */}
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isAdultConfirmed}
+                      onChange={(e) => setIsAdultConfirmed(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-zinc-700 text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
+                      I certify that I am at least 18 years of age (or legal age of majority in my jurisdiction) and agree to browse mature content responsibly.
                     </span>
                   </label>
                 </div>
