@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 Maintenance, safety, and community transparency patch refining card UI layouts, introducing SFW/NSFW classification and search filtering, clarifying AI usage policies, and providing dynamic profile submission tracking.
 
 ### Added
+- **Registration Age Affirmation (18+)**: Mandatory 18+ checkbox on sign up recording `is_adult: true` into Supabase Auth user metadata and seeding local consent (`[OA-M1-F1]`).
+- **SafeSearch Advisory Confirmation Gate**: Interstitial modal in `SearchSection` gating `[🔴 NSFW (18+)]` searches behind age affirmation (`[OA-M2-F3]`).
+- **AO3-Style Reader Warning Interstitial**: Content advisory screen in `ReaderPage` requiring explicit confirmation before displaying mature or explicit fanworks (`[OA-M2-F4]`).
+- **Adult Content Profile Preference**: Dedicated toggle in `/profile` allowing users to activate or deactivate adult content access across their device (`[OA-M1-F2]`).
 - **SFW / NSFW Classification**: Prominent classification toggle (`🟢 SFW` vs `🔴 NSFW (18+)`) in `UploadModal` with automatic rating alignment, system tagging (`sfw` / `nsfw`), and recursive inheritance for collection folder children (`[OA-M2-F6]`).
 - **SFW / NSFW Search Filters**: Interactive filter pills (`[All Works]`, `[🟢 SFW Only]`, `[🔴 NSFW (18+)]`) in `SearchSection` with backend query integration in `/api/search` (`[OA-M2-F3]`).
 - **Folder Limits & Pathing Guide**: Interactive info guide view in `UploadModal` detailing system ingestion limits (4 nesting depth, 30 subfolders, 100 readable files) with visual hierarchy pathing (`[OA-M2-F6]`).
