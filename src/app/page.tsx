@@ -104,7 +104,7 @@ export default function HomePage() {
                   OurArchive
                 </h1>
                 <span className="text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-brand-bark dark:text-amber-200 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Emergency Service
+                  TEMPORARY PROJECT
                 </span>
                 <span className="text-[11px] font-medium bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark px-2 py-0.5 rounded-full tracking-wide">
                   v{APP_VERSION}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getCurrentProfile, updateDisplayName } from "@/lib/services/profile";
+import { getCurrentProfile, updateDisplayName, getLiveSubmissionMetrics, type SubmissionMetrics } from "@/lib/services/profile";
 import type { UserProfileRecord } from "@/types/database";
 import Link from "next/link";
 import { maskWorkId } from "@/lib/utils/idMasker";
@@ -15,6 +15,7 @@ import {
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfileRecord | null>(null);
+  const [metrics, setMetrics] = useState<SubmissionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -24,11 +25,32 @@ export default function ProfilePage() {
   const [bookmarks, setBookmarks] = useState<ReaderBookmark[]>([]);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
 
+  // Adult Content / NSFW Preferences (18+)
+  const [nsfwConsent, setNsfwConsent] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setNsfwConsent(localStorage.getItem("ourarchive_nsfw_consent") === "true");
+    }
+  }, []);
+
+  function handleToggleNsfwConsent(enabled: boolean) {
+    setNsfwConsent(enabled);
+    if (typeof window !== "undefined") {
+      if (enabled) {
+        localStorage.setItem("ourarchive_nsfw_consent", "true");
+      } else {
+        localStorage.removeItem("ourarchive_nsfw_consent");
+      }
+    }
+  }
+
   useEffect(() => {
     getCurrentProfile().then(async (data) => {
       if (data) {
         setProfile(data);
         setDisplayName(data.display_name);
+        getLiveSubmissionMetrics(data.id).then(setMetrics).catch(() => {});
         setBookmarksLoading(true);
         try {
           const remoteBookmarks = await fetchSavedBookmarksFromApi();
@@ -147,7 +169,19 @@ export default function ProfilePage() {
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400 block">Total Submissions</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{profile.submission_count}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              {metrics ? (
+                <>
+                  {metrics.totalSubmissions}{" "}
+                  {metrics.totalSubmissions === 1 ? "submission" : "submissions"}{" "}
+                  <span className="text-gray-500 dark:text-gray-400 font-normal">
+                    ({metrics.totalWorks} indexed {metrics.totalWorks === 1 ? "work" : "works"})
+                  </span>
+                </>
+              ) : (
+                profile.submission_count
+              )}
+            </span>
           </div>
           <div>
             <span className="text-gray-500 dark:text-gray-400 block">Member Since</span>
@@ -192,6 +226,48 @@ export default function ProfilePage() {
             {saving ? "Saving Changes..." : "Save Display Name"}
           </button>
         </form>
+      </div>
+
+      {/* Content & SafeSearch Preferences */}
+      <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl p-6 shadow-xs space-y-4 text-gray-900 dark:text-gray-100">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light dark:border-border-dark pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔞</span>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100">Content Preferences (18+)</h2>
+          </div>
+          <span
+            className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
+              nsfwConsent
+                ? "bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/60"
+                : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60"
+            }`}
+          >
+            {nsfwConsent ? "Adult Content Unlocked" : "SafeSearch Active"}
+          </span>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Configure how adult fanworks (rated Mature or Explicit) are presented across search filters and the reader interface.
+          </p>
+
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark cursor-pointer hover:border-brand-trunk transition">
+            <input
+              type="checkbox"
+              checked={nsfwConsent}
+              onChange={(e) => handleToggleNsfwConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-trunk focus:ring-brand-trunk"
+            />
+            <div className="space-y-1">
+              <span className="font-semibold text-gray-900 dark:text-gray-100 block">
+                Allow browsing and reading adult (18+ / NSFW) fanworks
+              </span>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                By enabling this option, you certify that you are at least 18 years of age (or the age of majority in your jurisdiction). When disabled, adult works are hidden behind advisory confirmation screens.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
 
       {/* SAVED READING BOOKMARKS SECTION */}

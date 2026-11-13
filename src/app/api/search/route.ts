@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const fandom = searchParams.get("fandom")?.trim() || "";
     const rating = searchParams.get("rating")?.trim() || "";
     const tag = searchParams.get("tag")?.trim() || "";
+    const contentFilter = searchParams.get("contentFilter")?.trim().toLowerCase() || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
     const offset = (page - 1) * limit;
@@ -40,6 +41,13 @@ export async function GET(request: NextRequest) {
     // Tag filter
     if (tag) {
       query = query.contains("tags", [tag]);
+    }
+
+    // Content Classification (SFW / NSFW) filter
+    if (contentFilter === "sfw") {
+      query = query.or('rating.in.("General Audiences","Teen And Up Audiences"),tags.cs.{"sfw"}');
+    } else if (contentFilter === "nsfw") {
+      query = query.or('rating.in.("Mature","Explicit"),tags.cs.{"nsfw"}');
     }
 
     // Full-Text / Keyword Search across title, author, fandom, and summary

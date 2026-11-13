@@ -15,6 +15,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [driveUrl, setDriveUrl] = useState("");
   const [confirmedViewOnly, setConfirmedViewOnly] = useState(false);
   const [isFolder, setIsFolder] = useState(true); // Default to folder grouping
+  const [isNsfw, setIsNsfw] = useState(false); // SFW by default
+  const [showInfoView, setShowInfoView] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false); // Collapsed by default
 
   const [title, setTitle] = useState("");
@@ -80,6 +82,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         body: JSON.stringify({
           driveUrl: canonicalUrl,
           isFolder,
+          isNsfw,
           title: title.trim() || undefined,
           authorName: resolvedAuthor,
           fandom: resolvedFandom,
@@ -138,7 +141,24 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold tracking-wide">
+              {showInfoView ? "Folder Limits & Structure Guide" : "Submit View-Only Fanwork (Contributor)"}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowInfoView(!showInfoView)}
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-1 ${
+                showInfoView
+                  ? "bg-white text-brand-trunk hover:bg-white/90 shadow-2xs"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+              title="View folder ingestion limits and sample pathing"
+            >
+              <span>ℹ️</span>
+              <span>{showInfoView ? "Back to Form" : "Folder Limits & Guide"}</span>
+            </button>
+          </div>
           <button
             onClick={onClose}
             className="text-white/80 hover:text-white text-lg font-bold transition"
@@ -148,6 +168,87 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           </button>
         </div>
 
+        {showInfoView ? (
+          <div className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Google Drive Folder Ingestion Architecture
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  How OurArchive recursively crawls, indexes, and unpacks collection folders.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInfoView(false)}
+                className="px-3 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white rounded font-semibold text-xs transition"
+              >
+                &larr; Back to Form
+              </button>
+            </div>
+
+            {/* Visual Hierarchy */}
+            <div className="space-y-2">
+              <span className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider text-[11px]">
+                Visual Folder Pathing Example
+              </span>
+              <pre className="bg-canvas-light dark:bg-canvas-dark border border-border-light dark:border-border-dark rounded-lg p-3 text-[11px] font-mono text-gray-800 dark:text-gray-200 overflow-x-auto leading-relaxed">
+{`// Contributed Root Link (e.g. "My Fanwork Archive")   --> [Depth 0: Main Folder Link]
+.// Folder 1 (e.g. "Series A")                          --> [Depth 1: Subfolder]
+..// Folder inside Folder 1 (e.g. "Season 1")           --> [Depth 2: Subfolder]
+...// Folder inside Season 1 (e.g. "Act I")             --> [Depth 3: Subfolder]
+....// Deepest Folder (e.g. "Bonus Chapters")           --> [Depth 4: MAX NESTING LIMIT]
+.....// Anything deeper than 4 folders                  --> [SKIPPED - Exceeds depth limit]`}
+              </pre>
+            </div>
+
+            {/* Ingestion Limits Matrix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Nesting Depth</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Up to <strong>4 levels deep</strong> from the main contributed link. Folders nested deeper are skipped.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Subfolders Traversed</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  At most <strong>30 total subfolders</strong> are visited per collection submission to prevent rate limits.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Files Unpacked</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Up to <strong>100 individual files</strong> per contribution. Each file is cataloged as a searchable work.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Supported File Formats</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <code className="text-emerald-700 dark:text-emerald-400 font-mono">.pdf, .docx, .doc, .txt, .epub, .html</code>. Executables and <code className="font-mono">.zip</code> are ignored.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-xs text-amber-900 dark:text-amber-300">
+              <strong>View-Only Rule Reminder:</strong> Ensure your Google Drive folder and its files are set to <em>&quot;Anyone with the link can view&quot;</em>. Public edit permissions will cause the link to be rejected.
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowInfoView(false)}
+                className="w-full sm:w-auto px-5 py-2 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded-lg transition"
+              >
+                &larr; Return to Submission Form
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded text-xs leading-relaxed">
@@ -163,6 +264,49 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-[11px] text-amber-900 dark:text-amber-300 leading-normal">
             <strong>Zero-Download & Safety Rule:</strong> Only Google Drive/Docs links set to <em>&quot;Anyone with the link can view&quot;</em> are accepted. Editable links will be rejected to protect the author&apos;s content from vandalism.
+          </div>
+
+          {/* SFW / NSFW CLASSIFICATION SELECTOR */}
+          <div className="p-3 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark space-y-1.5">
+            <span className="block font-bold text-gray-800 dark:text-gray-200 text-xs">
+              Content Classification <span className="text-red-600">*</span>
+            </span>
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="content_classification"
+                  checked={!isNsfw}
+                  onChange={() => {
+                    setIsNsfw(false);
+                    setRating("General Audiences");
+                  }}
+                  className="text-brand-trunk focus:ring-brand-trunk"
+                />
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  🟢 SFW (Safe for Work / General Audiences)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="content_classification"
+                  checked={isNsfw}
+                  onChange={() => {
+                    setIsNsfw(true);
+                    setRating("Mature");
+                  }}
+                  className="text-red-600 focus:ring-red-600"
+                />
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  🔴 NSFW (18+ / Mature / Explicit)
+                </span>
+              </label>
+            </div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">
+              Helps readers filter works safely in search. You can also specify an exact rating in the optional details below.
+            </p>
           </div>
 
           {/* SEGMENTED LINK INPUT BOX (Prevents Abrupt Executions) */}
@@ -457,6 +601,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>,
     document.body
