@@ -8,6 +8,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.0.1] — 2026-11-13
+
+Maintenance, safety, and community transparency patch refining card UI layouts, introducing SFW/NSFW classification and search filtering, clarifying AI usage policies, and providing dynamic profile submission tracking.
+
+### Added
+- **SFW / NSFW Classification**: Prominent classification toggle (`🟢 SFW` vs `🔴 NSFW (18+)`) in `UploadModal` with automatic rating alignment, system tagging (`sfw` / `nsfw`), and recursive inheritance for collection folder children (`[OA-M2-F6]`).
+- **SFW / NSFW Search Filters**: Interactive filter pills (`[All Works]`, `[🟢 SFW Only]`, `[🔴 NSFW (18+)]`) in `SearchSection` with backend query integration in `/api/search` (`[OA-M2-F3]`).
+- **Folder Limits & Pathing Guide**: Interactive info guide view in `UploadModal` detailing system ingestion limits (4 nesting depth, 30 subfolders, 100 readable files) with visual hierarchy pathing (`[OA-M2-F6]`).
+- **AI Policy & Transparency Disclaimer**: Added Pillar 6 to `/disclaimers` detailing human-led development by `Oeubx`, Gemini 3.8 Flash assistance via Google Antigravity, zero runtime AI, zero story reading, and rule-based MIME safety checks (`[OA-M3-F4]`).
+- **Project Repository Link**: Added `NEXT_PUBLIC_PROJECT_REPO` and direct GitHub repository hyperlink in global footer "Reach Out & Connect" section (`[OA-M0-F0]`).
+
+### Changed
+- **Terminology Rebranding**: Systematically replaced "Emergency Service" with "TEMPORARY PROJECT" across Homepage hero pill, global notice banner, footer, and community disclaimers (`[OA-M3-F4]`).
+
+### Fixed
+- **Profile Submission Count Drift**: Replaced static database seed counter with `getLiveSubmissionMetrics()` to calculate authentic submissions and indexed works directly from `drive_links` (`[OA-M1-F2]`).
+
+### Refactored
+- **Card Header Projection**: Removed legacy `SYSTEM HEADER` bar UI from `DisplayCard` and `SkeletonCard`, relocating format indicator pills adjacent to rating badges in the title row (`[OA-M2-F5]`).
+
+---
+
 ## [1.0.0] — 2026-11-12
 
 Initial production release of **OurArchive**, promoting the complete progressive delivery baseline from `staging` to `production` across Modules **M0–M3** and staging stabilization fixes.

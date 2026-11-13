@@ -17,23 +17,24 @@ For a detailed, Keep-a-Changelog list of added features and fixes per release, s
 
 | Version | Release Date | Status | Delivery Path | Release Record |
 | :--- | :--- | :--- | :--- | :--- |
-| **`v1.0.0`** | 2026-11-12 | Production Release | `development` → `staging` → `production` | [v1.0.0.md](v1.0.0.md) |
+| **`v1.0.1`** | 2026-11-13 | Active Release | `fix/v1-fixes` → `development` → `staging` → `production` | [v1.0.1.md](v1.0.1.md) |
+| `v1.0.0` | 2026-11-12 | Superseded | `development` → `staging` → `production` | [v1.0.0.md](v1.0.0.md) |
 | `v0.1.0` | Pre-Production | Superseded | Initial scaffold & `docs/*` | See [CHANGELOG.md](../../CHANGELOG.md) |
 
 ---
 
-## 3. Active Version Alignment Matrix (`v1.0.0`)
+## 3. Active Version Alignment Matrix (`v1.0.1`)
 
 All runtime, package, UI, and documentation surfaces must remain synchronized on the active release version:
 
 | Surface | Location | Current Value | Source of Truth |
 | :--- | :--- | :--- | :--- |
-| **Package Manifest** | [`package.json`](../../package.json) | `1.0.0` | Release bump |
-| **Runtime Config** | [`src/lib/config.ts`](../../src/lib/config.ts) | `APP_VERSION = "1.0.0"` | Shared constant |
-| **Health Telemetry API** | [`src/app/api/health/route.ts`](../../src/app/api/health/route.ts) | `version: APP_VERSION` | `APP_VERSION` |
-| **Homepage Hero Badge** | [`src/app/page.tsx`](../../src/app/page.tsx) | `v1.0.0` | `APP_VERSION` |
-| **Global Footer Sub-Bar** | [`src/components/layout/Footer.tsx`](../../src/components/layout/Footer.tsx) | `v1.0.0` | `APP_VERSION` |
-| **Changelog** | [`CHANGELOG.md`](../../CHANGELOG.md) | `[1.0.0] — 2026-11-12` | Release notes |
+| **Package Manifest** | [`package.json`](../../package.json) | `1.0.1` | Release bump |
+| **Runtime Config** | [`src/lib/config.ts`](../../src/lib/config.ts) | `APP_VERSION = "1.0.1"` | Shared constant |
+| **Health Telemetry API** | [`src/app/api/health/route.ts`](../../src/app/api/health/route.ts) | `version: APP_VERSION` (`1.0.1`) | `APP_VERSION` |
+| **Homepage Hero Badge** | [`src/app/page.tsx`](../../src/app/page.tsx) | `v1.0.1` | `APP_VERSION` |
+| **Global Footer Sub-Bar** | [`src/components/layout/Footer.tsx`](../../src/components/layout/Footer.tsx) | `v1.0.1` | `APP_VERSION` |
+| **Changelog** | [`CHANGELOG.md`](../../CHANGELOG.md) | `[1.0.1] — 2026-11-13` | Release notes |
 
 ---
 
