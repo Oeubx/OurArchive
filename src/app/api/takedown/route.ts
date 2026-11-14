@@ -205,6 +205,21 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", targetLinkId);
 
+      // Cascade immediate hide to any child fanworks matching this collection URL
+      if (resolvedDriveUrl) {
+        const { data: childLinks } = await adminSupabase
+          .from("link_metadata")
+          .select("link_id")
+          .eq("canonical_source_url", resolvedDriveUrl);
+        if (childLinks && childLinks.length > 0) {
+          const childIds = childLinks.map((c) => c.link_id);
+          await adminSupabase
+            .from("drive_links")
+            .update({ is_hidden: true, updated_at: now })
+            .in("id", childIds);
+        }
+      }
+
       if (auditAdminId) {
         await adminSupabase.from("admin_actions").insert({
           link_id: targetLinkId,
