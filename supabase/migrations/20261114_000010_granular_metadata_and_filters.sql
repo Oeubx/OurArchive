@@ -30,8 +30,12 @@ ON public.link_metadata USING GIN (relationships);
 CREATE INDEX IF NOT EXISTS idx_link_metadata_is_complete 
 ON public.link_metadata (is_complete);
 
--- 3. Update vw_public_search_feed with Granular Metadata
-CREATE OR REPLACE VIEW public.vw_public_search_feed 
+-- 3. Drop existing views to allow reordering and adding new columns cleanly
+DROP VIEW IF EXISTS public.vw_public_search_feed CASCADE;
+DROP VIEW IF EXISTS public.vw_admin_triage_feed CASCADE;
+
+-- 4. Recreate vw_public_search_feed with Granular Metadata
+CREATE VIEW public.vw_public_search_feed 
 WITH (security_invoker = true) AS
 SELECT 
     dl.id AS work_id,
@@ -78,8 +82,8 @@ WHERE dl.verification_status = 'verified'
   AND dl.is_hidden = FALSE
   AND dl.is_removed = FALSE;
 
--- 4. Update vw_admin_triage_feed with Granular Metadata
-CREATE OR REPLACE VIEW public.vw_admin_triage_feed 
+-- 5. Recreate vw_admin_triage_feed with Granular Metadata
+CREATE VIEW public.vw_admin_triage_feed 
 WITH (security_invoker = true) AS
 SELECT 
     dl.id AS link_id,
