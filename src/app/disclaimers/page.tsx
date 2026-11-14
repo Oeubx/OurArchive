@@ -209,9 +209,27 @@ export default function DisclaimersPage() {
                   <strong>Rule-based safety filter:</strong> A simple system filter checks that the file is not a harmful computer program (like <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.exe</code>, <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.bat</code>, or installer scripts).
                 </li>
                 <li>
-                  <strong>Nobody and nothing reads the story text:</strong> The scanner never opens or reads the words inside your story. If it is a safe reading format (like a PDF or Google Doc), it is approved for the library.
+                  <strong>No AI reads the story body text:</strong> The verification scanner does not read, analyze, summarize, or train on story text.
                 </li>
               </ol>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
+                <span>📑</span>
+                <span>First-Page Catalog Metadata Scanning (Deterministic, Zero AI)</span>
+              </h3>
+              <ul className="list-disc pl-5 mt-1 space-y-1">
+                <li>
+                  <strong>Cover Page Only:</strong> When requested during link contribution or verification, the system ephemerally inspects only the first cover/title page of a fanwork to extract public catalog details (Title, Rating, Category, Fandom, Warnings, Characters, and Tags).
+                </li>
+                <li>
+                  <strong>Zero AI / Pure Deterministic Code:</strong> This scanning uses standard regular expressions and pattern matching—it does not use artificial intelligence, machine learning, or large language models.
+                </li>
+                <li>
+                  <strong>Story Chapters Are Never Read:</strong> The system never reads, analyzes, summarizes, or trains on story chapters or body text. All extracted tags are stored solely to help readers find works in library search.
+                </li>
+              </ul>
             </div>
           </div>
         </section>
