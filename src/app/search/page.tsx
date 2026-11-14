@@ -219,7 +219,7 @@ export default function SearchPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-1 gap-2">
           <span>
             {loading ? (
-              "Searching library in Supabase..."
+              "Searching library archive..."
             ) : (
               <>
                 Showing <strong>{works.length}</strong> of <strong>{pagination.total}</strong> verified works
