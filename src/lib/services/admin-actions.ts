@@ -299,6 +299,21 @@ export async function executeAdminAction({
         })
         .eq("id", linkId);
 
+      // Cascade hide to any child fanworks unpacked from this collection
+      if (link.drive_url) {
+        const { data: childLinks } = await adminSupabase
+          .from("link_metadata")
+          .select("link_id")
+          .eq("canonical_source_url", link.drive_url);
+        if (childLinks && childLinks.length > 0) {
+          const childIds = childLinks.map((c) => c.link_id);
+          await adminSupabase
+            .from("drive_links")
+            .update({ is_hidden: true, updated_at: now })
+            .in("id", childIds);
+        }
+      }
+
       await recordAuditLog("HIDE", reason || "Link visibility toggled off.");
 
       await adminSupabase
@@ -430,6 +445,18 @@ export async function executeAdminAction({
       ).map(mapAdminActionRowToAuditRecord);
 
       if (hardDelete) {
+        // Cascade hard delete to unpacked child works
+        if (link.drive_url) {
+          const { data: childLinks } = await adminSupabase
+            .from("link_metadata")
+            .select("link_id")
+            .eq("canonical_source_url", link.drive_url);
+          if (childLinks && childLinks.length > 0) {
+            const childIds = childLinks.map((c) => c.link_id);
+            await adminSupabase.from("drive_links").delete().in("id", childIds);
+          }
+        }
+
         // Hard delete link; ON DELETE SET NULL preserves admin_actions tombstones & takedown_requests
         const { error: deleteError } = await adminSupabase
           .from("drive_links")
@@ -452,6 +479,21 @@ export async function executeAdminAction({
           isRemoved: true,
           auditRecords,
         };
+      }
+
+      // Cascade soft-delete + hide to unpacked child works
+      if (link.drive_url) {
+        const { data: childLinks } = await adminSupabase
+          .from("link_metadata")
+          .select("link_id")
+          .eq("canonical_source_url", link.drive_url);
+        if (childLinks && childLinks.length > 0) {
+          const childIds = childLinks.map((c) => c.link_id);
+          await adminSupabase
+            .from("drive_links")
+            .update({ is_removed: true, is_hidden: true, updated_at: now })
+            .in("id", childIds);
+        }
       }
 
       // Soft-delete + Hide

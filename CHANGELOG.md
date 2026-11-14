@@ -8,7 +8,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.0.2] — 2026-11-14
+
+Fanwork metadata intelligence update introducing deterministic first-page catalog scanning, granular multi-facet search filtering, and enriched upload categorization across all contributor and admin intake surfaces.
+
+### Added
+- **Deterministic First-Page Metadata Parser**: Platform-agnostic, non-AI regex engine (`src/lib/services/metadata-parser.ts`) extracting title, author, rating, categories, archive warnings, characters, relationships, word count, status, and language from fanwork document page 1. Includes automatic SFW/NSFW classification and plain-text fallback (`[OA-M2-F2]`).
+- **Scan Metadata API Endpoint**: Ephemeral in-memory streaming endpoint at `/api/links/scan-metadata` for zero-storage, read-only page-1 metadata extraction (`[OA-M2-F2]`).
+- **Multi-Facet Dynamic Filter Drawer**: Full filter UI in `SearchSection` with Category, Rating, Archive Warning, Completion Status, Character search, and Word Count range controls (`[OA-M2-F3]`).
+- **Debounced Auto-Search**: 350ms debounced auto-search with `AbortController` cancellation to prevent database query congestion (`[OA-M2-F3]`).
+- **Granular Card Metadata Display**: `DisplayCard` updated to render category pills, warning badges, character tags, and completion status indicators (`[OA-M2-F3]`).
+- **Manual Metadata Scan in Upload Modals**: `Scan Metadata` button and granular categorization fields (category, warnings, characters, relationships, completion, language) added to contributor `UploadModal`, `AssistedIntakeModal`, and admin `AdminDirectUploadModal` with admin submit lock until scan is confirmed (`[OA-M2-F6]`).
+- **Granular Fanwork Schema (`OA-M1-F4`)**: New columns `categories`, `characters`, `warnings`, `relationships`, `is_complete`, `language` on `public.link_metadata`; 4 GIN array indexes; updated `vw_public_search_feed` and `vw_admin_triage_feed`; collection folder purge cascades for takedown integrity.
+- **Deterministic Catalog Scanning Disclosure**: Added scanning transparency subsection to `/disclaimers` and updated `docs/backlogs/module-2-drive-upload-search/drive_link_processing_spec.md` (`[OA-M3-F4]`).
+- **Metadata Parser Unit Tests**: Automated test suite in `src/lib/services/__tests__/metadata-parser.test.ts` verifying catalog extraction and SFW/NSFW classification (`[OA-M2-F2]`).
+
+### Fixed
+- **Database View Recreation Error**: Added `DROP VIEW IF EXISTS CASCADE` for both search feed views in migration `20261114_000010` to resolve PostgreSQL error `42P16` during column additions (`[OA-M1-F4]`).
+
+---
+
 ## [1.0.1] — 2026-11-13
+
 
 Maintenance, safety, and community transparency patch refining card UI layouts, introducing SFW/NSFW classification and search filtering, clarifying AI usage policies, and providing dynamic profile submission tracking.
 

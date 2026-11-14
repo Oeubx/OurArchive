@@ -35,6 +35,16 @@ export function AdminDirectUploadModal({
   const [tagsInput, setTagsInput] = useState("");
   const [driveOwnerEmail, setDriveOwnerEmail] = useState("");
 
+  // Granular fanwork categorization state
+  const [categories, setCategories] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [characters, setCharacters] = useState("");
+  const [chapters, setChapters] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  const [isNsfw, setIsNsfw] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +56,69 @@ export function AdminDirectUploadModal({
   }, []);
 
   if (!isOpen || !mounted) return null;
+
+  async function handleScanMetadata() {
+    if (!segments.isValid) {
+      setError("Please paste a valid Google Drive link first before scanning.");
+      return;
+    }
+
+    setScanning(true);
+    setError(null);
+    setScanNotice(null);
+
+    try {
+      const res = await fetch("/api/links/scan-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driveUrl: segments.canonicalUrl }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to scan metadata from link.");
+      }
+
+      if (data.metadata) {
+        const meta = data.metadata;
+        if (meta.title) setTitle(meta.title);
+        if (meta.fandom) setFandom(meta.fandom);
+        if (meta.pairing) setPairing(meta.pairing);
+        if (meta.rating) {
+          const validRatings = [
+            "General Audiences",
+            "Teen And Up Audiences",
+            "Mature",
+            "Explicit",
+            "Not Rated",
+          ];
+          if (validRatings.includes(meta.rating)) {
+            setRating(meta.rating as typeof rating);
+          }
+        }
+        if (meta.wordCount) setWordCount(meta.wordCount);
+        if (meta.summary) setSummary(meta.summary);
+        if (meta.additionalTags?.length) setTagsInput(meta.additionalTags.join(", "));
+        if (meta.categories?.length) setCategories(meta.categories);
+        if (meta.warnings?.length) setWarnings(meta.warnings);
+        if (meta.characters?.length) setCharacters(meta.characters.join(", "));
+        if (meta.chapters) setChapters(meta.chapters);
+        if (typeof meta.isComplete === "boolean") setIsComplete(meta.isComplete);
+        if (typeof meta.isNsfw === "boolean") setIsNsfw(meta.isNsfw);
+
+        setDetailsExpanded(true);
+        setScanNotice(
+          data.isStandardCoverFormatted
+            ? "✨ Metadata scanned and fields auto-filled from cover page!"
+            : "ℹ️ Plain document detected. Enter details manually if desired."
+        );
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error scanning metadata.");
+    } finally {
+      setScanning(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -90,6 +163,12 @@ export function AdminDirectUploadModal({
           wordCount: parsedWordCount,
           summary: summary.trim(),
           tags,
+          categories,
+          warnings,
+          characters: characters ? characters.split(",").map((c) => c.trim()).filter(Boolean) : [],
+          relationships: pairing ? [pairing.trim()] : [],
+          isComplete,
+          isNsfw,
           driveOwnerEmail: driveOwnerEmail.trim() || undefined,
           isPriorVerified,
           uploadMode: "assisted_admin",
@@ -241,7 +320,13 @@ export function AdminDirectUploadModal({
               <input
                 type="checkbox"
                 checked={isPriorVerified}
-                onChange={(e) => setIsPriorVerified(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsPriorVerified(checked);
+                  if (checked && segments.isValid) {
+                    handleScanMetadata();
+                  }
+                }}
                 className="mt-0.5 rounded border-amber-500 text-brand-trunk focus:ring-brand-trunk"
               />
               <div>
@@ -251,7 +336,7 @@ export function AdminDirectUploadModal({
                 <span className="text-[11px] text-gray-600 dark:text-gray-400 block mt-0.5">
                   {isPriorVerified ? (
                     <strong className="text-emerald-600 dark:text-emerald-400">
-                      ✓ Checked: Bypasses the review queue and immediately publishes to Archive as Approved (&ldquo;VERIFIED BY ADMIN&rdquo;).
+                      ✓ Checked: Bypasses the review queue and immediately publishes to Archive as Approved (&ldquo;VERIFIED BY ADMIN&rdquo;). Triggers first-page metadata scan.
                     </strong>
                   ) : (
                     <span className="text-amber-700 dark:text-amber-400">
@@ -259,6 +344,12 @@ export function AdminDirectUploadModal({
                     </span>
                   )}
                 </span>
+                {scanning && (
+                  <div className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-1.5 animate-pulse">
+                    <span>⏳</span>
+                    <span>Scanning first-page cover metadata... Submit button is locked until finished.</span>
+                  </div>
+                )}
               </div>
             </label>
           </div>
@@ -283,6 +374,43 @@ export function AdminDirectUploadModal({
 
             {detailsExpanded && (
               <div className="p-4 space-y-3.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark animate-in fade-in duration-150">
+                {/* Auto-Scan Action Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-brand-trunk/5 dark:bg-brand-trunk/15 border border-brand-trunk/20">
+                  <div className="text-xs">
+                    <span className="font-bold text-brand-trunk dark:text-brand-light flex items-center gap-1.5">
+                      <span>🪄</span>
+                      <span>Fanwork First-Page Scanner</span>
+                    </span>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      Extract title, rating, categories, warnings, characters, and word count directly from the cover.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleScanMetadata}
+                    disabled={scanning || !segments.isValid}
+                    className="px-3.5 py-1.5 bg-brand-trunk hover:bg-brand-bark disabled:opacity-50 text-white rounded text-xs font-semibold shrink-0 transition flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    {scanning ? (
+                      <>
+                        <span className="animate-spin text-xs">⏳</span>
+                        <span>Scanning Cover...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🪄</span>
+                        <span>Scan Metadata</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {scanNotice && (
+                  <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-blue-800 dark:text-blue-300 text-xs">
+                    {scanNotice}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
@@ -381,6 +509,116 @@ export function AdminDirectUploadModal({
                   />
                 </div>
 
+                {/* Categories */}
+                <div>
+                  <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                    Category <span className="text-gray-400 font-normal">(Select all that apply)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["F/F", "M/M", "F/M", "Gen", "Multi", "Other"].map((cat) => {
+                      const selected = categories.includes(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setCategories(categories.filter((c) => c !== cat));
+                            } else {
+                              setCategories([...categories, cat]);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded text-xs font-semibold border transition ${
+                            selected
+                              ? "bg-brand-trunk text-white border-brand-trunk"
+                              : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:border-gray-400"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Archive Warnings */}
+                <div>
+                  <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                    Archive Warnings
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "No Archive Warnings Apply",
+                      "Creator Chose Not To Use Archive Warnings",
+                      "Graphic Depictions Of Violence",
+                      "Major Character Death",
+                      "Rape/Non-Con",
+                      "Underage",
+                    ].map((warn) => {
+                      const selected = warnings.includes(warn);
+                      return (
+                        <button
+                          key={warn}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setWarnings(warnings.filter((w) => w !== warn));
+                            } else {
+                              setWarnings([...warnings, warn]);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition ${
+                            selected
+                              ? "bg-amber-700 text-white border-amber-700"
+                              : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:border-gray-400"
+                          }`}
+                        >
+                          {warn}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Characters & Chapters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Characters <span className="text-gray-400 font-normal">(Comma-separated)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={characters}
+                      onChange={(e) => setCharacters(e.target.value)}
+                      placeholder="e.g. Bae Jinsol, Seol Yoona"
+                      className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                      Chapters &amp; Completion Status
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={chapters}
+                        onChange={(e) => setChapters(e.target.value)}
+                        placeholder="e.g. 3/3"
+                        className="w-24 px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 text-xs font-mono"
+                      />
+                      <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isComplete}
+                          onChange={(e) => setIsComplete(e.target.checked)}
+                          className="rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                        />
+                        <span>Complete Work</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block font-semibold text-gray-800 dark:text-gray-200 mb-1">
                     Additional Tags (Comma-separated)
@@ -408,20 +646,22 @@ export function AdminDirectUploadModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || scanning}
               className={`px-5 py-2 rounded-lg font-bold text-white transition shadow-xs flex items-center gap-2 ${
                 isPriorVerified
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-brand-trunk hover:bg-brand-bark"
               } disabled:opacity-40`}
             >
-              {loading && (
+              {(loading || scanning) && (
                 <svg className="animate-spin -ml-0.5 mr-1 h-3 w-3 inline text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
               )}
-              {loading ? (
+              {scanning ? (
+                "Scanning Metadata (Locked)..."
+              ) : loading ? (
                 "Cataloging Fanwork..."
               ) : isPriorVerified ? (
                 <>
