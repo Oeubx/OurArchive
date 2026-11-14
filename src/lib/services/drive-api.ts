@@ -202,7 +202,7 @@ export async function fetchDriveFolderChildren(
     ];
     const visitedFolders = new Set<string>([rootFolderId]);
     const validChildren: DriveChildWork[] = [];
-    const supportedExtensions = /\.(pdf|docx?|txt|epub|rtf|html?)$/i;
+    const supportedExtensions = /\.(pdf|docx?|txt|rtf|html?)$/i;
 
     while (queue.length > 0 && validChildren.length < maxTotalFiles) {
       const current = queue.shift()!;
@@ -228,6 +228,26 @@ export async function fetchDriveFolderChildren(
       for (const f of rawFiles) {
         if (!f.id || !f.name) continue;
         const mime = f.mimeType || "";
+        const lowerName = f.name.toLowerCase();
+
+        // Directly exclude/hide zipped folders, archive files (.zip, .rar, .7z, .tar), and .epub
+        const isArchiveOrUnsupported =
+          mime.includes("zip") ||
+          mime.includes("rar") ||
+          mime.includes("tar") ||
+          mime.includes("7z") ||
+          mime.includes("epub") ||
+          mime.includes("compressed") ||
+          lowerName.endsWith(".zip") ||
+          lowerName.endsWith(".rar") ||
+          lowerName.endsWith(".epub") ||
+          lowerName.endsWith(".tar") ||
+          lowerName.endsWith(".7z") ||
+          lowerName.endsWith(".gz");
+
+        if (isArchiveOrUnsupported) {
+          continue;
+        }
 
         // If it's a subfolder, queue it for recursive discovery
         if (mime === "application/vnd.google-apps.folder" || mime.toLowerCase().includes("folder")) {

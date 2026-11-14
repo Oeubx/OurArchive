@@ -295,6 +295,8 @@ export async function executeAdminAction({
         .from("drive_links")
         .update({
           is_hidden: true,
+          takedown_flagged_at: null,
+          takedown_deadline: null,
           updated_at: now,
         })
         .eq("id", linkId);
@@ -340,6 +342,8 @@ export async function executeAdminAction({
         .from("drive_links")
         .update({
           is_hidden: false,
+          takedown_flagged_at: null,
+          takedown_deadline: null,
           updated_at: now,
         })
         .eq("id", linkId);

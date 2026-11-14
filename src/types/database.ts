@@ -81,6 +81,8 @@ export type DriveLinkRecord = {
   verification_status: VerificationStatus;
   is_hidden: boolean;
   is_removed: boolean;
+  takedown_flagged_at?: string | null;
+  takedown_deadline?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -158,6 +160,8 @@ export type PublicSearchFeedRecord = {
   work_id: string;
   upload_mode: UploadMode;
   uploaded_at: string;
+  takedown_flagged_at?: string | null;
+  takedown_deadline?: string | null;
   title: string;
   author_name: string;
   fandom: string;
