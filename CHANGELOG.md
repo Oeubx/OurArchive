@@ -22,8 +22,19 @@ Fanwork metadata intelligence update introducing deterministic first-page catalo
 - **Granular Fanwork Schema (`OA-M1-F4`)**: New columns `categories`, `characters`, `warnings`, `relationships`, `is_complete`, `language` on `public.link_metadata`; 4 GIN array indexes; updated `vw_public_search_feed` and `vw_admin_triage_feed`; collection folder purge cascades for takedown integrity.
 - **Deterministic Catalog Scanning Disclosure**: Added scanning transparency subsection to `/disclaimers` and updated `docs/backlogs/module-2-drive-upload-search/drive_link_processing_spec.md` (`[OA-M3-F4]`).
 - **Metadata Parser Unit Tests**: Automated test suite in `src/lib/services/__tests__/metadata-parser.test.ts` verifying catalog extraction and SFW/NSFW classification (`[OA-M2-F2]`).
+- **3-Hour Takedown Review Grace Period & Header Banner**: Implemented a 3-hour review window (`takedown_flagged_at` and `takedown_deadline`) on `drive_links` with an active warning notice in the reader header, automatic timeout suppression if unreviewed within 3 hours, and timer cancellation upon administrator dismissal (`[OA-M3-F5]`).
+- **Synchronized Reader Pagination & Direct Resumption**: Added scroll observation across `[data-pdf-page]` elements to dynamically synchronize `Pg [X]` counter during reading, with direct page jumping and bookmark resumption scrolling directly to the saved page element (`[OA-M2-F4]`).
+- **Formatted Reader Typography Spacing**: Added `.reader-content p` typography spacing rules (`margin: 1.15em !important; line-height: 1.85 !important;`) in `globals.css` ensuring comfortable vertical separation across dialogue and paragraphs (`[OA-M2-F4]`).
+- **Archive & EPUB Ingestion Exclusion**: Excluded `.zip`, `.rar`, `.7z`, `.tar`, `.gz`, `.epub`, and compressed folder formats from folder scanning traversal, removing `application/epub+zip` from threat scanner allowlist (`[OA-M3-F1]`).
+
+### Changed
+- **UI Terminology & Jargon Cleanup**: Replaced technical database jargon ("Supabase") across user profile, search results, and reader tooltips with user-friendly terms ("Cloud Synced", "reading bookmarks", "library archive") (`[OA-M1-F2]`, `[OA-M2-F5]`).
+- **Portal Hero Copy**: Removed external drive mirror redirection clause from portal homepage hero description (`[OA-M2-F5]`).
 
 ### Fixed
+- **Static Reader Page Counter on Scroll**: Fixed an issue where the reader toolbar remained static at `Pg 1` when scrolling through multi-page native extracted HTML works (`[OA-M2-F4]`).
+- **Bookmark Resume Scroll Bypass**: Fixed an issue where resuming a reading bookmark skipped scrolling if `isPdf: true` despite having extractable HTML text (`[OA-M2-F4]`).
+- **Takedown Modal Scrollbar & Field Resizing**: Fixed unstyled bright white browser scrollbar in dark modal views and constrained Proof of Ownership textarea to a non-expandable 3-line scrollable box (`[OA-M3-F5]`).
 - **Database View Recreation Error**: Added `DROP VIEW IF EXISTS CASCADE` for both search feed views in migration `20261114_000010` to resolve PostgreSQL error `42P16` during column additions (`[OA-M1-F4]`).
 
 ---
