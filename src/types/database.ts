@@ -97,6 +97,14 @@ export type LinkMetadataRecord = {
   tags: string[];
   canonical_source_url: string | null;
 
+  // Granular fanwork categorization fields
+  categories?: string[];
+  characters?: string[];
+  warnings?: string[];
+  relationships?: string[];
+  is_complete?: boolean;
+  language?: string;
+
   // Google Drive file properties
   file_name: string;
   mime_type: string;
@@ -158,6 +166,12 @@ export type PublicSearchFeedRecord = {
   word_count: number;
   summary: string | null;
   tags: string[];
+  categories?: string[];
+  characters?: string[];
+  warnings?: string[];
+  relationships?: string[];
+  is_complete?: boolean;
+  language?: string;
   mime_type: string;
   display_drive_owner: string | null;
   verification_badge: VerificationBadge;
