@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     const cleanReason =
       typeof reason === "string" && reason.trim() ? reason.trim() : null;
 
-    // 3. Persist the takedown request in Supabase (matched OR unmatched)
+    // 3. Persist the takedown request (pending review within 3-hour window)
     const { error: requestInsertError } = await adminSupabase
       .from("takedown_requests")
       .insert({
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         ownership_proof: proofStr,
         removal_preference: isPermanent ? "permanent" : "hide",
         reason: cleanReason,
-        status: targetLinkId ? "quarantined" : "pending",
+        status: "pending",
       });
 
     if (requestInsertError) {
@@ -195,17 +195,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Execute Immediate Suppression (Zero-Delay Hide; keep is_removed=false so Admin can verify & Purge w/ CSV export)
+    // 4. Set 3-Hour Review Window (flagged for review; auto-suppressed after 3 hours if no action taken)
     if (targetLinkId) {
+      const deadline = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
       await adminSupabase
         .from("drive_links")
         .update({
-          is_hidden: true,
+          takedown_flagged_at: now,
+          takedown_deadline: deadline,
+          is_hidden: false,
           updated_at: now,
         })
         .eq("id", targetLinkId);
 
-      // Cascade immediate hide to any child fanworks matching this collection URL
+      // Cascade takedown review flag to any child fanworks matching this collection URL
       if (resolvedDriveUrl) {
         const { data: childLinks } = await adminSupabase
           .from("link_metadata")
@@ -215,7 +218,7 @@ export async function POST(request: NextRequest) {
           const childIds = childLinks.map((c) => c.link_id);
           await adminSupabase
             .from("drive_links")
-            .update({ is_hidden: true, updated_at: now })
+            .update({ takedown_flagged_at: now, takedown_deadline: deadline, is_hidden: false, updated_at: now })
             .in("id", childIds);
         }
       }
@@ -225,7 +228,7 @@ export async function POST(request: NextRequest) {
           link_id: targetLinkId,
           admin_id: auditAdminId,
           action_type: "HIDE",
-          reason: `[IMMEDIATE_TAKEDOWN_REQUEST:${isPermanent ? "PURGE_REQUESTED" : "HIDE_REQUESTED"}] Role: ${normalizedRole} | Contact: ${
+          reason: `[TAKEDOWN_REQUEST_FLAGGED:3HR_REVIEW_WINDOW] Auto-hide deadline: ${deadline} | Role: ${normalizedRole} | Contact: ${
             cleanEmail || "anonymous"
           } | Proof: ${proofStr}${cleanReason ? ` | Notes: ${cleanReason}` : ""}`,
           work_title_snapshot: matchedMeta?.title || workTitleSnapshot || "Targeted Work",
@@ -242,8 +245,8 @@ export async function POST(request: NextRequest) {
         success: true,
         matched: Boolean(targetLinkId),
         message: targetLinkId
-          ? "This fanwork has been hidden from public view right away and logged in the Takedown Queue for final admin review and permanent removal."
-          : "Your takedown request and ownership details have been logged in the Takedown Queue for admin review within 24 hours.",
+          ? "This fanwork has been flagged for administrative review and will be automatically hidden within 3 hours if no action is taken."
+          : "Your takedown request and ownership details have been submitted to our review queue for administrator review.",
       },
       { status: 200 }
     );

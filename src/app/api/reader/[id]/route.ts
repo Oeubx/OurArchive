@@ -226,6 +226,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         verification_status,
         is_hidden,
         is_removed,
+        takedown_flagged_at,
+        takedown_deadline,
         link_metadata (
           title,
           author_name,
@@ -250,12 +252,54 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Check if 3-hour takedown grace period has expired without admin action
+    if (link.takedown_deadline) {
+      const deadlineMs = new Date(link.takedown_deadline).getTime();
+      const nowMs = Date.now();
+      if (nowMs >= deadlineMs) {
+        const nowIso = new Date().toISOString();
+        await supabase
+          .from("drive_links")
+          .update({
+            is_hidden: true,
+            updated_at: nowIso,
+          })
+          .eq("id", workId);
+
+        await supabase
+          .from("takedown_requests")
+          .update({
+            status: "quarantined",
+            updated_at: nowIso,
+          })
+          .eq("link_id", workId)
+          .eq("status", "pending");
+
+        return NextResponse.json(
+          { error: "This fanwork has been automatically hidden following a takedown review window expiration." },
+          { status: 403 }
+        );
+      }
+    }
+
     if (link.is_hidden) {
       return NextResponse.json(
         { error: "This work is hidden from public viewing." },
         { status: 403 }
       );
     }
+
+    const takedownNotice = link.takedown_deadline
+      ? {
+          isFlagged: true,
+          flaggedAt: link.takedown_flagged_at || null,
+          deadline: link.takedown_deadline,
+          minutesRemaining: Math.max(
+            1,
+            Math.round((new Date(link.takedown_deadline).getTime() - Date.now()) / (1000 * 60))
+          ),
+        }
+      : null;
 
     const metadata = Array.isArray(link.link_metadata)
       ? link.link_metadata[0]
@@ -356,6 +400,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           "Shared Google Drive folder collection containing multiple fanworks. Select any work below to read.",
         tags: metadata?.tags || [],
         collectionWorks,
+        takedownNotice,
       });
     }
 
@@ -497,6 +542,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 drivePreviewUrl,
                 contentHtml: formattedSanitizedHtml || plainSanitizedHtml,
                 plainContentHtml: plainSanitizedHtml || formattedSanitizedHtml,
+                takedownNotice,
               });
             }
           }
@@ -522,6 +568,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         drivePreviewUrl,
         contentHtml: null,
         plainContentHtml: null,
+        takedownNotice,
       });
     }
 
@@ -604,6 +651,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       drivePreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
       contentHtml: sanitizedHtml,
       plainContentHtml: null,
+      takedownNotice,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
