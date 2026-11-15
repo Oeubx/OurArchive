@@ -17,33 +17,43 @@ WHERE takedown_deadline IS NOT NULL;
 
 -- -----------------------------------------------------------------------------
 -- Update Public Search Projection View
+-- Drop with CASCADE to prevent PostgreSQL 42P16 column positional rename error
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.vw_public_search_feed 
+DROP VIEW IF EXISTS public.vw_public_search_feed CASCADE;
+
+CREATE VIEW public.vw_public_search_feed 
 WITH (security_invoker = true) AS
 SELECT 
     dl.id AS work_id,
-    dl.drive_url,
-    dl.google_file_id,
-    dl.uploader_user_id,
+    dl.upload_mode,
     dl.created_at AS uploaded_at,
     dl.takedown_flagged_at,
     dl.takedown_deadline,
     
+    -- Displayed file fields
     lm.title,
     lm.author_name,
     lm.fandom,
     lm.pairing,
     lm.rating,
-    lm.tags,
-    lm.summary,
-    lm.canonical_source_url,
     lm.word_count,
+    lm.summary,
+    lm.tags,
     lm.mime_type,
-    lm.file_size_bytes,
     
+    -- Granular fanwork categorization fields
+    COALESCE(lm.categories, '{}'::TEXT[]) AS categories,
+    COALESCE(lm.characters, '{}'::TEXT[]) AS characters,
+    COALESCE(lm.warnings, '{}'::TEXT[]) AS warnings,
+    COALESCE(lm.relationships, '{}'::TEXT[]) AS relationships,
+    COALESCE(lm.is_complete, FALSE) AS is_complete,
+    COALESCE(lm.language, 'English') AS language,
+    
+    -- File details & owner masking
     CASE 
-        WHEN dl.upload_mode = 'assisted_admin' THEN 'ARCHIVE_CURATOR'
-        ELSE COALESCE(up.display_name, 'COMMUNITY_BACKUP')
+        WHEN lm.is_owner_masked THEN 
+            regexp_replace(lm.drive_owner_email, '(?<=^.{2}).*?(?=@)', '***')
+        ELSE lm.drive_owner_name
     END AS display_drive_owner,
     
     COALESCE(lv.verification_badge, 'UNVERIFIED') AS verification_badge,
@@ -55,9 +65,10 @@ SELECT
 
 FROM public.drive_links dl
 JOIN public.link_metadata lm ON dl.id = lm.link_id
-LEFT JOIN public.user_profiles up ON dl.uploader_user_id = up.id
 LEFT JOIN public.link_verifications lv ON dl.id = lv.link_id
 WHERE dl.verification_status = 'verified'
   AND dl.is_hidden = FALSE
   AND dl.is_removed = FALSE
   AND (dl.takedown_deadline IS NULL OR dl.takedown_deadline > now());
+
+GRANT SELECT ON public.vw_public_search_feed TO anon, authenticated, service_role;
