@@ -47,6 +47,12 @@ export async function POST(request: NextRequest) {
       wordCount,
       summary,
       tags,
+      categories,
+      warnings,
+      characters,
+      relationships,
+      isComplete,
+      language,
       canonicalSourceUrl,
       isOwnerMasked,
       turnstileToken,
@@ -191,6 +197,21 @@ export async function POST(request: NextRequest) {
 
     const effectiveDisplayName = profile?.display_name || (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "Contributor";
 
+    const sanitizedCategories = Array.isArray(categories)
+      ? categories.map((c) => String(c).trim()).filter(Boolean)
+      : [];
+    const sanitizedCharacters = Array.isArray(characters)
+      ? characters.map((c) => String(c).trim()).filter(Boolean)
+      : [];
+    const sanitizedWarnings = Array.isArray(warnings)
+      ? warnings.map((w) => String(w).trim()).filter(Boolean)
+      : [];
+    const sanitizedRelationships = Array.isArray(relationships)
+      ? relationships.map((r) => String(r).trim()).filter(Boolean)
+      : pairing
+      ? [pairing.trim()]
+      : [];
+
     const { error: metadataError } = await adminSupabase.from("link_metadata").insert({
       link_id: newLink.id,
       title: (title || metadata.name).trim(),
@@ -201,6 +222,12 @@ export async function POST(request: NextRequest) {
       word_count: typeof wordCount === "number" && wordCount >= 0 ? wordCount : 0,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
+      categories: sanitizedCategories,
+      characters: sanitizedCharacters,
+      warnings: sanitizedWarnings,
+      relationships: sanitizedRelationships,
+      is_complete: Boolean(isComplete),
+      language: language ? String(language).trim() : "English",
       canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
 
       file_name: metadata.name,
@@ -276,6 +303,12 @@ export async function POST(request: NextRequest) {
                 ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
                 : `Part of collection: ${detectedCollectionName || "Curated Archive"}`,
               tags: Array.from(new Set([...sanitizedTags, collectionTag])),
+              categories: sanitizedCategories,
+              characters: sanitizedCharacters,
+              warnings: sanitizedWarnings,
+              relationships: sanitizedRelationships,
+              is_complete: Boolean(isComplete),
+              language: language ? String(language).trim() : "English",
               canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : urlValidation.canonicalUrl,
               file_name: child.name,
               mime_type: child.mimeType,

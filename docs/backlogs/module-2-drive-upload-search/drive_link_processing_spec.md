@@ -53,3 +53,17 @@ To serve the distraction-free reader without downloading files to disk:
 2. For uploaded PDFs (`mimeType: application/pdf`):
    - Streams directly into an isolated PDF canvas viewer.
 3. DOMPurify cleans the HTML stream, stripping script tags, tracking images, and iframes before delivering the payload to the frontend.
+
+---
+
+## 4. First-Page Fanwork Metadata Scanning (Deterministic, Zero AI)
+
+To support rich cataloging and granular search filtering, the system supports scanning page 1 of uploaded works:
+1. **In-Memory Ephemeral Stream**:
+   - The server streams the first page buffer directly via `unpdf` without writing file data to local storage.
+2. **Deterministic Tokenization (`metadata-parser.ts`)**:
+   - Parses standard fanwork cover headers (`Rating:`, `Archive Warning(s):`, `Categor(y|ies):`, `Fandom(s):`, `Relationship(s):`, `Characters:`, `Additional Tags:`, `Language:`, `Stats:`).
+   - Computes deterministic SFW/NSFW classification (`Rating: Explicit|Mature` or explicit trope tags -> `nsfw`).
+   - Flags completion status (`Chapters: X/X` -> `is_complete = true`).
+3. **Graceful Fallback**:
+   - If a plain document lacks standard cover headers, returns `isStandardCoverFormatted: false` and preserves manual form inputs.

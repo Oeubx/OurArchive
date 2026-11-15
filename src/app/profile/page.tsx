@@ -113,7 +113,7 @@ export default function ProfilePage() {
       <div className="py-12 px-4 max-w-md mx-auto text-center space-y-4">
         <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sign In Required</h1>
         <p className="text-xs text-gray-600 dark:text-gray-400">
-          You must be authenticated to view and manage your contributor profile and Supabase reading bookmarks.
+          You must be authenticated to view and manage your contributor profile and reading bookmarks.
         </p>
         <Link
           href="/"
@@ -281,20 +281,20 @@ export default function ProfilePage() {
             </span>
           </div>
           <span className="text-[11px] text-gray-500 dark:text-gray-400">
-            Synced with Supabase
+            Cloud Synced
           </span>
         </div>
 
         {bookmarksLoading ? (
           <div className="text-center py-8 text-xs text-gray-500 dark:text-gray-400">
-            Loading synced bookmarks from Supabase...
+            Loading your saved bookmarks...
           </div>
         ) : bookmarks.length === 0 ? (
           <div className="text-center py-8 text-xs text-gray-500 dark:text-gray-400 space-y-2">
             <p className="text-2xl">📖</p>
             <p className="font-semibold text-gray-700 dark:text-gray-300">No saved bookmarks yet</p>
             <p className="max-w-xs mx-auto text-gray-500 dark:text-gray-400">
-              When reading fanworks in the emergency reader mode, click Bookmark (or scroll in HTML stories) to sync checkpoints to your Supabase profile.
+              When reading fanworks in the emergency reader mode, click Bookmark (or scroll in HTML stories) to sync checkpoints to your profile.
             </p>
           </div>
         ) : (

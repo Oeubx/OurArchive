@@ -17,6 +17,13 @@ export async function GET(request: NextRequest) {
     const fandom = searchParams.get("fandom")?.trim() || "";
     const rating = searchParams.get("rating")?.trim() || "";
     const tag = searchParams.get("tag")?.trim() || "";
+    const category = searchParams.get("category")?.trim() || "";
+    const warning = searchParams.get("warning")?.trim() || "";
+    const character = searchParams.get("character")?.trim() || "";
+    const relationship = searchParams.get("relationship")?.trim() || "";
+    const isComplete = searchParams.get("isComplete")?.trim() || "";
+    const minWords = parseInt(searchParams.get("minWords") || "", 10);
+    const maxWords = parseInt(searchParams.get("maxWords") || "", 10);
     const contentFilter = searchParams.get("contentFilter")?.trim().toLowerCase() || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
@@ -36,6 +43,41 @@ export async function GET(request: NextRequest) {
     // Rating filter
     if (rating && rating.toLowerCase() !== "all") {
       query = query.eq("rating", rating);
+    }
+
+    // Category filter
+    if (category && category.toLowerCase() !== "all") {
+      query = query.contains("categories", [category]);
+    }
+
+    // Warning filter
+    if (warning && warning.toLowerCase() !== "all") {
+      query = query.contains("warnings", [warning]);
+    }
+
+    // Character filter
+    if (character) {
+      query = query.or(`characters.cs.{"${character}"},summary.ilike.%${character}%`);
+    }
+
+    // Relationship filter
+    if (relationship) {
+      query = query.or(`relationships.cs.{"${relationship}"},pairing.ilike.%${relationship}%`);
+    }
+
+    // Completion Status filter
+    if (isComplete === "true") {
+      query = query.eq("is_complete", true);
+    } else if (isComplete === "false") {
+      query = query.eq("is_complete", false);
+    }
+
+    // Word Count Range filters
+    if (!isNaN(minWords) && minWords > 0) {
+      query = query.gte("word_count", minWords);
+    }
+    if (!isNaN(maxWords) && maxWords > 0) {
+      query = query.lte("word_count", maxWords);
     }
 
     // Tag filter

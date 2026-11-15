@@ -81,6 +81,8 @@ export type DriveLinkRecord = {
   verification_status: VerificationStatus;
   is_hidden: boolean;
   is_removed: boolean;
+  takedown_flagged_at?: string | null;
+  takedown_deadline?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -96,6 +98,14 @@ export type LinkMetadataRecord = {
   summary: string | null;
   tags: string[];
   canonical_source_url: string | null;
+
+  // Granular fanwork categorization fields
+  categories?: string[];
+  characters?: string[];
+  warnings?: string[];
+  relationships?: string[];
+  is_complete?: boolean;
+  language?: string;
 
   // Google Drive file properties
   file_name: string;
@@ -150,6 +160,8 @@ export type PublicSearchFeedRecord = {
   work_id: string;
   upload_mode: UploadMode;
   uploaded_at: string;
+  takedown_flagged_at?: string | null;
+  takedown_deadline?: string | null;
   title: string;
   author_name: string;
   fandom: string;
@@ -158,6 +170,12 @@ export type PublicSearchFeedRecord = {
   word_count: number;
   summary: string | null;
   tags: string[];
+  categories?: string[];
+  characters?: string[];
+  warnings?: string[];
+  relationships?: string[];
+  is_complete?: boolean;
+  language?: string;
   mime_type: string;
   display_drive_owner: string | null;
   verification_badge: VerificationBadge;

@@ -63,7 +63,23 @@ export function DisplayCard({
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            {work.categories && work.categories.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-trunk/15 text-brand-trunk dark:text-brand-light border border-brand-trunk/30">
+                {work.categories.join(", ")}
+              </span>
+            )}
+            {typeof work.is_complete === "boolean" && (
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                  work.is_complete
+                    ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                }`}
+              >
+                {work.is_complete ? "✓ Complete" : "In Progress"}
+              </span>
+            )}
             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
               {work.mime_type.includes("folder")
                 ? "📁 Collection"
@@ -99,6 +115,34 @@ export function DisplayCard({
           <span className="text-gray-400">•</span>
           <span className="text-gray-500 dark:text-gray-400">Updated: {formattedDate}</span>
         </div>
+
+        {/* Warnings & Characters Bar */}
+        {((work.warnings && work.warnings.length > 0) || (work.characters && work.characters.length > 0)) && (
+          <div className="text-[11px] flex flex-wrap items-center gap-2 pt-0.5">
+            {work.warnings && work.warnings.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="font-semibold text-gray-600 dark:text-gray-400">Warnings:</span>
+                {work.warnings.map((w, i) => (
+                  <span
+                    key={i}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/40"
+                  >
+                    ⚠️ {w}
+                  </span>
+                ))}
+              </div>
+            )}
+            {work.characters && work.characters.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap text-gray-600 dark:text-gray-400">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">Characters:</span>
+                <span>
+                  {work.characters.slice(0, 5).join(", ")}
+                  {work.characters.length > 5 ? ` +${work.characters.length - 5}` : ""}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Summary */}
         {work.summary && (

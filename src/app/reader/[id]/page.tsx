@@ -44,6 +44,12 @@ interface ReaderData {
   plainContentHtml?: string | null;
   rawDriveUrl?: string;
   uploaderUserId?: string;
+  takedownNotice?: {
+    isFlagged: boolean;
+    deadline: string | null;
+    flaggedAt: string | null;
+    minutesRemaining: number;
+  } | null;
 }
 
 type FontFamily = "serif" | "sans" | "mono";
@@ -82,8 +88,22 @@ export default function ReaderPage() {
   const [showResumeBanner, setShowResumeBanner] = useState(false);
   const [bookmarkSavedFeedback, setBookmarkSavedFeedback] = useState(false);
   const [pdfPageInput, setPdfPageInput] = useState<number>(1);
+  const [currentScrollPercent, setCurrentScrollPercent] = useState<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialChildAppliedRef = useRef(false);
+
+  const handlePageInputChange = useCallback(
+    (newPage: number) => {
+      const maxPage = data?.totalPages || 9999;
+      const clamped = Math.max(1, Math.min(newPage, maxPage));
+      setPdfPageInput(clamped);
+      const targetEl = document.querySelector<HTMLElement>(`[data-pdf-page="${clamped}"]`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [data?.totalPages]
+  );
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
@@ -377,9 +397,18 @@ export default function ReaderPage() {
         sizeBytes: 0,
       });
     }
-    if (!existingBookmark.isPdf) {
+
+    // Scroll to exact saved page element if it exists in the DOM
+    const savedPage = existingBookmark.lastPage;
+    const targetPageEl = savedPage
+      ? document.querySelector<HTMLElement>(`[data-pdf-page="${savedPage}"]`)
+      : null;
+
+    if (targetPageEl) {
+      targetPageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
       const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const targetY = scrollMax * (existingBookmark.scrollPercent / 100);
+      const targetY = scrollMax > 0 ? scrollMax * (existingBookmark.scrollPercent / 100) : 0;
       window.scrollTo({ top: targetY, behavior: "smooth" });
     }
     setShowResumeBanner(false);
@@ -400,16 +429,17 @@ export default function ReaderPage() {
   const saveCurrentProgress = useCallback(
     async (manual: boolean = false) => {
       if (!data || !userId) return;
-      if (data.isPdf && !manual) return; // Cross-origin PDF iframes cannot auto-track scroll
+      const isPureIframePdf = data.isPdf && !data.contentHtml;
+      if (isPureIframePdf && !manual) return; // Only cross-origin PDF iframes cannot auto-track scroll
 
       const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = data.isPdf
+      const scrollPercent = isPureIframePdf
         ? 0
         : scrollMax > 0
         ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100)))
         : 0;
 
-      const totalPages = Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
+      const totalPages = data.totalPages || Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
       const lastPage = data.isPdf
         ? Math.max(1, Math.floor(Number(pdfPageInput) || 1))
         : Math.max(1, Math.ceil((scrollPercent / 100) * totalPages));
@@ -444,9 +474,54 @@ export default function ReaderPage() {
     [data, userId, pdfPageInput, selectedChildWork]
   );
 
-  // Debounced auto-save on scroll for authenticated HTML document readers
+  // Observe active visible page for extracted PDF content with [data-pdf-page]
   useEffect(() => {
-    if (!userId || !data || data.isPdf || data.isFolder) return;
+    if (!data?.contentHtml || data?.isFolder) return;
+
+    let ticking = false;
+
+    const onScrollPageTrack = () => {
+      const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = scrollMax > 0 ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100))) : 0;
+      setCurrentScrollPercent(pct);
+
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const pageElements = document.querySelectorAll<HTMLElement>("[data-pdf-page]");
+        if (pageElements.length === 0) return;
+
+        const triggerY = window.innerHeight * 0.35;
+        let activePage = 1;
+
+        for (let i = 0; i < pageElements.length; i++) {
+          const el = pageElements[i];
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= triggerY && rect.bottom >= 0) {
+            const pageNum = parseInt(el.getAttribute("data-pdf-page") || "1", 10);
+            if (!isNaN(pageNum)) {
+              activePage = pageNum;
+            }
+          }
+        }
+
+        setPdfPageInput((prev) => (prev !== activePage ? activePage : prev));
+      });
+    };
+
+    window.addEventListener("scroll", onScrollPageTrack, { passive: true });
+    onScrollPageTrack();
+
+    return () => {
+      window.removeEventListener("scroll", onScrollPageTrack);
+    };
+  }, [data?.contentHtml, data?.isFolder, selectedChildWork]);
+
+  // Debounced auto-save on scroll for authenticated readers
+  useEffect(() => {
+    const isPureIframePdf = data?.isPdf && !data?.contentHtml;
+    if (!userId || !data || isPureIframePdf || data.isFolder) return;
 
     const handleScroll = () => {
       if (scrollTimeoutRef.current) {
@@ -641,27 +716,60 @@ export default function ReaderPage() {
 
           {/* Reader Preferences Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* BOOKMARK BUTTON (Authenticated users only, Supabase-persisted) */}
+            {/* BOOKMARK BUTTON (Authenticated users only, Cloud-persisted) */}
             {userId ? (
               <div className="flex items-center gap-1.5">
-                {data?.isPdf && (
+                {data?.isPdf ? (
                   <label
                     className={`flex items-center gap-1 px-2 py-0.5 border rounded text-[11px] ${currentTheme.toolbarGroup}`}
-                    title="Google Drive PDF previews cannot expose internal scroll position; enter your page checkpoint manually"
+                    title={
+                      data?.contentHtml
+                        ? "Current reading page (scrolls automatically with reading position, or type to jump)"
+                        : "Enter your page checkpoint"
+                    }
                   >
                     <span className="text-[10px] opacity-80">Pg</span>
                     <input
                       type="number"
                       min={1}
-                      max={9999}
+                      max={data?.totalPages || 9999}
                       value={pdfPageInput}
                       onChange={(e) =>
-                        setPdfPageInput(Math.max(1, parseInt(e.target.value, 10) || 1))
+                        handlePageInputChange(parseInt(e.target.value, 10) || 1)
                       }
                       aria-label="PDF Page Number"
                       className="w-11 bg-transparent text-center font-mono text-[11px] focus:outline-hidden"
                     />
+                    {data?.totalPages && (
+                      <span className="text-[10px] opacity-60 font-mono">
+                        / {data.totalPages}
+                      </span>
+                    )}
                   </label>
+                ) : (
+                  !data?.isFolder && (
+                    <div
+                      className={`flex items-center gap-1 px-2 py-0.5 border rounded text-[11px] font-mono ${currentTheme.toolbarGroup}`}
+                      title="Estimated reading page based on scroll position"
+                    >
+                      <span className="text-[10px] opacity-80">Pg</span>
+                      <span>
+                        {Math.max(
+                          1,
+                          Math.min(
+                            Math.max(1, Math.ceil((data?.wordCount || 2500) / 350)),
+                            Math.ceil(
+                              (currentScrollPercent / 100) *
+                                Math.max(1, Math.ceil((data?.wordCount || 2500) / 350))
+                            )
+                          )
+                        )}
+                      </span>
+                      <span className="opacity-60">
+                        / {Math.max(1, Math.ceil((data?.wordCount || 2500) / 350))}
+                      </span>
+                    </div>
+                  )
                 )}
                 <button
                   type="button"
@@ -673,8 +781,8 @@ export default function ReaderPage() {
                   }`}
                   title={
                     data?.isPdf
-                      ? "Save manual PDF page checkpoint to your Supabase bookmarks"
-                      : "Save current reading position to your Supabase bookmarks"
+                      ? "Save page checkpoint to your reading bookmarks"
+                      : "Save current reading position to your reading bookmarks"
                   }
                 >
                   <span>🔖</span>
@@ -866,6 +974,22 @@ export default function ReaderPage() {
           </div>
         </div>
       </header>
+
+      {/* TAKEDOWN REVIEW NOTICE BANNER (3-Hour Grace Period Active) */}
+      {data?.takedownNotice?.isFlagged && (
+        <aside
+          aria-label="Takedown review notice"
+          className="max-w-3xl mx-auto my-3 p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/70 text-amber-950 dark:text-amber-200 text-xs shadow-xs space-y-1 animate-in slide-in-from-top-2 duration-200"
+        >
+          <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+            <span className="text-base">⚠️</span>
+            <span>Flagged for Takedown Review</span>
+          </div>
+          <p className="leading-relaxed text-[11px] opacity-90">
+            This fanwork has been flagged for copyright or ownership review. If no administrative action is taken, this work will be <strong>automatically hidden within 3 hours</strong> of submission (approximately {data.takedownNotice.minutesRemaining} minute{data.takedownNotice.minutesRemaining === 1 ? "" : "s"} remaining).
+          </p>
+        </aside>
+      )}
 
       {/* RESUME READING FLOATING BANNER */}
       {showResumeBanner && existingBookmark && (

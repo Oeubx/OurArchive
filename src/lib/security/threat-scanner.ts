@@ -17,7 +17,6 @@ export const ALLOWED_MIME_TYPES = [
   "text/html",
   "text/plain",
   "application/vnd.google-apps.document",
-  "application/epub+zip",
 ] as const;
 
 /**

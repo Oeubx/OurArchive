@@ -102,7 +102,7 @@ export function TakedownModal({
     <>
       {createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-border-light dark:border-border-dark text-xs text-gray-800 dark:text-gray-200">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar border border-border-light dark:border-border-dark text-xs text-gray-800 dark:text-gray-200">
             {/* Header */}
             <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between sticky top-0 z-10">
               <span className="text-sm sm:text-base font-bold">
@@ -122,10 +122,10 @@ export function TakedownModal({
               <div className="p-6 space-y-4 text-center">
                 <div className="text-4xl">✅</div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-                  Takedown Request Logged in Supabase
+                  Takedown Request Received
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-xs">
-                  Your request and ownership details have been saved to our Takedown Queue. Matched works are <strong>hidden right away</strong> from public search and readers pending final removal review.
+                  Your request and ownership details have been saved to our review queue. Matched works are <strong>flagged for administrative review</strong> and will be automatically hidden within 3 hours if no action is taken.
                 </p>
                 <div className="pt-2">
                   <button
@@ -140,7 +140,7 @@ export function TakedownModal({
             ) : (
               <form onSubmit={handleSubmit} className="p-5 space-y-4">
                 <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg text-red-950 dark:text-red-200 text-[11px] leading-relaxed">
-                  <strong>Zero-Resistance Policy:</strong> Authors and link owners only need to identify the work/Drive link and verify ownership. Matched works are suppressed immediately.
+                  <strong>Zero-Resistance Policy:</strong> Authors and link owners only need to identify the work/Drive link and verify ownership. Matched works are reviewed promptly or automatically hidden after 3 hours.
                 </div>
 
                 {error && (
@@ -192,7 +192,7 @@ export function TakedownModal({
                     placeholder="e.g. Link to original author profile/post, Drive file owner account verification, or submission confirmation note..."
                     rows={3}
                     required
-                    className="w-full p-2 border border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs"
+                    className="w-full p-2.5 border border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs resize-none overflow-y-auto min-h-[5.5rem] max-h-32 custom-scrollbar"
                   />
                 </div>
 
@@ -241,6 +241,7 @@ export function TakedownModal({
                         value="permanent"
                         checked={preference === "permanent"}
                         onChange={() => setPreference("permanent")}
+                        className="accent-brand-trunk text-brand-trunk focus:ring-brand-trunk"
                       />
                       <span>Permanent Removal</span>
                     </label>
@@ -251,6 +252,7 @@ export function TakedownModal({
                         value="hide"
                         checked={preference === "hide"}
                         onChange={() => setPreference("hide")}
+                        className="accent-brand-trunk text-brand-trunk focus:ring-brand-trunk"
                       />
                       <span>Temporary Hide (Suppress from search)</span>
                     </label>
@@ -267,7 +269,7 @@ export function TakedownModal({
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Optional notes (e.g., revoking mirror access or permissions changed)."
                     rows={2}
-                    className="w-full p-2 border border-border-light dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs"
+                    className="w-full p-2 border border-border-light dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-1 focus:ring-brand-trunk text-xs resize-none overflow-y-auto min-h-[3.5rem] max-h-24 custom-scrollbar"
                   />
                 </div>
 

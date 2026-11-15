@@ -111,7 +111,7 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                This system&apos;s purpose is to compile cloud drive links into one centralized, searchable index. Enjoy distraction-free online reading, verified safety diagnostics, and direct redirection to the author&apos;s original drive mirror.
+                This system&apos;s purpose is to compile cloud drive links into one centralized, searchable index. Enjoy distraction-free online reading and verified safety diagnostics.
               </p>
             </div>
           </div>
