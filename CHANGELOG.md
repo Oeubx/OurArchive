@@ -8,6 +8,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.0.3] — 2026-11-16
+
+Dynamic Google Drive resilience, community reporting, role access governance, and upload adaptation update introducing folderization limit disclosures, folder vs. file search filtering, idle auto-load validation, fallback UI for dead/inaccessible Drive works, idempotent collection re-synchronization, and instant administrator user role management.
+
+### Added
+- **Upload Modal Folder Details Adaptation**: Dynamic form labels switching between collection metadata (*"Collection / Folder Title"*, *"Curator / Primary Author"*, *"Primary Fandom(s)"*) and single-work metadata based on folder grouping selection (`[OA-M2-F5]`).
+- **Folderization Limits & Rules Callout**: Informative guidelines in `UploadModal` detailing traversal depth (up to 4 levels), subfolder bounds (max 30), document limits (max 100), and automatic exclusion of archive formats (`.zip`, `.rar`, `.7z`) and `.epub` (`[OA-M2-F5]`).
+- **Folder Scanning Wait Notice**: Informative animated notice informing uploaders during deep BFS folder crawls and metadata verifications (`[OA-M2-F5]`).
+- **Folder vs. File Search Filters**: Dedicated `entryType` filter in `SearchSection`, `SearchPage`, and `/api/search` allowing users to filter specifically by `[📁 Folders Only]` or `[📄 Files Only]` via `application/vnd.google-apps.folder` MIME type (`[OA-M2-F5]`).
+- **Search Loading Indicator & Idle Auto-Load**: Inline spinning search state inside the search bar and a 2.5-second idle debounce timer that automatically loads search results after filter selection without requiring manual form submission (`[OA-M2-F5]`).
+- **Inaccessible Fanwork & Broken Link Fallback UI**: Replaced generic error text in `ReaderPage` with a structured diagnostic card when Google Drive returns 404 (file deleted/trashed) or 403 (access restricted) (`[OA-M3-F5]`).
+- **Community Broken Link Reporting**: Lightweight one-click reporting modal (`ReportBrokenLinkModal`) allowing readers to report broken, deleted, or restricted links without requiring copyright ownership proof, automatically routing reports to the Admin Triage Desk (`[OA-M3-F5]`).
+- **Idempotent Collection Re-sync**: Enhanced `/api/links/submit` to allow re-submitting existing folder links without unique constraint errors, cleanly indexing newly added child fanworks while leaving existing works intact (`[OA-M2-F5]`).
+- **Contributor Role Standardization (Migration `20261116_000011`)**: Aligned the default registered user role to `contributor` across database columns, legacy rows, and the `handle_new_user()` auth trigger (`[OA-M1-F2]`).
+- **Admin User Role Management**: Added `/api/admin/users/role` and an interactive User Directory tab in `VerifierRequestsModal` allowing administrators to adjust roles (`contributor` ↔ `verifier` ↔ `admin`) with an immutable audit log (`[OA-M1-F2]`, `[OA-M3-F3]`).
+- **Role Change Confirmation Dialog**: Modal validation dialog prompting administrators to confirm or cancel role adjustments, detailing the specific permissions being granted or revoked (`[OA-M1-F2]`).
+- **Active vs. History Takedown Desk Tabs**: Split `AdminTakedownContainer` into Active Requests and Resolved / History tabs, ensuring resolved compliance items (such as `PURGED` records) do not clutter the active incoming inbox (`[OA-M3-F2]`).
+
+### Changed
+- **Admin Dashboard KPI Reordering**: Reordered dashboard metrics to begin with **Total Submissions** (`totalLinksCount`), followed by **Approved Works**, **Under Verification**, and **Verifier Applications** (`[OA-M3-F2]`).
+
+### Removed
+- **Masked Link Section in Admin Desk**: Removed the Masked Link row from mobile triage cards and the Masked Link column from desktop triage tables in `AdminDashboardClient` (`[OA-M3-F2]`).
+
+---
+
 ## [1.0.2] — 2026-11-14
 
 Fanwork metadata intelligence update introducing deterministic first-page catalog scanning, granular multi-facet search filtering, and enriched upload categorization across all contributor and admin intake surfaces.
