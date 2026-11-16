@@ -511,24 +511,54 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <span className="text-brand-trunk dark:text-brand-light font-mono text-sm">
                   {detailsExpanded ? "▼" : "▶"}
                 </span>
-                <span>PROVIDE DETAILS (OPTIONAL)</span>
+                <span>
+                  {isFolder
+                    ? "PROVIDE FOLDER & COLLECTION DETAILS (OPTIONAL)"
+                    : "PROVIDE WORK DETAILS (OPTIONAL)"}
+                </span>
               </div>
               <span className="text-[10px] text-gray-400 font-normal">
-                {detailsExpanded ? "Click to collapse" : "Click to specify title, author, fandom, or tags"}
+                {detailsExpanded
+                  ? "Click to collapse"
+                  : isFolder
+                  ? "Click to specify collection title, curator, fandom, or tags"
+                  : "Click to specify title, author, fandom, or tags"}
               </span>
             </button>
 
             {detailsExpanded && (
               <div className="p-4 space-y-3.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark animate-in fade-in duration-150">
+                {/* Folderization Limits & Guidelines (Visible when Folder is selected) */}
+                {isFolder && (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span>ℹ️</span>
+                      <span>Folder Collection Indexing Rules &amp; Limits</span>
+                    </div>
+                    <ul className="text-[11px] list-disc list-inside space-y-0.5 text-gray-700 dark:text-gray-300">
+                      <li><strong>Depth Limit:</strong> Traverses nested subfolders up to <strong>4 levels deep</strong>.</li>
+                      <li><strong>Folder Cap:</strong> Scans at most <strong>30 subfolders</strong> per collection.</li>
+                      <li><strong>Document Limit:</strong> Indexes up to <strong>100 documents</strong> (.pdf, .docx, .txt, .rtf, .html).</li>
+                      <li><strong>Excluded Formats:</strong> Compressed archives (.zip, .rar, .7z) and .epub are automatically ignored.</li>
+                    </ul>
+                  </div>
+                )}
+
                 {/* Auto-Scan Action Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-brand-trunk/5 dark:bg-brand-trunk/15 border border-brand-trunk/20">
                   <div className="text-xs">
                     <span className="font-bold text-brand-trunk dark:text-brand-light flex items-center gap-1.5">
                       <span>🪄</span>
-                      <span>Fanwork First-Page Scanner</span>
+                      <span>
+                        {isFolder
+                          ? "Folder Collection Scanner"
+                          : "Fanwork First-Page Scanner"}
+                      </span>
                     </span>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                      Extract title, rating, categories, warnings, characters, and word count directly from the cover.
+                      {isFolder
+                        ? "Verify folder permissions, inspect folder name, and check collection structure."
+                        : "Extract title, rating, categories, warnings, characters, and word count directly from the cover."}
                     </p>
                   </div>
                   <button
@@ -540,16 +570,25 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                     {scanning ? (
                       <>
                         <span className="animate-spin text-xs">⏳</span>
-                        <span>Scanning Cover...</span>
+                        <span>{isFolder ? "Scanning Folder..." : "Scanning Cover..."}</span>
                       </>
                     ) : (
                       <>
                         <span>🪄</span>
-                        <span>Scan Metadata</span>
+                        <span>{isFolder ? "Scan Folder" : "Scan Metadata"}</span>
                       </>
                     )}
                   </button>
                 </div>
+
+                {scanning && isFolder && (
+                  <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2 animate-pulse">
+                    <span>⏳</span>
+                    <span>
+                      This may take a while as we verify the metadata and unpack the files inside this folder...
+                    </span>
+                  </div>
+                )}
 
                 {scanNotice && (
                   <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-blue-800 dark:text-blue-300 text-xs">
@@ -560,25 +599,35 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Work Title <span className="text-gray-400 font-normal">(Optional, uses folder/file name if blank)</span>
+                      {isFolder ? "Collection / Folder Title" : "Work Title"}{" "}
+                      <span className="text-gray-400 font-normal">
+                        (Optional, uses folder/file name if blank)
+                      </span>
                     </label>
                     <input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="e.g. To Build a Home"
+                      placeholder={
+                        isFolder
+                          ? "e.g. Dramione Classics Collection"
+                          : "e.g. To Build a Home"
+                      }
                       className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
                     />
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Original Author <span className="text-gray-400 font-normal">(Optional)</span>
+                      {isFolder ? "Curator / Primary Author" : "Original Author"}{" "}
+                      <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="e.g. starlight_scribe"
+                      placeholder={
+                        isFolder ? "e.g. archive_curator" : "e.g. starlight_scribe"
+                      }
                       className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
                     />
                   </div>
@@ -587,7 +636,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Fandom <span className="text-gray-400 font-normal">(Optional)</span>
+                      {isFolder ? "Primary Fandom(s)" : "Fandom"}{" "}
+                      <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
