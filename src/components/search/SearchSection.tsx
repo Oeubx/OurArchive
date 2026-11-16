@@ -16,6 +16,7 @@ export interface SearchFilters {
   minWords?: number | "";
   maxWords?: number | "";
   contentFilter?: "all" | "sfw" | "nsfw";
+  entryType?: "all" | "folder" | "file";
 }
 
 interface SearchSectionProps {
@@ -45,6 +46,7 @@ const WARNINGS = [
 export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   const [q, setQ] = useState("");
   const [contentFilter, setContentFilter] = useState<"all" | "sfw" | "nsfw">("all");
+  const [entryType, setEntryType] = useState<"all" | "folder" | "file">("all");
   const [category, setCategory] = useState("All");
   const [rating, setRating] = useState("All");
   const [warning, setWarning] = useState("All");
@@ -60,6 +62,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
   const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const buildCurrentFilters = useCallback((): SearchFilters => {
     return {
@@ -75,6 +78,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
       minWords: minWords !== "" ? minWords : undefined,
       maxWords: maxWords !== "" ? maxWords : undefined,
       contentFilter,
+      entryType: entryType !== "all" ? entryType : undefined,
     };
   }, [
     q,
@@ -89,23 +93,38 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
     minWords,
     maxWords,
     contentFilter,
+    entryType,
   ]);
 
-  // Debounced auto-search for text inputs (350ms delay)
+  // Restart the 2.5-second idle auto-load timer whenever any filter or search term changes
+  const resetIdleAutoLoadTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
+    }
+    idleTimerRef.current = setTimeout(() => {
+      onSearch(buildCurrentFilters());
+    }, 2500);
+  }, [onSearch, buildCurrentFilters]);
+
+  // Debounced auto-search for text inputs (350ms delay) + idle timer
   const triggerDebouncedSearch = useCallback(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
+    resetIdleAutoLoadTimer();
     debounceTimerRef.current = setTimeout(() => {
       onSearch(buildCurrentFilters());
     }, 350);
-  }, [onSearch, buildCurrentFilters]);
+  }, [onSearch, buildCurrentFilters, resetIdleAutoLoadTimer]);
 
-  // Trigger immediate search for pill clicks and select changes
+  // Trigger immediate search for pill clicks and select changes + resets idle timer
   const triggerImmediateSearch = useCallback(
     (overrides?: Partial<SearchFilters>) => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
       }
       const current = buildCurrentFilters();
       onSearch({ ...current, ...overrides });
@@ -117,6 +136,9 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
+      }
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
       }
     };
   }, []);
@@ -194,6 +216,11 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
     triggerImmediateSearch({ contentFilter: filter });
   }
 
+  function handleEntryTypeChange(type: "all" | "folder" | "file") {
+    setEntryType(type);
+    triggerImmediateSearch({ entryType: type !== "all" ? type : undefined });
+  }
+
   function handleConfirmAdultContent() {
     if (typeof window !== "undefined") {
       localStorage.setItem("ourarchive_nsfw_consent", "true");
@@ -216,9 +243,13 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
     setMinWords("");
     setMaxWords("");
     setContentFilter("all");
+    setEntryType("all");
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
+    }
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current);
     }
 
     onSearch({
@@ -227,6 +258,7 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
       rating: "All",
       tag: "",
       contentFilter: "all",
+      entryType: undefined,
     });
   }
 
@@ -241,7 +273,8 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
     (fandom ? 1 : 0) +
     (tag ? 1 : 0) +
     (minWords !== "" || maxWords !== "" ? 1 : 0) +
-    (contentFilter !== "all" ? 1 : 0);
+    (contentFilter !== "all" ? 1 : 0) +
+    (entryType !== "all" ? 1 : 0);
 
   return (
     <div
@@ -267,8 +300,16 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
               value={q}
               onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="Search by title, author, fandom, character, or keyword (auto-searches)..."
-              className="w-full pl-10 pr-3 py-2.5 border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden text-xs sm:text-sm bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 shadow-2xs"
+              className="w-full pl-10 pr-10 py-2.5 border border-border-light dark:border-border-dark rounded-lg focus:ring-2 focus:ring-brand-trunk focus:border-brand-trunk outline-hidden text-xs sm:text-sm bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 placeholder-gray-500 shadow-2xs"
             />
+            {loading && (
+              <span
+                className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-brand-trunk dark:text-brand-light text-xs font-semibold animate-spin"
+                title="Searching archive..."
+              >
+                ⏳
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -318,46 +359,91 @@ export function SearchSection({ onSearch, loading }: SearchSectionProps) {
           </div>
         </div>
 
-        {/* Quick Content Classification Pills (SFW / NSFW) */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-light dark:border-border-dark text-xs">
-          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mr-1">
-            Safety Filter:
-          </span>
-          <button
-            type="button"
-            onClick={() => handleContentFilterChange("all")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
-              contentFilter === "all"
-                ? "bg-brand-trunk text-white shadow-2xs font-semibold"
-                : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
-            }`}
-          >
-            All Works
-          </button>
-          <button
-            type="button"
-            onClick={() => handleContentFilterChange("sfw")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
-              contentFilter === "sfw"
-                ? "bg-emerald-600 text-white shadow-2xs font-semibold"
-                : "bg-canvas-light dark:bg-canvas-dark text-emerald-700 dark:text-emerald-400 border border-border-light dark:border-border-dark hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            }`}
-          >
-            <span>🟢</span>
-            <span>SFW Only</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleContentFilterChange("nsfw")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
-              contentFilter === "nsfw"
-                ? "bg-red-600 text-white shadow-2xs font-semibold"
-                : "bg-canvas-light dark:bg-canvas-dark text-red-600 dark:text-red-400 border border-border-light dark:border-border-dark hover:bg-red-50 dark:hover:bg-red-950/30"
-            }`}
-          >
-            <span>🔴</span>
-            <span>NSFW (18+)</span>
-          </button>
+        {/* Quick Format Filter (Folders vs Files) & Content Classification Pills (SFW / NSFW) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-border-light dark:border-border-dark text-xs">
+          {/* Format Filter */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mr-1">
+              Format:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleEntryTypeChange("all")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
+                entryType === "all"
+                  ? "bg-brand-trunk text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+              }`}
+            >
+              All Formats
+            </button>
+            <button
+              type="button"
+              onClick={() => handleEntryTypeChange("folder")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                entryType === "folder"
+                  ? "bg-amber-600 text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-amber-700 dark:text-amber-400 border border-border-light dark:border-border-dark hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              }`}
+            >
+              <span>📁</span>
+              <span>Folders Only</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleEntryTypeChange("file")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                entryType === "file"
+                  ? "bg-blue-600 text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-blue-700 dark:text-blue-400 border border-border-light dark:border-border-dark hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              }`}
+            >
+              <span>📄</span>
+              <span>Files Only</span>
+            </button>
+          </div>
+
+          {/* Safety Filter */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mr-1">
+              Safety:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleContentFilterChange("all")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer ${
+                contentFilter === "all"
+                  ? "bg-brand-trunk text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+              }`}
+            >
+              All Works
+            </button>
+            <button
+              type="button"
+              onClick={() => handleContentFilterChange("sfw")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                contentFilter === "sfw"
+                  ? "bg-emerald-600 text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-emerald-700 dark:text-emerald-400 border border-border-light dark:border-border-dark hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              }`}
+            >
+              <span>🟢</span>
+              <span>SFW Only</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleContentFilterChange("nsfw")}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                contentFilter === "nsfw"
+                  ? "bg-red-600 text-white shadow-2xs font-semibold"
+                  : "bg-canvas-light dark:bg-canvas-dark text-red-600 dark:text-red-400 border border-border-light dark:border-border-dark hover:bg-red-50 dark:hover:bg-red-950/30"
+              }`}
+            >
+              <span>🔴</span>
+              <span>NSFW (18+)</span>
+            </button>
+          </div>
         </div>
 
         {/* EXPANDABLE DYNAMIC FILTER DRAWER */}
