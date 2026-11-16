@@ -34,6 +34,7 @@ export default function SearchPage() {
     rating: "All",
     tag: "",
     contentFilter: "all",
+    entryType: "all",
   });
 
   const [pagination, setPagination] = useState({
@@ -70,6 +71,9 @@ export default function SearchPage() {
       if (typeof filters.maxWords === "number") params.set("maxWords", filters.maxWords.toString());
       if (filters.contentFilter && filters.contentFilter !== "all") {
         params.set("contentFilter", filters.contentFilter);
+      }
+      if (filters.entryType && filters.entryType !== "all") {
+        params.set("entryType", filters.entryType);
       }
       params.set("page", page.toString());
       params.set("limit", limit.toString());

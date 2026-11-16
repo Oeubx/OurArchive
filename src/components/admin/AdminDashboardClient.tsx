@@ -231,6 +231,19 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
 
       {/* Queue Metrics & Interactive Pending Requests Container */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Ingested */}
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark p-4 rounded-xl shadow-xs">
+          <span className="text-gray-600 dark:text-gray-400 text-[11px] block uppercase font-bold tracking-wider">
+            Total Submissions
+          </span>
+          <span className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mt-1 block">
+            {metrics.totalLinksCount}
+          </span>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
+            All database submissions
+          </span>
+        </div>
+
         {/* Approved Works */}
         <div className="bg-surface-light dark:bg-surface-dark border border-emerald-200 dark:border-emerald-900/60 p-4 rounded-xl shadow-xs">
           <span className="text-emerald-800 dark:text-emerald-400 text-[11px] block uppercase font-bold tracking-wider">
@@ -275,19 +288,6 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
           </span>
           <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
             Contributors requesting verifier role
-          </span>
-        </div>
-
-        {/* Total Ingested */}
-        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark p-4 rounded-xl shadow-xs">
-          <span className="text-gray-600 dark:text-gray-400 text-[11px] block uppercase font-bold tracking-wider">
-            Total Submissions
-          </span>
-          <span className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mt-1 block">
-            {metrics.totalLinksCount}
-          </span>
-          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 block">
-            All database submissions
           </span>
         </div>
       </div>
@@ -399,14 +399,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         </div>
                       </div>
 
-                      {/* Masked Link & Submitter Row */}
-                      <div className="bg-canvas-light/60 dark:bg-canvas-dark/60 p-2.5 rounded-lg border border-border-light dark:border-border-dark space-y-1 font-mono text-[11px]">
-                        <div className="truncate text-gray-600 dark:text-gray-300">
-                          {item.maskedDriveUrl}
-                        </div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 font-sans">
-                          Submitted by <strong className="text-gray-700 dark:text-gray-300">@{item.uploadedBy}</strong> ({item.uploadedByRole})
-                        </div>
+                      {/* Submitter Attribution */}
+                      <div className="bg-canvas-light/60 dark:bg-canvas-dark/60 p-2 rounded-lg border border-border-light dark:border-border-dark text-[11px] text-gray-500 dark:text-gray-400">
+                        Submitted by <strong className="text-gray-700 dark:text-gray-300">@{item.uploadedBy}</strong> ({item.uploadedByRole})
                       </div>
 
                       {/* Touch-Friendly Action Buttons */}
@@ -496,8 +491,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-border-light dark:border-border-dark bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-4">Work & Author</th>
-                      <th className="py-3 px-4">Masked Link</th>
+                      <th className="py-3 px-4">Work &amp; Author</th>
                       <th className="py-3 px-4">Submitted By</th>
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4 text-right">Administrative Actions</th>
@@ -533,13 +527,6 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                                 </span>
                               </div>
                             )}
-                          </td>
-
-                          {/* Masked Link & Privacy (Protected against mass scraping) */}
-                          <td className="py-3 px-4 max-w-[200px] truncate font-mono text-gray-600 dark:text-gray-300">
-                            <span title={item.maskedDriveUrl} className="hover:underline">
-                              {item.maskedDriveUrl}
-                            </span>
                           </td>
 
                           {/* Submitter */}
