@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
 import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
+import { ReportBrokenLinkModal } from "@/components/modals/ReportBrokenLinkModal";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
@@ -68,6 +69,7 @@ export default function ReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
   const [showDirectEmailModal, setShowDirectEmailModal] = useState(false);
+  const [showBrokenLinkModal, setShowBrokenLinkModal] = useState(false);
 
   // Realtime Takedown/Suppression Interruption Modal State
   const [interruptedReason, setInterruptedReason] = useState<string | null>(null);
@@ -1041,15 +1043,38 @@ export default function ReaderPage() {
         )}
 
         {error && !data && !interruptedReason && (
-          <div className="p-6 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-200 rounded-lg text-center space-y-3">
-            <h2 className="text-base font-bold">Failed to Stream Work</h2>
-            <p className="text-xs">{error}</p>
-            <div className="pt-2">
-              <Link
-                href="/"
-                className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded hover:bg-brand-bark transition"
+          <div className="max-w-xl mx-auto my-10 p-6 sm:p-8 rounded-2xl border border-red-300 dark:border-red-900/60 bg-surface-light dark:bg-surface-dark shadow-xl text-center space-y-4 animate-in fade-in duration-200">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-2xl">
+              ⚠️
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                Inaccessible Fanwork / Broken Link Detected
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                We could not stream this document from Google Drive. The original author may have deleted the file, moved it to another directory, or restricted access permissions to private.
+              </p>
+            </div>
+
+            <div className="p-3 bg-red-50/70 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-left text-xs text-red-800 dark:text-red-300">
+              <strong>Diagnostic details:</strong> {error}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBrokenLinkModal(true)}
+                className="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
               >
-                Return to Library Search
+                <span>🚨</span>
+                <span>Report Broken Link</span>
+              </button>
+              <Link
+                href="/search"
+                className="w-full sm:w-auto px-4 py-2.5 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                <span>🔍</span>
+                <span>Return to Library</span>
               </Link>
             </div>
           </div>
@@ -1373,6 +1398,14 @@ export default function ReaderPage() {
         isOpen={showDirectEmailModal}
         onClose={() => setShowDirectEmailModal(false)}
         workTitle={selectedChildWork ? selectedChildWork.title || selectedChildWork.fileName : data?.title}
+      />
+
+      {/* Community Broken Link Reporting Modal */}
+      <ReportBrokenLinkModal
+        isOpen={showBrokenLinkModal}
+        onClose={() => setShowBrokenLinkModal(false)}
+        workId={workId}
+        workTitle={selectedChildWork?.title || data?.title || "Target Fanwork"}
       />
 
       {/* Real-Time Reader Interruption Modal (When Admin Hides or Purges Mid-Read) */}

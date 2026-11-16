@@ -48,8 +48,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedRole = VALID_ROLES.includes(role) ? role : "community";
+    const isCommunityReport = normalizedRole === "community";
     const proofStr =
-      typeof ownershipProof === "string" ? ownershipProof.trim() : "";
+      typeof ownershipProof === "string" && ownershipProof.trim()
+        ? ownershipProof.trim()
+        : isCommunityReport
+        ? "Community reader broken or inaccessible link report (File Not Found / Access Restricted)."
+        : "";
+
     if (!proofStr) {
       return NextResponse.json(
         {
@@ -163,7 +170,6 @@ export async function POST(request: NextRequest) {
     const auditAdminId = adminProfile?.id || null;
     const now = new Date().toISOString();
     const isPermanent = preference !== "hide";
-    const normalizedRole = VALID_ROLES.includes(role) ? role : "author";
     const cleanEmail =
       typeof requesterEmail === "string" && requesterEmail.trim()
         ? requesterEmail.trim()
