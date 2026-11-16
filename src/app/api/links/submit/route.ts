@@ -163,26 +163,45 @@ export async function POST(request: NextRequest) {
     // Determine upload_mode: "assisted_admin" if uploaded by admin via direct upload, otherwise "authenticated"
     const effectiveUploadMode = isUserAdmin && uploadMode === "assisted_admin" ? "assisted_admin" : "authenticated";
 
-    // 6. Insert Drive Link Record
-    const { data: newLink, error: linkError } = await adminSupabase
-      .from("drive_links")
-      .insert({
-        drive_url: urlValidation.canonicalUrl,
-        google_file_id: urlValidation.fileId,
-        upload_mode: effectiveUploadMode,
-        uploader_user_id: user.id,
-        verification_status: effectiveStatus,
-        is_hidden: effectiveHidden,
-        is_removed: false,
-      })
-      .select()
-      .single();
+    // 6. Insert Drive Link Record (or reuse existing for collection re-sync)
+    let newLink: { id: string } | null = null;
+    let isReSync = false;
 
-    if (linkError || !newLink) {
-      return NextResponse.json(
-        { error: `Database error creating link: ${linkError?.message}` },
-        { status: 500 }
-      );
+    if (urlValidation.isFolder) {
+      const { data: existingParent } = await adminSupabase
+        .from("drive_links")
+        .select("id")
+        .eq("drive_url", urlValidation.canonicalUrl)
+        .maybeSingle();
+
+      if (existingParent) {
+        newLink = existingParent;
+        isReSync = true;
+      }
+    }
+
+    if (!newLink) {
+      const { data: createdLink, error: linkError } = await adminSupabase
+        .from("drive_links")
+        .insert({
+          drive_url: urlValidation.canonicalUrl,
+          google_file_id: urlValidation.fileId,
+          upload_mode: effectiveUploadMode,
+          uploader_user_id: user.id,
+          verification_status: effectiveStatus,
+          is_hidden: effectiveHidden,
+          is_removed: false,
+        })
+        .select()
+        .single();
+
+      if (linkError || !createdLink) {
+        return NextResponse.json(
+          { error: `Database error creating link: ${linkError?.message}` },
+          { status: 500 }
+        );
+      }
+      newLink = createdLink;
     }
 
     // 7. Insert Link Metadata Record
@@ -212,54 +231,56 @@ export async function POST(request: NextRequest) {
       ? [pairing.trim()]
       : [];
 
-    const { error: metadataError } = await adminSupabase.from("link_metadata").insert({
-      link_id: newLink.id,
-      title: (title || metadata.name).trim(),
-      author_name: (authorName || effectiveDisplayName).trim(),
-      fandom: (fandom || "General Fanworks").trim(),
-      pairing: pairing ? pairing.trim() : null,
-      rating: effectiveRating,
-      word_count: typeof wordCount === "number" && wordCount >= 0 ? wordCount : 0,
-      summary: summary ? summary.trim() : null,
-      tags: sanitizedTags,
-      categories: sanitizedCategories,
-      characters: sanitizedCharacters,
-      warnings: sanitizedWarnings,
-      relationships: sanitizedRelationships,
-      is_complete: Boolean(isComplete),
-      language: language ? String(language).trim() : "English",
-      canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
+    if (!isReSync) {
+      const { error: metadataError } = await adminSupabase.from("link_metadata").insert({
+        link_id: newLink.id,
+        title: (title || metadata.name).trim(),
+        author_name: (authorName || effectiveDisplayName).trim(),
+        fandom: (fandom || "General Fanworks").trim(),
+        pairing: pairing ? pairing.trim() : null,
+        rating: effectiveRating,
+        word_count: typeof wordCount === "number" && wordCount >= 0 ? wordCount : 0,
+        summary: summary ? summary.trim() : null,
+        tags: sanitizedTags,
+        categories: sanitizedCategories,
+        characters: sanitizedCharacters,
+        warnings: sanitizedWarnings,
+        relationships: sanitizedRelationships,
+        is_complete: Boolean(isComplete),
+        language: language ? String(language).trim() : "English",
+        canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
 
-      file_name: metadata.name,
-      mime_type: metadata.mimeType,
-      file_size_bytes: metadata.sizeBytes,
-      drive_owner_name: metadata.ownerName || effectiveDisplayName,
-      drive_owner_email: metadata.ownerEmail,
-      is_owner_masked: isOwnerMasked !== false,
-    });
+        file_name: metadata.name,
+        mime_type: metadata.mimeType,
+        file_size_bytes: metadata.sizeBytes,
+        drive_owner_name: metadata.ownerName || effectiveDisplayName,
+        drive_owner_email: metadata.ownerEmail,
+        is_owner_masked: isOwnerMasked !== false,
+      });
 
-    if (metadataError) {
-      // Rollback link insertion on metadata failure
-      await adminSupabase.from("drive_links").delete().eq("id", newLink.id);
-      return NextResponse.json(
-        { error: `Database error storing metadata: ${metadataError.message}` },
-        { status: 500 }
-      );
+      if (metadataError) {
+        // Rollback link insertion on metadata failure
+        await adminSupabase.from("drive_links").delete().eq("id", newLink.id);
+        return NextResponse.json(
+          { error: `Database error storing metadata: ${metadataError.message}` },
+          { status: 500 }
+        );
+      }
+
+      // 8. Record Link Verification and Risk Evaluation Metrics [OA-M3-F1, OA-M3-F3]
+      await adminSupabase.from("link_verifications").insert({
+        link_id: newLink.id,
+        automated_risk_score: scanResult.riskScore,
+        automated_flags: scanResult.flags,
+        scanner_passed: scanResult.riskScore === 0,
+        admin_verified_by: allowDirectApproval ? user.id : null,
+        admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
+        admin_notes: allowDirectApproval
+          ? "Direct administrator upload with prior verification bypass (auto-verified override)."
+          : evaluation.quarantineReason || null,
+        verification_badge: effectiveBadge,
+      });
     }
-
-    // 8. Record Link Verification and Risk Evaluation Metrics [OA-M3-F1, OA-M3-F3]
-    await adminSupabase.from("link_verifications").insert({
-      link_id: newLink.id,
-      automated_risk_score: scanResult.riskScore,
-      automated_flags: scanResult.flags,
-      scanner_passed: scanResult.riskScore === 0,
-      admin_verified_by: allowDirectApproval ? user.id : null,
-      admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
-      admin_notes: allowDirectApproval
-        ? "Direct administrator upload with prior verification bypass (auto-verified override)."
-        : evaluation.quarantineReason || null,
-      verification_badge: effectiveBadge,
-    });
 
     // 9. Increment Contributor Submission Count
     if (profile) {
@@ -269,11 +290,26 @@ export async function POST(request: NextRequest) {
         .eq("id", user.id);
     }
 
-    // 10. Solution A: Unpack and Index Individual Child Fanworks from Collection Folder
+    // 10. Solution A: Unpack and Index Individual Child Fanworks from Collection Folder (Idempotent Sync)
     let unpackedCount = 0;
+    let alreadyIndexedCount = 0;
     if (folderChildren.length > 0) {
+      const childIds = folderChildren.map((c) => c.id);
+      const { data: existingChildRows } = await adminSupabase
+        .from("drive_links")
+        .select("google_file_id")
+        .in("google_file_id", childIds);
+
+      const existingIdSet = new Set((existingChildRows || []).map((e) => e.google_file_id));
+      alreadyIndexedCount = existingIdSet.size;
+
       const collectionTag = `collection:${detectedCollectionName || "Curated Archive"}`;
       for (const child of folderChildren) {
+        if (existingIdSet.has(child.id)) {
+          // Already indexed; skip insertion to prevent duplicates and constraint violations
+          continue;
+        }
+
         try {
           const childDriveUrl = `https://drive.google.com/file/d/${child.id}/view`;
           const { data: childLink } = await adminSupabase
@@ -340,7 +376,11 @@ export async function POST(request: NextRequest) {
     }
 
     const message = unpackedCount > 0
-      ? `Collection submitted successfully! Unpacked and indexed ${unpackedCount} individual fanworks into library search.`
+      ? alreadyIndexedCount > 0
+        ? `Collection synchronized! Indexed ${unpackedCount} new fanworks (${alreadyIndexedCount} works already up to date).`
+        : `Collection submitted successfully! Unpacked and indexed ${unpackedCount} individual fanworks into library search.`
+      : alreadyIndexedCount > 0
+      ? `Collection is already completely up to date (${alreadyIndexedCount} fanworks indexed).`
       : allowDirectApproval
       ? "Fanwork published directly to the public archive."
       : evaluation.status === "flagged"

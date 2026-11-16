@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const minWords = parseInt(searchParams.get("minWords") || "", 10);
     const maxWords = parseInt(searchParams.get("maxWords") || "", 10);
     const contentFilter = searchParams.get("contentFilter")?.trim().toLowerCase() || "";
+    const entryType = searchParams.get("entryType")?.trim().toLowerCase() || "all";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20", 10)));
     const offset = (page - 1) * limit;
@@ -90,6 +91,13 @@ export async function GET(request: NextRequest) {
       query = query.or('rating.in.("General Audiences","Teen And Up Audiences"),tags.cs.{"sfw"}');
     } else if (contentFilter === "nsfw") {
       query = query.or('rating.in.("Mature","Explicit"),tags.cs.{"nsfw"}');
+    }
+
+    // Work Entry Type (Folder vs File) filter
+    if (entryType === "folder") {
+      query = query.eq("mime_type", "application/vnd.google-apps.folder");
+    } else if (entryType === "file") {
+      query = query.neq("mime_type", "application/vnd.google-apps.folder");
     }
 
     // Full-Text / Keyword Search across title, author, fandom, and summary
