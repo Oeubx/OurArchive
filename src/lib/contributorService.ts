@@ -12,6 +12,21 @@ const DEFAULT_MY_CONTRIBUTIONS: DriveLink[] = [];
  * Fetch authentic contributions submitted by the authenticated user directly from Supabase.
  */
 export async function fetchUserContributions(userId: string): Promise<DriveLink[]> {
+  // First attempt secure server-side retrieval to bypass client RLS restrictions on unverified items
+  if (typeof window !== "undefined") {
+    try {
+      const res = await fetch("/api/contribute/mine", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.links)) {
+          return json.links;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("fetchUserContributions API fallback to client query:", apiErr);
+    }
+  }
+
   try {
     const supabase = createClient();
     const { data, error } = await supabase
