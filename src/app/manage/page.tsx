@@ -25,13 +25,26 @@ export default function VerifierManagePage() {
     totalLinksCount: 0,
   });
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<"all" | "folder" | "file">("all");
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
+
+  const isItemFolder = (item: DriveLink) =>
+    item.mimeType === "application/vnd.google-apps.folder" || item.rawDriveUrl.includes("/folders/");
 
   async function executeAction(
     linkId: string,
     actionType: "VERIFY" | "APPROVE" | "REJECT" | "HIDE" | "UNHIDE" | "REMOVE",
     reason = "Verifier triage action"
   ) {
+    const targetLink = links.find((l) => l.id === linkId);
+    const isFolder = targetLink && isItemFolder(targetLink);
+    if (isFolder && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Notice: "${targetLink?.title}" is a Collection Folder.\n\nExecuting ${actionType} will also automatically apply this action to all fanworks unpacked from this collection.\n\nDo you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+
     const res = await fetch("/api/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -104,9 +117,17 @@ export default function VerifierManagePage() {
     return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
   });
 
+  const folderCount = links.filter((l) => isItemFolder(l)).length;
+  const fileCount = links.filter((l) => !isItemFolder(l)).length;
+
   const filteredLinks = sortedLinks.filter((item) => {
-    if (selectedStatusFilter === "all") return true;
-    return item.status === selectedStatusFilter;
+    if (selectedStatusFilter !== "all" && item.status !== selectedStatusFilter) {
+      return false;
+    }
+    const isFolder = isItemFolder(item);
+    if (selectedTypeFilter === "folder" && !isFolder) return false;
+    if (selectedTypeFilter === "file" && isFolder) return false;
+    return true;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredLinks.length / pageSize));
@@ -273,29 +294,80 @@ export default function VerifierManagePage() {
                 </p>
               </div>
 
-              {/* Status Filter Buttons (Scrollbar hidden) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                {[
-                  { id: "all", label: `All (${links.length})` },
-                  { id: "under_verification", label: `Pending (${metrics.underVerificationCount})` },
-                  { id: "approved", label: `Approved (${metrics.approvedCount})` },
-                  { id: "hidden", label: `Hidden (${metrics.hiddenCount})` },
-                ].map((tab) => (
+              {/* Dual Filter Controls: Status Tabs & Item Type Selector */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                {/* Status Filter Buttons */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {[
+                    { id: "all", label: `All (${links.length})` },
+                    { id: "under_verification", label: `Pending (${metrics.underVerificationCount})` },
+                    { id: "approved", label: `Approved (${metrics.approvedCount})` },
+                    { id: "hidden", label: `Hidden (${metrics.hiddenCount})` },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setSelectedStatusFilter(tab.id);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                        selectedStatusFilter === tab.id
+                          ? "bg-brand-trunk text-white shadow-2xs"
+                          : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Type Filter Buttons (Folders vs. Individual Files) */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-subtle-light dark:bg-subtle-dark border border-border-light dark:border-border-dark text-[11px]">
                   <button
-                    key={tab.id}
+                    type="button"
                     onClick={() => {
-                      setSelectedStatusFilter(tab.id);
+                      setSelectedTypeFilter("all");
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                      selectedStatusFilter === tab.id
-                        ? "bg-brand-trunk text-white shadow-2xs"
-                        : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                    className={`px-2 py-0.5 rounded font-semibold transition cursor-pointer ${
+                      selectedTypeFilter === "all"
+                        ? "bg-surface-light dark:bg-surface-dark text-brand-trunk dark:text-brand-light shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                     }`}
                   >
-                    {tab.label}
+                    All Types
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTypeFilter("folder");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                      selectedTypeFilter === "folder"
+                        ? "bg-surface-light dark:bg-surface-dark text-blue-700 dark:text-blue-300 shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    <span>📁</span>
+                    <span>Folders ({folderCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTypeFilter("file");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                      selectedTypeFilter === "file"
+                        ? "bg-surface-light dark:bg-surface-dark text-emerald-700 dark:text-emerald-300 shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    <span>📄</span>
+                    <span>Files ({fileCount})</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -319,8 +391,19 @@ export default function VerifierManagePage() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
-                              {link.title}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                  isItemFolder(link)
+                                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                }`}
+                              >
+                                {isItemFolder(link) ? "📁 Folder" : "📄 File"}
+                              </span>
+                              <span className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
+                                {link.title}
+                              </span>
                             </div>
                             <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                               by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
@@ -422,8 +505,19 @@ export default function VerifierManagePage() {
                             className="hover:bg-subtle-light dark:hover:bg-subtle-dark transition group"
                           >
                             <td className="p-3">
-                              <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
-                                {link.title}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                    isItemFolder(link)
+                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                      : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  }`}
+                                >
+                                  {isItemFolder(link) ? "📁 Folder" : "📄 File"}
+                                </span>
+                                <span className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
+                                  {link.title}
+                                </span>
                               </div>
                               <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                                 by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
