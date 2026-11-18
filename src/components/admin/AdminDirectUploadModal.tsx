@@ -82,6 +82,7 @@ export function AdminDirectUploadModal({
       if (data.metadata) {
         const meta = data.metadata;
         if (meta.title) setTitle(meta.title);
+        if (meta.author && !authorName) setAuthorName(meta.author);
         if (meta.fandom) setFandom(meta.fandom);
         if (meta.pairing) setPairing(meta.pairing);
         if (meta.rating) {
@@ -108,9 +109,11 @@ export function AdminDirectUploadModal({
 
         setDetailsExpanded(true);
         setScanNotice(
-          data.isStandardCoverFormatted
-            ? "✨ Metadata scanned and fields auto-filled from cover page!"
-            : "ℹ️ Plain document detected. Enter details manually if desired."
+          data.message || (
+            data.isStandardCoverFormatted
+              ? "✨ Metadata scanned and fields auto-filled from cover page!"
+              : "ℹ️ Plain document detected. Enter details manually if desired."
+          )
         );
       }
     } catch (err: unknown) {
@@ -635,6 +638,19 @@ export function AdminDirectUploadModal({
             )}
           </div>
 
+          {loading && isFolder && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 animate-pulse">
+              <svg className="animate-spin h-4 w-4 text-amber-700 dark:text-amber-300 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <div>
+                <span className="font-bold block">Scanning &amp; Indexing Folder Fanworks</span>
+                <span>This may take a while as we verify and stream-scan each file inside this folder...</span>
+              </div>
+            </div>
+          )}
+
           {/* Modal Footer Controls */}
           <div className="pt-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
             <button
@@ -660,9 +676,9 @@ export function AdminDirectUploadModal({
                 </svg>
               )}
               {scanning ? (
-                "Scanning Metadata (Locked)..."
+                isFolder ? "Scanning Folder Files..." : "Scanning Metadata (Locked)..."
               ) : loading ? (
-                "Cataloging Fanwork..."
+                isFolder ? "Scanning & Indexing Folder Files..." : "Cataloging Fanwork..."
               ) : isPriorVerified ? (
                 <>
                   <span>✓</span> Direct Publish (Approved)

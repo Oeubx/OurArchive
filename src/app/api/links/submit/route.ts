@@ -13,9 +13,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validateAndNormalizeDriveUrl } from "@/lib/services/drive-validator";
 import { fetchDriveFileMetadata, fetchDriveFolderChildren } from "@/lib/services/drive-api";
 import type { GoogleDriveFileMetadata, DriveChildWork } from "@/lib/services/drive-api";
+import { extractFileMetadataFromDrive } from "@/lib/services/metadata-extractor";
 import { verifyTurnstileToken } from "@/lib/services/turnstile";
 import { performFullThreatScan } from "@/lib/security/threat-scanner";
 import { evaluateScanStateMachine } from "@/lib/security/state-machine";
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const ip =
@@ -304,74 +307,169 @@ export async function POST(request: NextRequest) {
       alreadyIndexedCount = existingIdSet.size;
 
       const collectionTag = `collection:${detectedCollectionName || "Curated Archive"}`;
-      for (const child of folderChildren) {
-        if (existingIdSet.has(child.id)) {
-          // Already indexed; skip insertion to prevent duplicates and constraint violations
-          continue;
-        }
+      const toIndex = folderChildren.filter((child) => !existingIdSet.has(child.id));
 
-        try {
-          const childDriveUrl = `https://drive.google.com/file/d/${child.id}/view`;
-          const { data: childLink } = await adminSupabase
-            .from("drive_links")
-            .insert({
-              drive_url: childDriveUrl,
-              google_file_id: child.id,
-              upload_mode: effectiveUploadMode,
-              uploader_user_id: user.id,
-              verification_status: effectiveStatus,
-              is_hidden: effectiveHidden,
-              is_removed: false,
-            })
-            .select()
-            .single();
+      // Batch-scan child works in chunks of 5 using in-memory ephemeral streaming
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < toIndex.length; i += BATCH_SIZE) {
+        const batch = toIndex.slice(i, i + BATCH_SIZE);
 
-          if (childLink) {
-            await adminSupabase.from("link_metadata").insert({
-              link_id: childLink.id,
-              title: child.cleanTitle,
-              author_name: (authorName || effectiveDisplayName).trim(),
-              fandom: (fandom || "General Fanworks").trim(),
-              pairing: pairing ? pairing.trim() : null,
-              rating: effectiveRating,
-              word_count: 0,
-              summary: summary
+        await Promise.all(
+          batch.map(async (child) => {
+            try {
+              // 1. In-memory ephemeral cover metadata extraction (Zero-AI, Zero-Download)
+              const childScan = await extractFileMetadataFromDrive(
+                child.id,
+                child.name,
+                child.mimeType,
+                process.env.GOOGLE_DRIVE_API_KEY
+              );
+              const childMeta = childScan.metadata;
+              const childDriveUrl = `https://drive.google.com/file/d/${child.id}/view`;
+
+              // 2. Child Threat Scan & Evaluation
+              const childFileMeta: GoogleDriveFileMetadata = {
+                id: child.id,
+                name: child.name,
+                mimeType: child.mimeType,
+                sizeBytes: child.sizeBytes,
+                canEdit: false,
+                ownerName: metadata.ownerName,
+                ownerEmail: metadata.ownerEmail,
+              };
+              const childThreatScan = await performFullThreatScan(childFileMeta, childDriveUrl);
+              const childEvaluation = evaluateScanStateMachine(childThreatScan);
+
+              const childStatus = allowDirectApproval ? "verified" : childEvaluation.status;
+              const childHidden = allowDirectApproval ? false : childEvaluation.isHidden;
+              const childBadge = allowDirectApproval ? "MANUAL_VERIFIED" : childEvaluation.badge;
+
+              // 3. Insert child drive link
+              const { data: childLink } = await adminSupabase
+                .from("drive_links")
+                .insert({
+                  drive_url: childDriveUrl,
+                  google_file_id: child.id,
+                  upload_mode: effectiveUploadMode,
+                  uploader_user_id: user.id,
+                  verification_status: childStatus,
+                  is_hidden: childHidden,
+                  is_removed: false,
+                })
+                .select()
+                .single();
+
+              if (!childLink) return;
+
+              // 4. Resolve child metadata with intelligent fallbacks
+              const resolvedChildTitle =
+                childMeta.title && childMeta.title !== "Untitled Fanwork"
+                  ? childMeta.title
+                  : child.cleanTitle;
+
+              const resolvedChildAuthor =
+                childMeta.author?.trim() || (authorName || effectiveDisplayName).trim();
+
+              const resolvedChildFandom =
+                (childMeta.fandom && childMeta.fandom.trim()) ||
+                (fandom || "General Fanworks").trim();
+
+              const resolvedChildRating =
+                childMeta.rating && childMeta.rating !== "Not Rated"
+                  ? childMeta.rating
+                  : effectiveRating;
+
+              const resolvedChildWordCount = childMeta.wordCount || 0;
+
+              const resolvedChildPairing =
+                childMeta.pairing || pairing ? (childMeta.pairing || pairing)!.trim() : null;
+
+              const childClassificationTag = childMeta.classification || (childMeta.isNsfw ? "nsfw" : "sfw");
+
+              const childTags = Array.from(
+                new Set([
+                  ...sanitizedTags,
+                  collectionTag,
+                  ...(childMeta.additionalTags || []),
+                  childClassificationTag,
+                ])
+              );
+
+              const childCategories = Array.from(
+                new Set([...sanitizedCategories, ...(childMeta.categories || [])])
+              );
+
+              const childWarnings = Array.from(
+                new Set([...sanitizedWarnings, ...(childMeta.warnings || [])])
+              );
+
+              const childCharacters = Array.from(
+                new Set([...sanitizedCharacters, ...(childMeta.characters || [])])
+              );
+
+              const childRelationships = Array.from(
+                new Set([
+                  ...sanitizedRelationships,
+                  ...(childMeta.relationships || []),
+                  ...(resolvedChildPairing ? [resolvedChildPairing] : []),
+                ])
+              );
+
+              const childSummary = childMeta.summary
+                ? `${childMeta.summary.trim()}\n\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
+                : summary
                 ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
-                : `Part of collection: ${detectedCollectionName || "Curated Archive"}`,
-              tags: Array.from(new Set([...sanitizedTags, collectionTag])),
-              categories: sanitizedCategories,
-              characters: sanitizedCharacters,
-              warnings: sanitizedWarnings,
-              relationships: sanitizedRelationships,
-              is_complete: Boolean(isComplete),
-              language: language ? String(language).trim() : "English",
-              canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : urlValidation.canonicalUrl,
-              file_name: child.name,
-              mime_type: child.mimeType,
-              file_size_bytes: child.sizeBytes,
-              drive_owner_name: effectiveDisplayName,
-              drive_owner_email: metadata.ownerEmail,
-              is_owner_masked: isOwnerMasked !== false,
-            });
+                : `Part of collection: ${detectedCollectionName || "Curated Archive"}`;
 
-            await adminSupabase.from("link_verifications").insert({
-              link_id: childLink.id,
-              automated_risk_score: scanResult.riskScore,
-              automated_flags: scanResult.flags,
-              scanner_passed: scanResult.riskScore === 0,
-              admin_verified_by: allowDirectApproval ? user.id : null,
-              admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
-              admin_notes: allowDirectApproval
-                ? "Auto-verified collection child work."
-                : evaluation.quarantineReason || null,
-              verification_badge: effectiveBadge,
-            });
+              await adminSupabase.from("link_metadata").insert({
+                link_id: childLink.id,
+                title: resolvedChildTitle,
+                author_name: resolvedChildAuthor,
+                fandom: resolvedChildFandom,
+                pairing: resolvedChildPairing,
+                rating: resolvedChildRating,
+                word_count: resolvedChildWordCount,
+                summary: childSummary,
+                tags: childTags,
+                categories: childCategories,
+                characters: childCharacters,
+                warnings: childWarnings,
+                relationships: childRelationships,
+                is_complete:
+                  typeof childMeta.isComplete === "boolean"
+                    ? childMeta.isComplete
+                    : Boolean(isComplete),
+                language: childMeta.language || (language ? String(language).trim() : "English"),
+                canonical_source_url:
+                  childMeta.canonicalSourceUrl ||
+                  (canonicalSourceUrl ? canonicalSourceUrl.trim() : urlValidation.canonicalUrl),
+                file_name: child.name,
+                mime_type: child.mimeType,
+                file_size_bytes: child.sizeBytes,
+                drive_owner_name: effectiveDisplayName,
+                drive_owner_email: metadata.ownerEmail,
+                is_owner_masked: isOwnerMasked !== false,
+              });
 
-            unpackedCount += 1;
-          }
-        } catch (childErr) {
-          console.warn(`Could not unpack child fanwork ${child.name}:`, childErr);
-        }
+              await adminSupabase.from("link_verifications").insert({
+                link_id: childLink.id,
+                automated_risk_score: childThreatScan.riskScore,
+                automated_flags: childThreatScan.flags,
+                scanner_passed: childThreatScan.riskScore === 0,
+                admin_verified_by: allowDirectApproval ? user.id : null,
+                admin_verified_at: allowDirectApproval ? new Date().toISOString() : null,
+                admin_notes: allowDirectApproval
+                  ? "Auto-verified collection child work."
+                  : childEvaluation.quarantineReason || null,
+                verification_badge: childBadge,
+              });
+
+              unpackedCount += 1;
+            } catch (childErr) {
+              console.warn(`Could not unpack child fanwork ${child.name}:`, childErr);
+            }
+          })
+        );
       }
     }
 

@@ -9,6 +9,7 @@
 
 export interface ParsedWorkMetadata {
   title: string;
+  author?: string;
   canonicalSourceUrl?: string;
   rating?: string;
   warnings: string[];
@@ -70,6 +71,7 @@ export function parseFirstPageMetadata(rawText: string, fallbackFileName?: strin
 
   const result: ParsedWorkMetadata = {
     title: defaultTitle,
+    author: undefined,
     canonicalSourceUrl: undefined,
     rating: "Not Rated",
     warnings: [],
@@ -100,7 +102,7 @@ export function parseFirstPageMetadata(rawText: string, fallbackFileName?: strin
     };
   }
 
-  // 1. Detect Canonical Source URL and Title
+  // 1. Detect Canonical Source URL, Title, and Author
   const sourceMatch = text.match(
     /(?:Posted originally (?:on|at)(?: the)?|Original source:?)\s*(?:Archive of Our Own at\s+)?(https?:\/\/[^\s]+)/i
   );
@@ -110,12 +112,17 @@ export function parseFirstPageMetadata(rawText: string, fallbackFileName?: strin
     const beforeSource = text.substring(0, sourceMatch.index).trim();
     const lines = beforeSource.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (lines.length > 0) {
-      result.title = lines[lines.length - 1];
+      result.title = lines[0];
+      if (lines.length > 1 && /^by\s+/i.test(lines[1])) {
+        result.author = lines[1].replace(/^by\s+/i, "").trim();
+      }
     }
   }
 
   // 2. Scan Standard Key-Value Fields
   const fieldPatterns = [
+    "Authors?",
+    "Creators?",
     "Rating",
     "Archive Warnings?",
     "Categor(?:y|ies)",
@@ -143,7 +150,9 @@ export function parseFirstPageMetadata(rawText: string, fallbackFileName?: strin
     if (!rawVal) continue;
     fieldsFound++;
 
-    if (key.startsWith("rating")) {
+    if (key.startsWith("author") || key.startsWith("creator")) {
+      result.author = rawVal;
+    } else if (key.startsWith("rating")) {
       result.rating = rawVal;
     } else if (key.startsWith("archive warning")) {
       result.warnings = rawVal.split(",").map((s) => s.trim()).filter(Boolean);
@@ -193,6 +202,20 @@ export function parseFirstPageMetadata(rawText: string, fallbackFileName?: strin
     const preLines = preText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (preLines.length > 0 && preLines[0].length < 120) {
       result.title = preLines[0];
+      if (!result.author && preLines.length > 1 && /^by\s+/i.test(preLines[1])) {
+        result.author = preLines[1].replace(/^by\s+/i, "").trim();
+      }
+    }
+  }
+
+  // 4b. Fallback Author: Detect "by Author" anywhere in the cover header if still missing
+  if (!result.author) {
+    const byMatch = text.match(/(?:^|\r?\n)\s*by\s+([^\r\n,]+)/i);
+    if (byMatch) {
+      const candidate = byMatch[1].trim();
+      if (candidate.length > 0 && candidate.length < 80 && !candidate.toLowerCase().startsWith("the ")) {
+        result.author = candidate;
+      }
     }
   }
 
