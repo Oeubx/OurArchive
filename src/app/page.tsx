@@ -147,20 +147,22 @@ export default function HomePage() {
               </button>
             )}
 
-            {/* Sign Up Section with Bookmarking Subtext */}
-            <div className="pt-1 text-center space-y-1">
-              <button
-                type="button"
-                onClick={openSignUp}
-                className="w-full py-2.5 px-4 bg-amber-100 dark:bg-amber-950/50 hover:bg-amber-200 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 text-brand-bark dark:text-amber-200 text-xs sm:text-sm font-bold rounded-xl transition flex items-center justify-center gap-2"
-              >
-                <span>⭐</span>
-                <span>SIGN UP</span>
-              </button>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
-                Sign up to unlock reading progress bookmarking
-              </p>
-            </div>
+            {/* Sign Up Section with Bookmarking Subtext (Only rendered for unauthenticated guests) */}
+            {!isAuthenticated && (
+              <div className="pt-1 text-center space-y-1">
+                <button
+                  type="button"
+                  onClick={openSignUp}
+                  className="w-full py-2.5 px-4 bg-amber-100 dark:bg-amber-950/50 hover:bg-amber-200 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 text-brand-bark dark:text-amber-200 text-xs sm:text-sm font-bold rounded-xl transition flex items-center justify-center gap-2"
+                >
+                  <span>⭐</span>
+                  <span>SIGN UP</span>
+                </button>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                  Sign up to unlock reading progress bookmarking
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
