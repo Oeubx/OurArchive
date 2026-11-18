@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isAdminUser } from "@/lib/auth/rbac";
+import { isAdminUser, isVerifierOrAdminUser } from "@/lib/auth/rbac";
 import { executeAdminAction } from "@/lib/services/admin-actions";
 import type { AdminActionType } from "@/types/database";
 
@@ -29,15 +29,32 @@ export async function POST(request: NextRequest) {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user || !isAdminUser(user)) {
+    if (authError || !user) {
       return NextResponse.json(
-        { error: "Forbidden: Administrator privileges required." },
+        { error: "Unauthorized: Authentication required." },
+        { status: 401 }
+      );
+    }
+
+    const isUserAdmin = isAdminUser(user);
+    const isUserVerifier = isVerifierOrAdminUser(user);
+
+    if (!isUserVerifier) {
+      return NextResponse.json(
+        { error: "Forbidden: Verifier or Administrator privileges required." },
         { status: 403 }
       );
     }
 
     const body = await request.json();
     const { linkId, actionType, reason, hardDelete } = body;
+
+    if (actionType === "REMOVE" && !isUserAdmin) {
+      return NextResponse.json(
+        { error: "Forbidden: Permanent deletion requires Administrator privileges." },
+        { status: 403 }
+      );
+    }
 
     if (!linkId || typeof linkId !== "string") {
       return NextResponse.json(
