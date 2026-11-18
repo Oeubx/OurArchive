@@ -111,7 +111,7 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                This system&apos;s purpose is to compile cloud drive links into one centralized, searchable index. Enjoy distraction-free online reading and verified safety diagnostics.
+                A community fanfiction index and personal reading archive. Compile view-only cloud drive links into one centralized search library, or curate your own private archive to read your stories anytime.
               </p>
             </div>
           </div>
