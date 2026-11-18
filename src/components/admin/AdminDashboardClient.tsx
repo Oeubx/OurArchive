@@ -49,6 +49,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   });
 
   const [filter, setFilter] = useState<string>("all");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<"all" | "folder" | "file">("all");
   const [processingActionId, setProcessingActionId] = useState<string | null>(null);
   const [showVerifierRequestsModal, setShowVerifierRequestsModal] = useState(false);
   const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
@@ -56,6 +57,9 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
   const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
   const [exportingAudit, setExportingAudit] = useState(false);
+
+  const isItemFolder = (item: DriveLink) =>
+    item.mimeType === "application/vnd.google-apps.folder" || item.rawDriveUrl.includes("/folders/");
 
   async function handleTriageAction(actionKey: string, actionFn: () => Promise<unknown> | unknown) {
     if (processingActionId) return;
@@ -72,6 +76,15 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     actionType: "VERIFY" | "APPROVE" | "REJECT" | "HIDE" | "UNHIDE" | "REMOVE",
     reason = "Administrative triage action"
   ) {
+    const targetLink = links.find((l) => l.id === linkId);
+    const isFolder = targetLink && isItemFolder(targetLink);
+    if (isFolder && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Notice: "${targetLink?.title}" is a Collection Folder.\n\nExecuting ${actionType} will also automatically apply this action to all fanworks unpacked from this collection.\n\nDo you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+
     const res = await fetch("/api/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,13 +148,19 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
     return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
   });
 
+  const folderCount = links.filter((l) => isItemFolder(l)).length;
+  const fileCount = links.filter((l) => !isItemFolder(l)).length;
+
   const filteredLinks = sortedLinks.filter((item) => {
-    if (filter === "all") return true;
-    if (filter === "pending") return item.status === "under_verification";
-    if (filter === "approved") return item.status === "approved";
-    if (filter === "hidden") return item.status === "hidden";
-    if (filter === "flagged") return item.status === "flagged" || item.automatedRiskScore >= 70;
-    if (filter === "rejected") return item.status === "rejected";
+    if (filter === "pending" && item.status !== "under_verification") return false;
+    if (filter === "approved" && item.status !== "approved") return false;
+    if (filter === "hidden" && item.status !== "hidden") return false;
+    if (filter === "flagged" && item.status !== "flagged" && (item.automatedRiskScore ?? 0) < 70) return false;
+    if (filter === "rejected" && item.status !== "rejected") return false;
+
+    const isFolder = isItemFolder(item);
+    if (selectedTypeFilter === "folder" && !isFolder) return false;
+    if (selectedTypeFilter === "file" && isFolder) return false;
     return true;
   });
 
@@ -304,32 +323,83 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             </p>
           </div>
 
-          {/* Categorized Filter Tabs (Native scrollbar hidden) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              { id: "all", label: `All (${links.length})` },
-              { id: "pending", label: `Pending (${metrics.underVerificationCount})` },
-              { id: "approved", label: `Approved (${metrics.approvedCount})` },
-              { id: "hidden", label: `Hidden / Quarantine (${metrics.hiddenCount})` },
-              { id: "flagged", label: `Threat Flags (${metrics.flaggedCount})` },
-              { id: "rejected", label: `Rejected (${metrics.rejectedCount})` },
-            ].map((tab) => (
+          {/* Dual Filter Controls: Categorized Status Tabs & Item Type Selector */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            {/* Status Filter Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {[
+                { id: "all", label: `All (${links.length})` },
+                { id: "pending", label: `Pending (${metrics.underVerificationCount})` },
+                { id: "approved", label: `Approved (${metrics.approvedCount})` },
+                { id: "hidden", label: `Hidden / Quarantine (${metrics.hiddenCount})` },
+                { id: "flagged", label: `Threat Flags (${metrics.flaggedCount})` },
+                { id: "rejected", label: `Rejected (${metrics.rejectedCount})` },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setFilter(tab.id);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                    filter === tab.id
+                      ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xs"
+                      : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Type Filter Buttons (Folders vs. Individual Files) */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-subtle-light dark:bg-subtle-dark border border-border-light dark:border-border-dark text-[11px]">
               <button
-                key={tab.id}
                 type="button"
                 onClick={() => {
-                  setFilter(tab.id);
+                  setSelectedTypeFilter("all");
                   setCurrentPage(1);
                 }}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                  filter === tab.id
-                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xs"
-                    : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                className={`px-2 py-0.5 rounded font-semibold transition cursor-pointer ${
+                  selectedTypeFilter === "all"
+                    ? "bg-surface-light dark:bg-surface-dark text-brand-trunk dark:text-brand-light shadow-2xs"
+                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                 }`}
               >
-                {tab.label}
+                All Types
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTypeFilter("folder");
+                  setCurrentPage(1);
+                }}
+                className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                  selectedTypeFilter === "folder"
+                    ? "bg-surface-light dark:bg-surface-dark text-blue-700 dark:text-blue-300 shadow-2xs"
+                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                <span>📁</span>
+                <span>Folders ({folderCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTypeFilter("file");
+                  setCurrentPage(1);
+                }}
+                className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                  selectedTypeFilter === "file"
+                    ? "bg-surface-light dark:bg-surface-dark text-emerald-700 dark:text-emerald-300 shadow-2xs"
+                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                <span>📄</span>
+                <span>Files ({fileCount})</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -337,7 +407,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs overflow-hidden">
           {displayedLinks.length === 0 ? (
             <div className="py-10 text-center text-xs text-gray-500 dark:text-gray-400">
-              No submissions found matching the &ldquo;{filter}&rdquo; filter.
+              No submissions found matching the current status and type filters.
             </div>
           ) : (
             <>
@@ -358,10 +428,21 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                       {/* Card Header: Title & Status Badge */}
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
-                            {item.title}
-                          </h4>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                isItemFolder(item)
+                                  ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                  : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                              }`}
+                            >
+                              {isItemFolder(item) ? "📁 Folder" : "📄 File"}
+                            </span>
+                            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
+                              {item.title}
+                            </h4>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                             by {item.authorName} &bull; {item.fandom}
                           </p>
                           {item.verificationBadge && (
@@ -512,8 +593,19 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
                         >
                           {/* Work & Author */}
                           <td className="py-3 px-4 max-w-xs">
-                            <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk transition">
-                              {item.title}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                  isItemFolder(item)
+                                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                }`}
+                              >
+                                {isItemFolder(item) ? "📁 Folder" : "📄 File"}
+                              </span>
+                              <span className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk transition">
+                                {item.title}
+                              </span>
                             </div>
                             <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
                               <span>by {item.authorName}</span>
