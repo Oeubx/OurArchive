@@ -74,6 +74,7 @@ export async function executeAdminAction({
       id,
       drive_url,
       google_file_id,
+      uploader_user_id,
       verification_status,
       is_hidden,
       is_removed,
@@ -584,6 +585,24 @@ export async function executeAdminAction({
           };
         }
 
+        // Synchronize authentic submission count on user profile
+        if (link.uploader_user_id) {
+          try {
+            const { count } = await adminSupabase
+              .from("drive_links")
+              .select("id", { count: "exact", head: true })
+              .eq("uploader_user_id", link.uploader_user_id)
+              .eq("is_removed", false);
+
+            await adminSupabase
+              .from("user_profiles")
+              .update({ submission_count: count ?? 0 })
+              .eq("id", link.uploader_user_id);
+          } catch (cntErr) {
+            console.warn("Failed to update user submission_count:", cntErr);
+          }
+        }
+
         return {
           success: true,
           action: "REMOVE",
@@ -613,6 +632,24 @@ export async function executeAdminAction({
           updated_at: now,
         })
         .eq("id", linkId);
+
+      // Synchronize authentic submission count on user profile
+      if (link.uploader_user_id) {
+        try {
+          const { count } = await adminSupabase
+            .from("drive_links")
+            .select("id", { count: "exact", head: true })
+            .eq("uploader_user_id", link.uploader_user_id)
+            .eq("is_removed", false);
+
+          await adminSupabase
+            .from("user_profiles")
+            .update({ submission_count: count ?? 0 })
+            .eq("id", link.uploader_user_id);
+        } catch (cntErr) {
+          console.warn("Failed to update user submission_count:", cntErr);
+        }
+      }
 
       return {
         success: true,

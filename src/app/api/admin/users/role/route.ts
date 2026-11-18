@@ -37,7 +37,25 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, users: users || [] });
+    // Query active non-removed submissions from drive_links to compute dynamic, accurate submission counts
+    const { data: activeLinks } = await adminSupabase
+      .from("drive_links")
+      .select("uploader_user_id")
+      .eq("is_removed", false);
+
+    const activeCountMap = new Map<string, number>();
+    activeLinks?.forEach((link) => {
+      if (link.uploader_user_id) {
+        activeCountMap.set(link.uploader_user_id, (activeCountMap.get(link.uploader_user_id) || 0) + 1);
+      }
+    });
+
+    const enrichedUsers = (users || []).map((u) => ({
+      ...u,
+      submission_count: activeCountMap.get(u.id) ?? 0,
+    }));
+
+    return NextResponse.json({ success: true, users: enrichedUsers });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });
