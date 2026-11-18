@@ -584,13 +584,13 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                       <span>🪄</span>
                       <span>
                         {isFolder
-                          ? "Folder Collection Scanner"
-                          : "Fanwork First-Page Scanner"}
+                          ? "Folder Collection Preview & Auto-Fill"
+                          : "Cover Page Auto-Fill"}
                       </span>
                     </span>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                       {isFolder
-                        ? "Verify folder permissions, inspect folder name, and check collection structure."
+                        ? "Pre-fill form details by sampling member works in this folder (Preview only, does not save yet)."
                         : "Extract title, rating, categories, warnings, characters, and word count directly from the cover."}
                     </p>
                   </div>
@@ -603,12 +603,12 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                     {scanning ? (
                       <>
                         <span className="animate-spin text-xs">⏳</span>
-                        <span>{isFolder ? "Scanning Folder..." : "Scanning Cover..."}</span>
+                        <span>{isFolder ? "Sampling Folder..." : "Scanning Cover..."}</span>
                       </>
                     ) : (
                       <>
                         <span>🪄</span>
-                        <span>{isFolder ? "Scan Folder" : "Scan Metadata"}</span>
+                        <span>{isFolder ? "Auto-Fill from Folder" : "Auto-Fill from Cover"}</span>
                       </>
                     )}
                   </button>
@@ -893,8 +893,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
               </svg>
               <div>
-                <span className="font-bold block">Scanning &amp; Indexing Folder Fanworks</span>
-                <span>This may take a while as we verify and extract metadata from each file inside this folder...</span>
+                <span className="font-bold block">Submitting &amp; Indexing Folder Collection</span>
+                <span>Writing to database and cataloging member fanworks into the library...</span>
               </div>
             </div>
           )}
@@ -920,10 +920,10 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 </svg>
               )}
               {scanning
-                ? (isFolder ? "Scanning Folder Files..." : "Scanning Metadata...")
+                ? "Previewing Details..."
                 : loading
-                ? (isFolder ? "Scanning & Indexing Folder Files..." : "Verifying & Submitting...")
-                : "Submit Work"}
+                ? (isFolder ? "Submitting & Indexing Collection..." : "Verifying & Submitting...")
+                : (isFolder ? "Submit Folder Collection" : "Submit Work")}
             </button>
           </div>
         </form>

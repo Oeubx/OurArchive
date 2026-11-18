@@ -361,6 +361,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         fileName: string;
         mimeType: string;
         sizeBytes: number;
+        rating?: string;
+        isNsfw?: boolean;
       }> = [];
 
       try {
@@ -375,7 +377,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               file_name,
               mime_type,
               file_size_bytes,
-              canonical_source_url
+              canonical_source_url,
+              rating,
+              tags
             )
           `)
           .neq("id", workId)
@@ -387,12 +391,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               ? item.link_metadata[0]
               : item.link_metadata;
             if (meta?.canonical_source_url === link.drive_url) {
+              const isChildNsfw =
+                meta.rating === "Explicit" ||
+                meta.rating === "Mature" ||
+                (meta.tags || []).includes("nsfw");
+
               collectionWorks.push({
                 id: item.google_file_id || item.id,
                 title: meta.title,
                 fileName: meta.file_name,
                 mimeType: meta.mime_type,
                 sizeBytes: Number(meta.file_size_bytes) || 0,
+                rating: meta.rating,
+                isNsfw: isChildNsfw,
               });
             }
           });

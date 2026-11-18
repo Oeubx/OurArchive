@@ -81,6 +81,7 @@ export async function executeAdminAction({
         title,
         author_name,
         fandom,
+        mime_type,
         drive_owner_name,
         drive_owner_email
       ),
@@ -114,6 +115,33 @@ export async function executeAdminAction({
     currentVerification?.verification_badge || "UNVERIFIED";
 
   const now = new Date().toISOString();
+
+  const isFolder =
+    metadata?.mime_type === "application/vnd.google-apps.folder" ||
+    link.drive_url.includes("/folders/");
+
+  const getChildLinkIds = async (): Promise<string[]> => {
+    if (!isFolder) return [];
+    try {
+      const { data: canonicalRows } = await adminSupabase
+        .from("link_metadata")
+        .select("link_id")
+        .eq("canonical_source_url", link.drive_url);
+
+      const ids = (canonicalRows || []).map((r) => r.link_id).filter((id) => id && id !== linkId);
+
+      const { data: taggedRows } = await adminSupabase
+        .from("link_metadata")
+        .select("link_id")
+        .contains("tags", [`folder_id:${linkId}`]);
+
+      const taggedIds = (taggedRows || []).map((r) => r.link_id).filter((id) => id && id !== linkId);
+      return Array.from(new Set([...ids, ...taggedIds]));
+    } catch (err) {
+      console.warn("Could not query child links for cascading action:", err);
+      return [];
+    }
+  };
 
   const maskedSnapshotUrl = `/reader/${maskWorkId(linkId)}`;
 
@@ -188,6 +216,33 @@ export async function executeAdminAction({
           .eq("id", currentVerification.id);
       }
 
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
+          await adminSupabase
+            .from("drive_links")
+            .update({
+              verification_status: evaluation.status,
+              is_hidden: evaluation.isHidden,
+              updated_at: now,
+            })
+            .in("id", childIds);
+
+          await adminSupabase
+            .from("link_verifications")
+            .update({
+              automated_risk_score: scanResult.riskScore,
+              automated_flags: scanResult.flags,
+              scanner_passed: evaluation.scannerPassed,
+              verification_badge: evaluation.badge,
+              admin_verified_by: adminId,
+              admin_verified_at: now,
+              admin_notes: `Collection Folder Re-scan (Score: ${scanResult.riskScore})`,
+            })
+            .in("link_id", childIds);
+        }
+      }
+
       await recordAuditLog(
         "VERIFY",
         reason || `Completed automated threat rescan. Score: ${scanResult.riskScore}/100.`
@@ -227,6 +282,32 @@ export async function executeAdminAction({
           .eq("id", currentVerification.id);
       }
 
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
+          await adminSupabase
+            .from("drive_links")
+            .update({
+              verification_status: "verified",
+              is_hidden: false,
+              updated_at: now,
+            })
+            .in("id", childIds);
+
+          await adminSupabase
+            .from("link_verifications")
+            .update({
+              verification_badge: newBadge,
+              admin_verified_by: adminId,
+              admin_verified_at: now,
+              admin_notes: reason
+                ? `${reason} (Cascaded from collection folder approval)`
+                : "Approved via collection folder approval.",
+            })
+            .in("link_id", childIds);
+        }
+      }
+
       await recordAuditLog(
         "APPROVE",
         reason || "Verified fanwork and published to public search feed."
@@ -262,6 +343,32 @@ export async function executeAdminAction({
             admin_notes: reason || "Rejected by administrator.",
           })
           .eq("id", currentVerification.id);
+      }
+
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
+          await adminSupabase
+            .from("drive_links")
+            .update({
+              verification_status: "rejected",
+              is_hidden: true,
+              updated_at: now,
+            })
+            .in("id", childIds);
+
+          await adminSupabase
+            .from("link_verifications")
+            .update({
+              verification_badge: "UNVERIFIED",
+              admin_verified_by: adminId,
+              admin_verified_at: now,
+              admin_notes: reason
+                ? `${reason} (Cascaded from collection folder rejection)`
+                : "Rejected via collection folder rejection.",
+            })
+            .in("link_id", childIds);
+        }
       }
 
       await recordAuditLog(
@@ -301,14 +408,9 @@ export async function executeAdminAction({
         })
         .eq("id", linkId);
 
-      // Cascade hide to any child fanworks unpacked from this collection
-      if (link.drive_url) {
-        const { data: childLinks } = await adminSupabase
-          .from("link_metadata")
-          .select("link_id")
-          .eq("canonical_source_url", link.drive_url);
-        if (childLinks && childLinks.length > 0) {
-          const childIds = childLinks.map((c) => c.link_id);
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
           await adminSupabase
             .from("drive_links")
             .update({ is_hidden: true, updated_at: now })
@@ -347,6 +449,16 @@ export async function executeAdminAction({
           updated_at: now,
         })
         .eq("id", linkId);
+
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
+          await adminSupabase
+            .from("drive_links")
+            .update({ is_hidden: false, updated_at: now })
+            .in("id", childIds);
+        }
+      }
 
       await recordAuditLog("UNHIDE", reason || "Link visibility restored.");
 
@@ -450,13 +562,9 @@ export async function executeAdminAction({
 
       if (hardDelete) {
         // Cascade hard delete to unpacked child works
-        if (link.drive_url) {
-          const { data: childLinks } = await adminSupabase
-            .from("link_metadata")
-            .select("link_id")
-            .eq("canonical_source_url", link.drive_url);
-          if (childLinks && childLinks.length > 0) {
-            const childIds = childLinks.map((c) => c.link_id);
+        if (isFolder) {
+          const childIds = await getChildLinkIds();
+          if (childIds.length > 0) {
             await adminSupabase.from("drive_links").delete().in("id", childIds);
           }
         }
@@ -486,13 +594,9 @@ export async function executeAdminAction({
       }
 
       // Cascade soft-delete + hide to unpacked child works
-      if (link.drive_url) {
-        const { data: childLinks } = await adminSupabase
-          .from("link_metadata")
-          .select("link_id")
-          .eq("canonical_source_url", link.drive_url);
-        if (childLinks && childLinks.length > 0) {
-          const childIds = childLinks.map((c) => c.link_id);
+      if (isFolder) {
+        const childIds = await getChildLinkIds();
+        if (childIds.length > 0) {
           await adminSupabase
             .from("drive_links")
             .update({ is_removed: true, is_hidden: true, updated_at: now })
