@@ -22,6 +22,8 @@ export interface CollectionChildWork {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  rating?: string;
+  isNsfw?: boolean;
 }
 
 interface ReaderData {
@@ -355,6 +357,7 @@ export default function ReaderPage() {
                 }
               : json
           );
+          setPdfPageInput(1);
         })
         .catch((err: unknown) => {
           console.error("Error streaming collection child work:", err);
@@ -478,7 +481,7 @@ export default function ReaderPage() {
 
   // Observe active visible page for extracted PDF content with [data-pdf-page]
   useEffect(() => {
-    if (!data?.contentHtml || data?.isFolder) return;
+    if (!data?.contentHtml || (data?.isFolder && !selectedChildWork)) return;
 
     let ticking = false;
 
@@ -494,8 +497,8 @@ export default function ReaderPage() {
         const pageElements = document.querySelectorAll<HTMLElement>("[data-pdf-page]");
         if (pageElements.length === 0) return;
 
-        const triggerY = window.innerHeight * 0.35;
-        let activePage = 1;
+        const triggerY = window.innerHeight * 0.4;
+        let activePage = -1;
 
         for (let i = 0; i < pageElements.length; i++) {
           const el = pageElements[i];
@@ -508,7 +511,16 @@ export default function ReaderPage() {
           }
         }
 
-        setPdfPageInput((prev) => (prev !== activePage ? activePage : prev));
+        // Check if scrolled near the bottom of document
+        const isNearBottom =
+          window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 60;
+        if (isNearBottom && (data?.totalPages || pageElements.length > 0)) {
+          activePage = data?.totalPages || pageElements.length;
+        }
+
+        if (activePage > 0) {
+          setPdfPageInput((prev) => (prev !== activePage ? activePage : prev));
+        }
       });
     };
 
@@ -518,7 +530,7 @@ export default function ReaderPage() {
     return () => {
       window.removeEventListener("scroll", onScrollPageTrack);
     };
-  }, [data?.contentHtml, data?.isFolder, selectedChildWork]);
+  }, [data?.contentHtml, data?.isFolder, data?.totalPages, selectedChildWork]);
 
   // Debounced auto-save on scroll for authenticated readers
   useEffect(() => {
@@ -1225,10 +1237,51 @@ export default function ReaderPage() {
                   )}
                 </div>
 
+                {/* Mixed Content / Adult Content Protection Banner */}
+                {(() => {
+                  const hasAdultConsent =
+                    nsfwAcknowledged ||
+                    (typeof window !== "undefined" &&
+                      localStorage.getItem("ourarchive_nsfw_consent") === "true");
+                  const hiddenAdultCount = (data.collectionWorks || []).filter(
+                    (w) => w.isNsfw && !hasAdultConsent
+                  ).length;
+
+                  if (hiddenAdultCount === 0) return null;
+
+                  return (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🔞</span>
+                        <span>
+                          <strong>{hiddenAdultCount} adult (18+ / NSFW) fanwork{hiddenAdultCount > 1 ? "s" : ""}</strong> hidden in this collection by SafeSearch.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("ourarchive_nsfw_consent", "true");
+                          }
+                          setNsfwAcknowledged(true);
+                        }}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-xs transition shrink-0 cursor-pointer shadow-2xs"
+                      >
+                        Unlock 18+ Content
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {data.collectionWorks && data.collectionWorks.length > 0 ? (
                   <div className="grid grid-cols-1 gap-2.5">
                     {data.collectionWorks
                       .filter((w) => {
+                        const hasAdultConsent =
+                          nsfwAcknowledged ||
+                          (typeof window !== "undefined" &&
+                            localStorage.getItem("ourarchive_nsfw_consent") === "true");
+                        if (w.isNsfw && !hasAdultConsent) return false;
                         if (!collectionFilter.trim()) return true;
                         const q = collectionFilter.toLowerCase();
                         return w.title.toLowerCase().includes(q) || w.fileName.toLowerCase().includes(q);
@@ -1240,15 +1293,22 @@ export default function ReaderPage() {
                           className={`group flex items-center justify-between p-3.5 rounded-lg border transition-all cursor-pointer ${currentTheme.collectionCard}`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                work.mimeType.includes("pdf")
-                                  ? currentTheme.badgePdf
-                                  : currentTheme.badgeDoc
-                              }`}
-                            >
-                              {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                  work.mimeType.includes("pdf")
+                                    ? currentTheme.badgePdf
+                                    : currentTheme.badgeDoc
+                                }`}
+                              >
+                                {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
+                              </span>
+                              {work.isNsfw && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                  18+
+                                </span>
+                              )}
+                            </div>
                             <div className="min-w-0">
                               <h3 className={`text-sm font-semibold transition truncate ${currentTheme.collectionCardTitle}`}>
                                 {work.title}
