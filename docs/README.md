@@ -17,6 +17,8 @@ docs/
 ├── ci_cd.md                                       # CI/CD Architecture & GitHub Actions Contract
 ├── version_history/                               # Release Alignment & Version Records
 │   ├── README.md                                  # Release Index & Active Alignment Matrix
+│   ├── v1.0.3.md                                  # v1.0.3 Release Snapshot (Personal Archive, Scanning)
+│   ├── v1.0.2.md                                  # v1.0.2 Release Snapshot
 │   ├── v1.0.1.md                                  # v1.0.1 Patch Release Snapshot
 │   └── v1.0.0.md                                  # v1.0.0 Production Release Snapshot
 ├── disclaimers/                                   # Community Governance & Legal Protection
