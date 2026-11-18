@@ -118,4 +118,25 @@ It was a dark and stormy night. The wind howled through the open window as she s
     assert.deepEqual(res.metadata.categories, []);
     assert.deepEqual(res.metadata.warnings, []);
   });
+
+  it("extracts author from AO3 standard cover header and by-line", () => {
+    const sample = `
+The Midnight Sun
+by StarlightWriter
+Posted originally on the Archive of Our Own at https://archiveofourown.org/works/99887766.
+
+Rating: Teen And Up Audiences
+Archive Warning: No Archive Warnings Apply
+Fandom: Original Work
+Stats: Published: 2026-02-14 Words: 12,345 Chapters: 1/1
+`;
+
+    const res = parseFirstPageMetadata(sample);
+    assert.equal(res.success, true);
+    assert.equal(res.metadata.title, "The Midnight Sun");
+    assert.equal(res.metadata.author, "StarlightWriter");
+    assert.equal(res.metadata.fandom, "Original Work");
+    assert.equal(res.metadata.wordCount, 12345);
+    assert.equal(res.metadata.isComplete, true);
+  });
 });

@@ -11,6 +11,7 @@
 
 During extended or unexpected outages on primary fanwork archives, readers and authors lose access to bookmarked works, continuing stories, and community archives. **OurArchive** bridges this gap as a temporary, non-commercial community hub where:
 - Users can submit public, view-only Google Drive links containing fanfiction backups.
+- Contributors can curate their own **Personal Fanwork Archive (Private Vault)**, enjoying immediate distraction-free reading of their works prior to verification, with granular toggles to share them publicly with the community.
 - Readers can search and read works in a clean, distraction-free reader interface without downloading raw files.
 - Internal automated safety filters and system administrators verify submitted links to prevent malicious file distribution.
 - Authors and Drive owners have complete sovereignty over their links with zero-barrier immediate removal upon request.

@@ -19,6 +19,7 @@ Module 2 delivers the core user experience for readers and archivists:
    [Option to view Google Drive link / path]
    ```
 6. **Ephemeral Reader Mode**: Clean, distraction-free reading without file downloading.
+7. **Personal Fanwork Archive (Private Vault)**: Contributors can maintain their own personal reading collection with immediate pre-approval reading, 5/10/15 pagination, and granular public-vs-private visibility controls.
 
 ---
 
@@ -32,7 +33,7 @@ Module 2 delivers the core user experience for readers and archivists:
 | `OA-M2-F3` | Full-Text & Multi-Tag Search | [`../../database/indexes_and_performance.md`](../../database/indexes_and_performance.md) |
 | `OA-M2-F4` | Distraction-Free Reader Mode | [`../../architecture/reader_and_anti_bot_protection.md`](../../architecture/reader_and_anti_bot_protection.md) |
 | `OA-M2-F5` | Standard Display Card Projection | [`../../database/search_and_display_projection.md`](../../database/search_and_display_projection.md) |
-| `OA-M2-F6` | Dual-Path Upload Model | [`../../architecture/drive_ingestion_and_search.md`](../../architecture/drive_ingestion_and_search.md) |
+| `OA-M2-F6` | Dual-Path Upload & Personal Archive | [`drive_link_processing_spec.md`](drive_link_processing_spec.md) |
 
 ---
 
