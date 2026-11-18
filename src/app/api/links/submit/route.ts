@@ -298,6 +298,9 @@ export async function POST(request: NextRequest) {
     // 10. Solution A: Unpack and Index Individual Child Fanworks from Collection Folder (Idempotent Sync)
     let unpackedCount = 0;
     let alreadyIndexedCount = 0;
+    let hasSfwChild = false;
+    let hasNsfwChild = false;
+
     if (folderChildren.length > 0) {
       const childIds = folderChildren.map((c) => c.id);
       const { data: existingChildRows } = await adminSupabase
@@ -309,6 +312,7 @@ export async function POST(request: NextRequest) {
       alreadyIndexedCount = existingIdSet.size;
 
       const collectionTag = `collection:${detectedCollectionName || "Curated Archive"}`;
+      const folderRefTag = `folder_id:${newLink.id}`;
       const toIndex = folderChildren.filter((child) => !existingIdSet.has(child.id));
 
       // Batch-scan child works in chunks of 5 using in-memory ephemeral streaming
@@ -363,14 +367,14 @@ export async function POST(request: NextRequest) {
 
               if (!childLink) return;
 
-              // 4. Resolve child metadata with intelligent fallbacks
+              // 4. Resolve isolated child metadata (do not blindly copy folder-level fic tags/characters)
               const resolvedChildTitle =
                 childMeta.title && childMeta.title !== "Untitled Fanwork"
                   ? childMeta.title
                   : child.cleanTitle;
 
               const resolvedChildAuthor =
-                childMeta.author?.trim() || (authorName || effectiveDisplayName).trim();
+                childMeta.author?.trim() || "Unknown / Community Backup";
 
               const resolvedChildFandom =
                 (childMeta.fandom && childMeta.fandom.trim()) ||
@@ -379,39 +383,38 @@ export async function POST(request: NextRequest) {
               const resolvedChildRating =
                 childMeta.rating && childMeta.rating !== "Not Rated"
                   ? childMeta.rating
-                  : effectiveRating;
+                  : "Not Rated";
 
               const resolvedChildWordCount = childMeta.wordCount || 0;
+              const resolvedChildPairing = childMeta.pairing ? childMeta.pairing.trim() : null;
 
-              const resolvedChildPairing =
-                childMeta.pairing || pairing ? (childMeta.pairing || pairing)!.trim() : null;
+              const isChildAdult =
+                Boolean(childMeta.isNsfw) ||
+                resolvedChildRating === "Explicit" ||
+                resolvedChildRating === "Mature";
 
-              const childClassificationTag = childMeta.classification || (childMeta.isNsfw ? "nsfw" : "sfw");
+              if (isChildAdult) {
+                hasNsfwChild = true;
+              } else {
+                hasSfwChild = true;
+              }
+
+              const childClassificationTag = isChildAdult ? "nsfw" : "sfw";
 
               const childTags = Array.from(
                 new Set([
-                  ...sanitizedTags,
                   collectionTag,
+                  folderRefTag,
                   ...(childMeta.additionalTags || []),
                   childClassificationTag,
                 ])
               );
 
-              const childCategories = Array.from(
-                new Set([...sanitizedCategories, ...(childMeta.categories || [])])
-              );
-
-              const childWarnings = Array.from(
-                new Set([...sanitizedWarnings, ...(childMeta.warnings || [])])
-              );
-
-              const childCharacters = Array.from(
-                new Set([...sanitizedCharacters, ...(childMeta.characters || [])])
-              );
-
+              const childCategories = childMeta.categories || [];
+              const childWarnings = childMeta.warnings || [];
+              const childCharacters = childMeta.characters || [];
               const childRelationships = Array.from(
                 new Set([
-                  ...sanitizedRelationships,
                   ...(childMeta.relationships || []),
                   ...(resolvedChildPairing ? [resolvedChildPairing] : []),
                 ])
@@ -419,8 +422,6 @@ export async function POST(request: NextRequest) {
 
               const childSummary = childMeta.summary
                 ? `${childMeta.summary.trim()}\n\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
-                : summary
-                ? `${summary.trim()}\n(Part of collection: ${detectedCollectionName || "Curated Archive"})`
                 : `Part of collection: ${detectedCollectionName || "Curated Archive"}`;
 
               await adminSupabase.from("link_metadata").insert({
@@ -443,8 +444,7 @@ export async function POST(request: NextRequest) {
                     : Boolean(isComplete),
                 language: childMeta.language || (language ? String(language).trim() : "English"),
                 canonical_source_url:
-                  childMeta.canonicalSourceUrl ||
-                  (canonicalSourceUrl ? canonicalSourceUrl.trim() : urlValidation.canonicalUrl),
+                  childMeta.canonicalSourceUrl || urlValidation.canonicalUrl,
                 file_name: child.name,
                 mime_type: child.mimeType,
                 file_size_bytes: child.sizeBytes,
@@ -472,6 +472,27 @@ export async function POST(request: NextRequest) {
             }
           })
         );
+      }
+
+      // If collection contains both SFW and NSFW works, dual-tag the parent folder
+      if (hasSfwChild && hasNsfwChild) {
+        try {
+          const { data: parentMeta } = await adminSupabase
+            .from("link_metadata")
+            .select("tags")
+            .eq("link_id", newLink.id)
+            .maybeSingle();
+
+          const existingTags = parentMeta?.tags || [];
+          const updatedTags = Array.from(new Set([...existingTags, "sfw", "nsfw", "mixed-content"]));
+
+          await adminSupabase
+            .from("link_metadata")
+            .update({ tags: updatedTags })
+            .eq("link_id", newLink.id);
+        } catch {
+          // non-blocking
+        }
       }
     }
 
