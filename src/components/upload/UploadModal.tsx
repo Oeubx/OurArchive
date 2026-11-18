@@ -31,6 +31,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [tagsInput, setTagsInput] = useState("");
   const [canonicalSourceUrl, setCanonicalSourceUrl] = useState("");
   const [isOwnerMasked, setIsOwnerMasked] = useState(true);
+  const [isPersonalArchive, setIsPersonalArchive] = useState(false);
 
   // Granular fanwork categorization state
   const [categories, setCategories] = useState<string[]>([]);
@@ -165,6 +166,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           driveUrl: canonicalUrl,
           isFolder,
           isNsfw,
+          isPersonalArchive,
           title: title.trim() || undefined,
           authorName: resolvedAuthor,
           fandom: resolvedFandom,
@@ -505,6 +507,28 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
               />
               <label htmlFor="confirmViewOnly" className="text-gray-700 dark:text-gray-300 text-[11px] leading-tight cursor-pointer">
                 I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
+              </label>
+            </div>
+
+            {/* Personal Archive / Public Visibility Checkbox */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="personalArchiveCheckbox"
+                  checked={isPersonalArchive}
+                  onChange={(e) => setIsPersonalArchive(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>Keep in my Personal Archive (Private Vault)</span>
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                    Store this work in your personal archive only. Other users will not be able to search or read it until you choose to make it public. You can read it anytime from your contribute portal.
+                  </p>
+                </div>
               </label>
             </div>
           </div>

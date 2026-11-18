@@ -10,6 +10,7 @@ import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { maskDriveUrl } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,14 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Safety rule: Do not reveal hidden links to public readers
-    if (link.is_hidden) {
-      return NextResponse.json(
-        { error: "This fanwork has been hidden by the author or administrator." },
-        { status: 403 }
-      );
-    }
-
     // 1. Resolve Authenticated Identity & Role
     let userRole: string = "guest";
     let userId: string | null = null;
@@ -98,19 +91,33 @@ export async function POST(request: NextRequest) {
       // Fallback for unauthenticated guest
     }
 
-    // 2. Anti-Mass Scraping Access Control Gate:
-    // Only Verifiers, Admins, or the original uploader can reveal the raw Drive URL.
     const isModerator = userRole === "admin" || userRole === "verifier";
     const isOriginalUploader = Boolean(userId && link.uploader_user_id && link.uploader_user_id === userId);
 
-    if (!isModerator && !isOriginalUploader) {
-      return NextResponse.json(
-        {
-          error:
-            "Access Denied: Full Google Drive URLs are restricted to Verifiers, Administrators, and the original submitter to protect fanworks against automated mass harvesting.",
-        },
-        { status: 403 }
-      );
+    // 2. Personal Archive & Role-Based Masking Protocol:
+    // If the contributor toggled the work to private/personal (is_hidden === true):
+    // - Admins: Unmasked raw Drive URL
+    // - Original Uploader: Unmasked raw Drive URL
+    // - Verifiers: Strictly MASKED Drive URL
+    // - General Readers: HTTP 403 Forbidden
+    if (link.is_hidden) {
+      if (userRole !== "admin" && !isOriginalUploader && userRole !== "verifier") {
+        return NextResponse.json(
+          { error: "This fanwork is stored in the contributor's private personal archive." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Public Link Gate: Only moderators or the original submitter can reveal raw URLs
+      if (!isModerator && !isOriginalUploader) {
+        return NextResponse.json(
+          {
+            error:
+              "Access Denied: Full Google Drive URLs are restricted to Verifiers, Administrators, and the original submitter to protect fanworks against automated mass harvesting.",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Process metadata
@@ -134,19 +141,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine effective Drive URL: If private and user is a verifier, strictly mask the link!
+    const isVerifierOnPrivateWork = link.is_hidden && userRole === "verifier" && !isOriginalUploader;
+    const effectiveDriveUrl = isVerifierOnPrivateWork
+      ? maskDriveUrl(link.drive_url)
+      : link.drive_url;
+
     return NextResponse.json({
       success: true,
       workId: link.id,
-      driveUrl: link.drive_url,
-      googleFileId: link.google_file_id,
+      driveUrl: effectiveDriveUrl,
+      isMasked: isVerifierOnPrivateWork,
+      googleFileId: isVerifierOnPrivateWork ? undefined : link.google_file_id,
       title: metadata?.title || "Untitled Fanwork",
       authorName: metadata?.author_name || "Unknown Author",
       displayOwner,
       verificationBadge: verification?.verification_badge || "UNVERIFIED",
       riskScore: verification?.automated_risk_score ?? 0,
       verifiedAt: verification?.admin_verified_at || null,
-      safetyDisclaimer:
-        "You are opening an external Google Drive view-only file. OurArchive has verified view-only status and clean MIME safety.",
+      safetyDisclaimer: isVerifierOnPrivateWork
+        ? "Personal Archive Work: Google Drive URL is masked for Verifiers under contributor privacy policy."
+        : "You are opening an external Google Drive view-only file. OurArchive has verified view-only status and clean MIME safety.",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";
