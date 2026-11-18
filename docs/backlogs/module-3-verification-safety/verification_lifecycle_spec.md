@@ -32,7 +32,11 @@ export function evaluateDriveThreat(metadata: DriveMetadata, safeBrowsingClean: 
     'text/html',
     'text/plain',
     'application/vnd.google-apps.document',
-    'application/epub+zip'
+    'application/vnd.google-apps.folder',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'application/epub+zip',
+    'application/rtf'
   ];
   if (!ALLOWED_MIMES.includes(metadata.mimeType)) {
     score += 80;
@@ -91,3 +95,12 @@ Every action inserts an immutable record into `public.admin_actions`:
 INSERT INTO public.admin_actions (link_id, admin_id, action_type, reason)
 VALUES ('7f891b2c-3d4e-5f6a-7b8c-9d0e1f2a3b4c', auth.uid(), 'APPROVE', 'Verified view-only Heartstopper fanfiction mirror.');
 ```
+
+---
+
+## 3. Folder Collection Cascading & File-Level Granularity
+
+When executing any triage action on `/manage` or `/admin/queue`:
+- **Folder Collection Actions**: Executing `APPROVE`, `REMOVE`, `HIDE`, `UNHIDE`, `REJECT`, or `VERIFY` on a folder collection automatically cascades that exact status and verification badge to all member fanworks unpacked from that folder (matched via `link_metadata.canonical_source_url === parent.drive_url` or tagged with `folder_id:<parent_id>`).
+- **Granular File Actions**: Performing any action directly on an individual member file affects **only that specific file**, leaving the parent folder and sibling works intact in their current status.
+- **Review Queue Type Filtering**: The queue supports instantaneous filtering by Item Type (`All Types`, `Folders Only`, `Individual Files Only`) with live count badges and visual collection association tags.
