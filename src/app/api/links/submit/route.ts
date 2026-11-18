@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       language,
       canonicalSourceUrl,
       isOwnerMasked,
+      isPersonalArchive,
       turnstileToken,
       isPriorVerified,
       uploadMode,
@@ -160,7 +161,8 @@ export async function POST(request: NextRequest) {
     // Direct Approved Override: ONLY allowed if submitted by an authorized Admin AND isPriorVerified is explicitly true
     const allowDirectApproval = isUserAdmin && Boolean(isPriorVerified);
     const effectiveStatus: "verified" | typeof evaluation.status = allowDirectApproval ? "verified" : evaluation.status;
-    const effectiveHidden = allowDirectApproval ? false : evaluation.isHidden;
+    const isPersonal = Boolean(isPersonalArchive);
+    const effectiveHidden = isPersonal ? true : (allowDirectApproval ? false : evaluation.isHidden);
     const effectiveBadge = allowDirectApproval ? "MANUAL_VERIFIED" : evaluation.badge;
 
     // Determine upload_mode: "assisted_admin" if uploaded by admin via direct upload, otherwise "authenticated"
@@ -341,7 +343,7 @@ export async function POST(request: NextRequest) {
               const childEvaluation = evaluateScanStateMachine(childThreatScan);
 
               const childStatus = allowDirectApproval ? "verified" : childEvaluation.status;
-              const childHidden = allowDirectApproval ? false : childEvaluation.isHidden;
+              const childHidden = isPersonal ? true : (allowDirectApproval ? false : childEvaluation.isHidden);
               const childBadge = allowDirectApproval ? "MANUAL_VERIFIED" : childEvaluation.badge;
 
               // 3. Insert child drive link
