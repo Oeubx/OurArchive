@@ -36,7 +36,7 @@ export interface DriveLink {
   driveOwnerName?: string;
   driveOwnerEmail?: string;
   isOwnerMasked: boolean;
-  uploadedBy: string; // Contributor human-readable display name (e.g. @biboy_admin)
+  uploadedBy: string; // Contributor human-readable display name (e.g. @admin)
   uploaderUserId?: string; // Internal user UUID for administrative actions
   uploadedByRole: UserRole;
   uploadedAt: string;

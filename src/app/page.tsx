@@ -104,14 +104,14 @@ export default function HomePage() {
                   OurArchive
                 </h1>
                 <span className="text-[11px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-brand-bark dark:text-amber-200 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  TEMPORARY PROJECT
+                  Read-Only Index
                 </span>
                 <span className="text-[11px] font-medium bg-subtle-light dark:bg-subtle-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark px-2 py-0.5 rounded-full tracking-wide">
                   v{APP_VERSION}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                A community fanfiction index and personal reading archive. Compile view-only cloud drive links into one centralized search library, or curate your own private archive to read your stories anytime.
+                A zero-download, read-only cloud drive directory and document viewer. Compile view-only drive links into one centralized search library, or curate your own personal vault to read documents anytime.
               </p>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3 px-1">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <span>📖</span>
-            <span>About OurArchive & The Initiative</span>
+            <span>About OurArchive</span>
           </h2>
           <Link
             href="/disclaimers"

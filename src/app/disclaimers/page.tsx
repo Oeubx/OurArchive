@@ -26,13 +26,13 @@ export default function DisclaimersPage() {
         </p>
       </div>
 
-      {/* Temporary Project Scope Box */}
+      {/* Platform Scope Box */}
       <div className="p-4 bg-amber-50/80 dark:bg-amber-950/20 border-l-4 border-amber-600 rounded-r text-gray-800 dark:text-gray-200 space-y-1">
         <h2 className="font-bold text-sm text-brand-bark dark:text-brand-light">
-          Temporary Project Scope & Community Charter
+          Platform Scope &amp; Governance Charter
         </h2>
         <p>
-          <strong>OurArchive</strong> was created as a temporary project to aid fanfiction readers and authors during service disruptions. It is strictly not intended to replace, compete with, or replicate permanent operations of primary fanwork archives.
+          <strong>OurArchive</strong> is a zero-download, read-only cloud drive directory and document viewer. It is designed to index and stream shared, view-only drive links safely without hosting files locally.
         </p>
       </div>
 
@@ -43,14 +43,14 @@ export default function DisclaimersPage() {
           <div className="flex items-center gap-2">
             <span className="text-lg">✍️</span>
             <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-              1. Respect for Fanfiction Creator Sovereignty
+              1. Respect for Creator Sovereignty
             </h2>
           </div>
           <p>
-            Fanfiction authors retain <strong>100% intellectual and moral ownership</strong> over their works. OurArchive does not claim any copyright, trademark, licensing, or commercial rights to any text, character, plotline, or fanwork indexed on this site.
+            Original creators retain <strong>100% intellectual and moral ownership</strong> over their works. OurArchive does not claim any copyright, trademark, licensing, or commercial rights to any text or document indexed on this site.
           </p>
           <p>
-            OurArchive functions strictly as an emergency directory and read-only proxy for view-only cloud drive backups that community volunteers or authors have made available.
+            OurArchive functions strictly as an indexed directory and read-only proxy for view-only cloud drive links that contributors or owners have made available.
           </p>
         </section>
 
@@ -93,7 +93,7 @@ export default function DisclaimersPage() {
             <li>We do not run advertisements, affiliate links, or promotional sponsorships.</li>
             <li>We do not solicit, accept, or process monetary donations.</li>
             <li>We do not sell, rent, or monetize reader or contributor telemetry data.</li>
-            <li>All infrastructure runs on community-tier serverless services purely for the benefit of fans and readers during outages.</li>
+            <li>All infrastructure runs on serverless services without commercial monetization.</li>
           </ul>
         </section>
 
@@ -159,7 +159,7 @@ export default function DisclaimersPage() {
             </h2>
           </div>
           <p>
-            We believe in complete transparency with the fanfiction community regarding how OurArchive was made and how it operates:
+            We believe in complete transparency with our community regarding how OurArchive was made and how it operates:
           </p>
 
           <div className="space-y-3 pl-1 text-gray-700 dark:text-gray-300">
@@ -170,10 +170,10 @@ export default function DisclaimersPage() {
               </h3>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>
-                  <strong>Human Planning &amp; Vision:</strong> This entire system—its purpose, design, creator safety protections, and zero-download rules—was <strong>planned and directed by the developer (<span className="font-mono">Oeubx</span>)</strong>.
+                  <strong>Human Planning &amp; Vision:</strong> This entire system—its purpose, design, creator safety protections, and zero-download rules—was <strong>planned and directed by the platform maintainer</strong>.
                 </li>
                 <li>
-                  <strong>AI as a Coding Assistant:</strong> The code was constructed using Google&apos;s <strong>Antigravity</strong> tool powered by the <strong>Gemini 3.8 Flash</strong> model. The AI acted purely as a software engineering helper (writing code, styling pages, and setting up database queries) under the developer&apos;s supervision.
+                  <strong>AI as a Coding Assistant:</strong> The code was constructed using Google&apos;s <strong>Antigravity</strong> tool powered by the <strong>Gemini 3.8 Flash</strong> model. The AI acted purely as a software engineering helper (writing code, styling pages, and setting up database queries) under human developer supervision.
                 </li>
               </ul>
             </div>
@@ -181,14 +181,14 @@ export default function DisclaimersPage() {
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
                 <span>🚫</span>
-                <span>Does AI Run on the Live Website or Read Fanworks?</span>
+                <span>Does AI Run on the Live Website or Read Documents?</span>
               </h3>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>
                   <strong>Zero AI on the Live Site:</strong> The active website and server run on <strong>standard website code without any AI running in the background</strong>.
                 </li>
                 <li>
-                  <strong>The AI Never Reads Your Stories:</strong> No artificial intelligence model has access to, ingests, or will <strong>ever read, analyze, summarize, or train on</strong> any fanfiction submitted or mirrored here. Your creative works remain 100% yours and are never fed into any machine learning models.
+                  <strong>The AI Never Reads Your Documents:</strong> No artificial intelligence model has access to, ingests, or will <strong>ever read, analyze, summarize, or train on</strong> any document or creative work submitted or mirrored here. Your creative works remain 100% yours and are never fed into any machine learning models.
                 </li>
               </ul>
             </div>
@@ -209,7 +209,7 @@ export default function DisclaimersPage() {
                   <strong>Rule-based safety filter:</strong> A simple system filter checks that the file is not a harmful computer program (like <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.exe</code>, <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.bat</code>, or installer scripts).
                 </li>
                 <li>
-                  <strong>No AI reads the story body text:</strong> The verification scanner does not read, analyze, summarize, or train on story text.
+                  <strong>No AI reads the document body text:</strong> The verification scanner does not read, analyze, summarize, or train on document text.
                 </li>
               </ol>
             </div>
@@ -221,13 +221,13 @@ export default function DisclaimersPage() {
               </h3>
               <ul className="list-disc pl-5 mt-1 space-y-1">
                 <li>
-                  <strong>Cover Page Only:</strong> When requested during link contribution or verification, the system ephemerally inspects only the first cover/title page of a fanwork to extract public catalog details (Title, Rating, Category, Fandom, Warnings, Characters, and Tags).
+                  <strong>Cover Page Only:</strong> When requested during link contribution or verification, the system ephemerally inspects only the first cover/title page of a document or work to extract public catalog details (Title, Rating, Category, Fandom, Warnings, Characters, and Tags).
                 </li>
                 <li>
                   <strong>Zero AI / Pure Deterministic Code:</strong> This scanning uses standard regular expressions and pattern matching—it does not use artificial intelligence, machine learning, or large language models.
                 </li>
                 <li>
-                  <strong>Story Chapters Are Never Read:</strong> The system never reads, analyzes, summarizes, or trains on story chapters or body text. All extracted tags are stored solely to help readers find works in library search.
+                  <strong>Document Body Text Is Never Read:</strong> The system never reads, analyzes, summarizes, or trains on document chapters or body text. All extracted tags are stored solely to help readers find works in library search.
                 </li>
               </ul>
             </div>

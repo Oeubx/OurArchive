@@ -6,9 +6,9 @@ import { EmergencyNoticeBanner } from "@/components/disclaimers/EmergencyNoticeB
 import { ThemeProvider } from "@/context/ThemeContext";
 
 export const metadata: Metadata = {
-  title: "OurArchive — Cloud Fanwork Directory & Read-Only Archive",
+  title: "OurArchive — Cloud Drive Directory & Read-Only Viewer",
   description:
-    "An emergency, non-commercial reading directory and cloud mirror index for the fanfiction community. Zero-download, read-only streaming.",
+    "A zero-download, read-only cloud drive index and document streaming platform.",
 };
 
 const themeInitScript = `
