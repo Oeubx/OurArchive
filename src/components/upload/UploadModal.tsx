@@ -31,6 +31,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [tagsInput, setTagsInput] = useState("");
   const [canonicalSourceUrl, setCanonicalSourceUrl] = useState("");
   const [isOwnerMasked, setIsOwnerMasked] = useState(true);
+  const [isPersonalArchive, setIsPersonalArchive] = useState(false);
 
   // Granular fanwork categorization state
   const [categories, setCategories] = useState<string[]>([]);
@@ -51,6 +52,12 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (segments.isValid && typeof segments.isFolder === "boolean") {
+      setIsFolder(segments.isFolder);
+    }
+  }, [segments.isValid, segments.isFolder]);
 
   if (!isOpen || !mounted) return null;
 
@@ -79,6 +86,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
       if (data.metadata) {
         const meta = data.metadata;
         if (meta.title) setTitle(meta.title);
+        if (meta.author && !authorName) setAuthorName(meta.author);
         if (meta.fandom) setFandom(meta.fandom);
         if (meta.pairing) setPairing(meta.pairing);
         if (meta.rating) {
@@ -106,9 +114,11 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
         setDetailsExpanded(true);
         setScanNotice(
-          data.isStandardCoverFormatted
-            ? "✨ Metadata scanned and fields auto-filled from cover page!"
-            : "ℹ️ Plain document detected. Enter details manually if desired."
+          data.message || (
+            data.isStandardCoverFormatted
+              ? "✨ Metadata scanned and fields auto-filled from cover page!"
+              : "ℹ️ Plain document detected. Enter details manually if desired."
+          )
         );
       }
     } catch (err: unknown) {
@@ -156,6 +166,7 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           driveUrl: canonicalUrl,
           isFolder,
           isNsfw,
+          isPersonalArchive,
           title: title.trim() || undefined,
           authorName: resolvedAuthor,
           fandom: resolvedFandom,
@@ -498,6 +509,28 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
               </label>
             </div>
+
+            {/* Personal Archive / Public Visibility Checkbox */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="personalArchiveCheckbox"
+                  checked={isPersonalArchive}
+                  onChange={(e) => setIsPersonalArchive(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>Keep in my Personal Archive (Private Vault)</span>
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                    Store this work in your personal archive only. Other users will not be able to search or read it until you choose to make it public. You can read it anytime from your contribute portal.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Expandable Sub-Details Section (Default Closed) */}
@@ -551,13 +584,13 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                       <span>🪄</span>
                       <span>
                         {isFolder
-                          ? "Folder Collection Scanner"
-                          : "Fanwork First-Page Scanner"}
+                          ? "Folder Collection Preview & Auto-Fill"
+                          : "Cover Page Auto-Fill"}
                       </span>
                     </span>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                       {isFolder
-                        ? "Verify folder permissions, inspect folder name, and check collection structure."
+                        ? "Pre-fill form details by sampling member works in this folder (Preview only, does not save yet)."
                         : "Extract title, rating, categories, warnings, characters, and word count directly from the cover."}
                     </p>
                   </div>
@@ -570,23 +603,24 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                     {scanning ? (
                       <>
                         <span className="animate-spin text-xs">⏳</span>
-                        <span>{isFolder ? "Scanning Folder..." : "Scanning Cover..."}</span>
+                        <span>{isFolder ? "Sampling Folder..." : "Scanning Cover..."}</span>
                       </>
                     ) : (
                       <>
                         <span>🪄</span>
-                        <span>{isFolder ? "Scan Folder" : "Scan Metadata"}</span>
+                        <span>{isFolder ? "Auto-Fill from Folder" : "Auto-Fill from Cover"}</span>
                       </>
                     )}
                   </button>
                 </div>
 
                 {scanning && isFolder && (
-                  <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2 animate-pulse">
-                    <span>⏳</span>
-                    <span>
-                      This may take a while as we verify the metadata and unpack the files inside this folder...
-                    </span>
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 animate-pulse">
+                    <span className="text-base animate-spin">⏳</span>
+                    <div>
+                      <span className="font-bold block">Scanning Folder Collection</span>
+                      <span>This may take a while as we verify the metadata and inspect the files inside this folder...</span>
+                    </div>
                   </div>
                 )}
 
@@ -852,6 +886,19 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </label>
           </div>
 
+          {loading && isFolder && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 animate-pulse">
+              <svg className="animate-spin h-4 w-4 text-amber-700 dark:text-amber-300 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <div>
+                <span className="font-bold block">Submitting &amp; Indexing Folder Collection</span>
+                <span>Writing to database and cataloging member fanworks into the library...</span>
+              </div>
+            </div>
+          )}
+
           <div className="pt-3 border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
             <button
               type="button"
@@ -872,7 +919,11 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
               )}
-              {scanning ? "Scanning Metadata..." : loading ? "Verifying & Submitting..." : "Submit Work"}
+              {scanning
+                ? "Previewing Details..."
+                : loading
+                ? (isFolder ? "Submitting & Indexing Collection..." : "Verifying & Submitting...")
+                : (isFolder ? "Submit Folder Collection" : "Submit Work")}
             </button>
           </div>
         </form>

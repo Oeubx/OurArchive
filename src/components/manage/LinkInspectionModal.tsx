@@ -87,6 +87,17 @@ export function LinkInspectionModal({
               >
                 Inspect Fanwork Submission
               </h3>
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  link.mimeType === "application/vnd.google-apps.folder" || link.rawDriveUrl.includes("/folders/")
+                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                }`}
+              >
+                {link.mimeType === "application/vnd.google-apps.folder" || link.rawDriveUrl.includes("/folders/")
+                  ? "📁 Folder Collection"
+                  : "📄 File"}
+              </span>
               {isAdmin && (
                 <span className="text-[10px] bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 px-2 py-0.5 rounded font-mono font-bold uppercase">
                   Admin Mode
@@ -102,6 +113,15 @@ export function LinkInspectionModal({
               ✕
             </button>
           </div>
+
+          {(link.mimeType === "application/vnd.google-apps.folder" || link.rawDriveUrl.includes("/folders/")) && (
+            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-800 dark:text-blue-200 flex items-center gap-1.5">
+              <span>📁</span>
+              <span>
+                <strong>Folder Collection:</strong> All triage actions performed here (Approve, Reject, Hide, Delete) will automatically cascade to all member fanworks inside this folder.
+              </span>
+            </div>
+          )}
 
           {/* Content Body */}
           <div className="p-5 overflow-y-auto space-y-4 text-xs text-gray-700 dark:text-gray-300">

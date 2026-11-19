@@ -142,6 +142,19 @@ export async function fetchAdminCommunityLinks(): Promise<DriveLink[]> {
     } catch {
       // Ignore
     }
+
+    // First attempt secure server-side retrieval to bypass client RLS restrictions on triage queue
+    try {
+      const res = await fetch("/api/admin/links", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.links)) {
+          return json.links;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("fetchAdminCommunityLinks API fallback to direct client query:", apiErr);
+    }
   }
 
   try {

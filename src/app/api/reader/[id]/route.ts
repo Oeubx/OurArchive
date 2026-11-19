@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { extractText, extractTextItems, type StructuredTextItem } from "unpdf";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
@@ -223,6 +224,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         drive_url,
         google_file_id,
         upload_mode,
+        uploader_user_id,
         verification_status,
         is_hidden,
         is_removed,
@@ -251,6 +253,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { status: 404 }
       );
     }
+
+    // Resolve viewer user identity & authorization
+    let viewerUser: { id: string; role?: string } | null = null;
+    try {
+      const userSupabase = createClient();
+      const {
+        data: { user: authUser },
+      } = await userSupabase.auth.getUser();
+      if (authUser) {
+        viewerUser = {
+          id: authUser.id,
+          role: (authUser.app_metadata?.role as string) || "contributor",
+        };
+      }
+    } catch {
+      // Unauthenticated visitor
+    }
+
+    const isOwner = Boolean(viewerUser && link.uploader_user_id === viewerUser.id);
+    const isAdmin = Boolean(viewerUser && viewerUser.role === "admin");
+    const isVerifier = Boolean(viewerUser && (viewerUser.role === "verifier" || viewerUser.role === "admin"));
 
     // Check if 3-hour takedown grace period has expired without admin action
     if (link.takedown_deadline) {
@@ -282,9 +305,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    if (link.is_hidden) {
+    // Personal Archive / Hidden check (Allowed for owner and administrator)
+    if (link.is_hidden && !isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: "This work is hidden from public viewing." },
+        { error: "This fanwork is stored in the contributor's private personal archive." },
+        { status: 403 }
+      );
+    }
+
+    // Verification check: unapproved works can be read by owner, verifiers, or admins
+    if (link.verification_status !== "verified" && !isOwner && !isVerifier) {
+      return NextResponse.json(
+        { error: "This fanwork is currently pending verification and is not yet available for public reading." },
         { status: 403 }
       );
     }
@@ -329,6 +361,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         fileName: string;
         mimeType: string;
         sizeBytes: number;
+        rating?: string;
+        isNsfw?: boolean;
       }> = [];
 
       try {
@@ -343,7 +377,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               file_name,
               mime_type,
               file_size_bytes,
-              canonical_source_url
+              canonical_source_url,
+              rating,
+              tags
             )
           `)
           .neq("id", workId)
@@ -355,12 +391,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               ? item.link_metadata[0]
               : item.link_metadata;
             if (meta?.canonical_source_url === link.drive_url) {
+              const isChildNsfw =
+                meta.rating === "Explicit" ||
+                meta.rating === "Mature" ||
+                (meta.tags || []).includes("nsfw");
+
               collectionWorks.push({
                 id: item.google_file_id || item.id,
                 title: meta.title,
                 fileName: meta.file_name,
                 mimeType: meta.mime_type,
                 sizeBytes: Number(meta.file_size_bytes) || 0,
+                rating: meta.rating,
+                isNsfw: isChildNsfw,
               });
             }
           });
