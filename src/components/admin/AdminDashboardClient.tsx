@@ -50,6 +50,7 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
 
   const [filter, setFilter] = useState<string>("all");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<"all" | "folder" | "file">("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [processingActionId, setProcessingActionId] = useState<string | null>(null);
   const [showVerifierRequestsModal, setShowVerifierRequestsModal] = useState(false);
   const [showDirectUploadModal, setShowDirectUploadModal] = useState(false);
@@ -57,6 +58,8 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
   const [itemToRemove, setItemToRemove] = useState<DriveLink | null>(null);
   const [auditLink, setAuditLink] = useState<{ id: string; title: string } | null>(null);
   const [exportingAudit, setExportingAudit] = useState(false);
+
+  const isFilteredActive = filter !== "all" || selectedTypeFilter !== "all";
 
   const isItemFolder = (item: DriveLink) =>
     item.mimeType === "application/vnd.google-apps.folder" || item.rawDriveUrl.includes("/folders/");
@@ -323,85 +326,117 @@ export function AdminDashboardClient({ adminEmail }: AdminDashboardClientProps) 
             </p>
           </div>
 
-          {/* Dual Filter Controls: Categorized Status Tabs & Item Type Selector */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            {/* Status Filter Buttons */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              {[
-                { id: "all", label: `All (${links.length})` },
-                { id: "pending", label: `Pending (${metrics.underVerificationCount})` },
-                { id: "approved", label: `Approved (${metrics.approvedCount})` },
-                { id: "hidden", label: `Hidden / Quarantine (${metrics.hiddenCount})` },
-                { id: "flagged", label: `Threat Flags (${metrics.flaggedCount})` },
-                { id: "rejected", label: `Rejected (${metrics.rejectedCount})` },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setFilter(tab.id);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                    filter === tab.id
-                      ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xs"
-                      : "bg-surface-light dark:bg-surface-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          {/* Sole Filter Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-2xs self-start sm:self-auto ${
+              showFilters || isFilteredActive
+                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100 shadow-sm"
+                : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 text-current" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+            </svg>
+            <span>FILTER</span>
+            {isFilteredActive && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Filters active" />
+            )}
+            <span className="text-[10px] ml-0.5">{showFilters ? "▲" : "▼"}</span>
+          </button>
+        </div>
 
-            {/* Type Filter Buttons (Folders vs. Individual Files) */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-subtle-light dark:bg-subtle-dark border border-border-light dark:border-border-dark text-[11px]">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTypeFilter("all");
-                  setCurrentPage(1);
-                }}
-                className={`px-2 py-0.5 rounded font-semibold transition cursor-pointer ${
-                  selectedTypeFilter === "all"
-                    ? "bg-surface-light dark:bg-surface-dark text-brand-trunk dark:text-brand-light shadow-2xs"
-                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
-                }`}
-              >
-                All Types
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTypeFilter("folder");
-                  setCurrentPage(1);
-                }}
-                className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
-                  selectedTypeFilter === "folder"
-                    ? "bg-surface-light dark:bg-surface-dark text-blue-700 dark:text-blue-300 shadow-2xs"
-                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
-                }`}
-              >
-                <span>📁</span>
-                <span>Folders ({folderCount})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTypeFilter("file");
-                  setCurrentPage(1);
-                }}
-                className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
-                  selectedTypeFilter === "file"
-                    ? "bg-surface-light dark:bg-surface-dark text-emerald-700 dark:text-emerald-300 shadow-2xs"
-                    : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
-                }`}
-              >
-                <span>📄</span>
-                <span>Files ({fileCount})</span>
-              </button>
+        {/* Expandable Filter Drawer (Displayed below header when Filter button is clicked) */}
+        {showFilters && (
+          <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              {/* Status Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">
+                  Status:
+                </span>
+                {[
+                  { id: "all", label: `All (${links.length})` },
+                  { id: "pending", label: `Pending (${metrics.underVerificationCount})` },
+                  { id: "approved", label: `Approved (${metrics.approvedCount})` },
+                  { id: "hidden", label: `Hidden / Quarantine (${metrics.hiddenCount})` },
+                  { id: "flagged", label: `Threat Flags (${metrics.flaggedCount})` },
+                  { id: "rejected", label: `Rejected (${metrics.rejectedCount})` },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setFilter(tab.id);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                      filter === tab.id
+                        ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-2xs"
+                        : "bg-canvas-light dark:bg-canvas-dark text-gray-600 dark:text-gray-300 border border-border-light dark:border-border-dark hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Type Filter Buttons (Folders vs. Individual Files) */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">
+                  Format:
+                </span>
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-subtle-light dark:bg-subtle-dark border border-border-light dark:border-border-dark text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTypeFilter("all");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded font-semibold transition cursor-pointer ${
+                      selectedTypeFilter === "all"
+                        ? "bg-surface-light dark:bg-surface-dark text-brand-trunk dark:text-brand-light shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    All Types
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTypeFilter("folder");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                      selectedTypeFilter === "folder"
+                        ? "bg-surface-light dark:bg-surface-dark text-blue-700 dark:text-blue-300 shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    <span>📁</span>
+                    <span>Folders ({folderCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTypeFilter("file");
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                      selectedTypeFilter === "file"
+                        ? "bg-surface-light dark:bg-surface-dark text-emerald-700 dark:text-emerald-300 shadow-2xs"
+                        : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                    }`}
+                  >
+                    <span>📄</span>
+                    <span>Files ({fileCount})</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Triage Container: Dual Responsive Layout (Mobile Cards vs Desktop Table) */}
         <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs overflow-hidden">
