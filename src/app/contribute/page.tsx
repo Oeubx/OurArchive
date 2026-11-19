@@ -198,6 +198,13 @@ export default function ContributePage() {
               setShowGuestGateModal(true);
             }
           }}
+          onRefresh={() => {
+            if (userId) {
+              fetchUserContributions(userId).then((items) => {
+                setContributions(items);
+              });
+            }
+          }}
         />
       </section>
 

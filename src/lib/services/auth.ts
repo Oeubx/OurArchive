@@ -24,7 +24,8 @@ export async function signUpWithEmailPassword(
   email: string,
   password: string,
   redirectTo?: string,
-  displayName?: string
+  displayName?: string,
+  isAdult?: boolean
 ) {
   const supabase = createClient();
   const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -39,14 +40,17 @@ export async function signUpWithEmailPassword(
     password,
     options: {
       emailRedirectTo: targetUrl,
-      data: trimmedName
-        ? {
-            display_name: trimmedName,
-            full_name: trimmedName,
-            name: trimmedName,
-            user_name: trimmedName,
-          }
-        : undefined,
+      data: {
+        ...(trimmedName
+          ? {
+              display_name: trimmedName,
+              full_name: trimmedName,
+              name: trimmedName,
+              user_name: trimmedName,
+            }
+          : {}),
+        is_adult: Boolean(isAdult),
+      },
     },
   });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TakedownModal } from "@/components/takedown/TakedownModal";
 import { DirectTakedownEmailModal } from "@/components/takedown/DirectTakedownEmailModal";
+import { ReportBrokenLinkModal } from "@/components/modals/ReportBrokenLinkModal";
 import { createClient } from "@/lib/supabase/client";
 import { useRealtimeDriveLinks } from "@/lib/hooks/useRealtimeDriveLinks";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
@@ -21,6 +22,8 @@ export interface CollectionChildWork {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  rating?: string;
+  isNsfw?: boolean;
 }
 
 interface ReaderData {
@@ -44,6 +47,12 @@ interface ReaderData {
   plainContentHtml?: string | null;
   rawDriveUrl?: string;
   uploaderUserId?: string;
+  takedownNotice?: {
+    isFlagged: boolean;
+    deadline: string | null;
+    flaggedAt: string | null;
+    minutesRemaining: number;
+  } | null;
 }
 
 type FontFamily = "serif" | "sans" | "mono";
@@ -62,6 +71,7 @@ export default function ReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [showTakedownModal, setShowTakedownModal] = useState(false);
   const [showDirectEmailModal, setShowDirectEmailModal] = useState(false);
+  const [showBrokenLinkModal, setShowBrokenLinkModal] = useState(false);
 
   // Realtime Takedown/Suppression Interruption Modal State
   const [interruptedReason, setInterruptedReason] = useState<string | null>(null);
@@ -82,16 +92,48 @@ export default function ReaderPage() {
   const [showResumeBanner, setShowResumeBanner] = useState(false);
   const [bookmarkSavedFeedback, setBookmarkSavedFeedback] = useState(false);
   const [pdfPageInput, setPdfPageInput] = useState<number>(1);
+  const [currentScrollPercent, setCurrentScrollPercent] = useState<number>(0);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initialChildAppliedRef = useRef(false);
+
+  const handlePageInputChange = useCallback(
+    (newPage: number) => {
+      const maxPage = data?.totalPages || 9999;
+      const clamped = Math.max(1, Math.min(newPage, maxPage));
+      setPdfPageInput(clamped);
+      const targetEl = document.querySelector<HTMLElement>(`[data-pdf-page="${clamped}"]`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+    [data?.totalPages]
+  );
 
   // Reader customization state
   const [fontFamily, setFontFamily] = useState<FontFamily>("serif");
   const [fontSizePx, setFontSizePx] = useState<number>(18);
+  const [nsfwAcknowledged, setNsfwAcknowledged] = useState(false);
   const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [themeReady, setThemeReady] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ReaderViewMode>("formatted");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const consent = localStorage.getItem("ourarchive_nsfw_consent") === "true";
+      if (consent) {
+        setNsfwAcknowledged(true);
+      }
+    }
+  }, []);
+
+  const isAdultWork = Boolean(
+    data &&
+      (data.rating === "Mature" ||
+        data.rating === "Explicit" ||
+        (Array.isArray(data.tags) &&
+          data.tags.some((t) => ["nsfw", "mature", "explicit"].includes(t.toLowerCase()))))
+  );
 
   // Synchronize initial theme and view mode with global stored preferences before first paint
   useIsomorphicLayoutEffect(() => {
@@ -315,6 +357,7 @@ export default function ReaderPage() {
                 }
               : json
           );
+          setPdfPageInput(1);
         })
         .catch((err: unknown) => {
           console.error("Error streaming collection child work:", err);
@@ -359,9 +402,18 @@ export default function ReaderPage() {
         sizeBytes: 0,
       });
     }
-    if (!existingBookmark.isPdf) {
+
+    // Scroll to exact saved page element if it exists in the DOM
+    const savedPage = existingBookmark.lastPage;
+    const targetPageEl = savedPage
+      ? document.querySelector<HTMLElement>(`[data-pdf-page="${savedPage}"]`)
+      : null;
+
+    if (targetPageEl) {
+      targetPageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
       const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const targetY = scrollMax * (existingBookmark.scrollPercent / 100);
+      const targetY = scrollMax > 0 ? scrollMax * (existingBookmark.scrollPercent / 100) : 0;
       window.scrollTo({ top: targetY, behavior: "smooth" });
     }
     setShowResumeBanner(false);
@@ -382,16 +434,17 @@ export default function ReaderPage() {
   const saveCurrentProgress = useCallback(
     async (manual: boolean = false) => {
       if (!data || !userId) return;
-      if (data.isPdf && !manual) return; // Cross-origin PDF iframes cannot auto-track scroll
+      const isPureIframePdf = data.isPdf && !data.contentHtml;
+      if (isPureIframePdf && !manual) return; // Only cross-origin PDF iframes cannot auto-track scroll
 
       const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = data.isPdf
+      const scrollPercent = isPureIframePdf
         ? 0
         : scrollMax > 0
         ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100)))
         : 0;
 
-      const totalPages = Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
+      const totalPages = data.totalPages || Math.max(1, Math.ceil((data.wordCount || 2500) / 350));
       const lastPage = data.isPdf
         ? Math.max(1, Math.floor(Number(pdfPageInput) || 1))
         : Math.max(1, Math.ceil((scrollPercent / 100) * totalPages));
@@ -426,9 +479,63 @@ export default function ReaderPage() {
     [data, userId, pdfPageInput, selectedChildWork]
   );
 
-  // Debounced auto-save on scroll for authenticated HTML document readers
+  // Observe active visible page for extracted PDF content with [data-pdf-page]
   useEffect(() => {
-    if (!userId || !data || data.isPdf || data.isFolder) return;
+    if (!data?.contentHtml || (data?.isFolder && !selectedChildWork)) return;
+
+    let ticking = false;
+
+    const onScrollPageTrack = () => {
+      const scrollMax = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = scrollMax > 0 ? Math.min(100, Math.max(0, Math.round((window.scrollY / scrollMax) * 100))) : 0;
+      setCurrentScrollPercent(pct);
+
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const pageElements = document.querySelectorAll<HTMLElement>("[data-pdf-page]");
+        if (pageElements.length === 0) return;
+
+        const triggerY = window.innerHeight * 0.4;
+        let activePage = -1;
+
+        for (let i = 0; i < pageElements.length; i++) {
+          const el = pageElements[i];
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= triggerY && rect.bottom >= 0) {
+            const pageNum = parseInt(el.getAttribute("data-pdf-page") || "1", 10);
+            if (!isNaN(pageNum)) {
+              activePage = pageNum;
+            }
+          }
+        }
+
+        // Check if scrolled near the bottom of document
+        const isNearBottom =
+          window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 60;
+        if (isNearBottom && (data?.totalPages || pageElements.length > 0)) {
+          activePage = data?.totalPages || pageElements.length;
+        }
+
+        if (activePage > 0) {
+          setPdfPageInput((prev) => (prev !== activePage ? activePage : prev));
+        }
+      });
+    };
+
+    window.addEventListener("scroll", onScrollPageTrack, { passive: true });
+    onScrollPageTrack();
+
+    return () => {
+      window.removeEventListener("scroll", onScrollPageTrack);
+    };
+  }, [data?.contentHtml, data?.isFolder, data?.totalPages, selectedChildWork]);
+
+  // Debounced auto-save on scroll for authenticated readers
+  useEffect(() => {
+    const isPureIframePdf = data?.isPdf && !data?.contentHtml;
+    if (!userId || !data || isPureIframePdf || data.isFolder) return;
 
     const handleScroll = () => {
       if (scrollTimeoutRef.current) {
@@ -623,27 +730,60 @@ export default function ReaderPage() {
 
           {/* Reader Preferences Bar */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* BOOKMARK BUTTON (Authenticated users only, Supabase-persisted) */}
+            {/* BOOKMARK BUTTON (Authenticated users only, Cloud-persisted) */}
             {userId ? (
               <div className="flex items-center gap-1.5">
-                {data?.isPdf && (
+                {data?.isPdf ? (
                   <label
                     className={`flex items-center gap-1 px-2 py-0.5 border rounded text-[11px] ${currentTheme.toolbarGroup}`}
-                    title="Google Drive PDF previews cannot expose internal scroll position; enter your page checkpoint manually"
+                    title={
+                      data?.contentHtml
+                        ? "Current reading page (scrolls automatically with reading position, or type to jump)"
+                        : "Enter your page checkpoint"
+                    }
                   >
                     <span className="text-[10px] opacity-80">Pg</span>
                     <input
                       type="number"
                       min={1}
-                      max={9999}
+                      max={data?.totalPages || 9999}
                       value={pdfPageInput}
                       onChange={(e) =>
-                        setPdfPageInput(Math.max(1, parseInt(e.target.value, 10) || 1))
+                        handlePageInputChange(parseInt(e.target.value, 10) || 1)
                       }
                       aria-label="PDF Page Number"
                       className="w-11 bg-transparent text-center font-mono text-[11px] focus:outline-hidden"
                     />
+                    {data?.totalPages && (
+                      <span className="text-[10px] opacity-60 font-mono">
+                        / {data.totalPages}
+                      </span>
+                    )}
                   </label>
+                ) : (
+                  !data?.isFolder && (
+                    <div
+                      className={`flex items-center gap-1 px-2 py-0.5 border rounded text-[11px] font-mono ${currentTheme.toolbarGroup}`}
+                      title="Estimated reading page based on scroll position"
+                    >
+                      <span className="text-[10px] opacity-80">Pg</span>
+                      <span>
+                        {Math.max(
+                          1,
+                          Math.min(
+                            Math.max(1, Math.ceil((data?.wordCount || 2500) / 350)),
+                            Math.ceil(
+                              (currentScrollPercent / 100) *
+                                Math.max(1, Math.ceil((data?.wordCount || 2500) / 350))
+                            )
+                          )
+                        )}
+                      </span>
+                      <span className="opacity-60">
+                        / {Math.max(1, Math.ceil((data?.wordCount || 2500) / 350))}
+                      </span>
+                    </div>
+                  )
                 )}
                 <button
                   type="button"
@@ -655,8 +795,8 @@ export default function ReaderPage() {
                   }`}
                   title={
                     data?.isPdf
-                      ? "Save manual PDF page checkpoint to your Supabase bookmarks"
-                      : "Save current reading position to your Supabase bookmarks"
+                      ? "Save page checkpoint to your reading bookmarks"
+                      : "Save current reading position to your reading bookmarks"
                   }
                 >
                   <span>🔖</span>
@@ -849,6 +989,22 @@ export default function ReaderPage() {
         </div>
       </header>
 
+      {/* TAKEDOWN REVIEW NOTICE BANNER (3-Hour Grace Period Active) */}
+      {data?.takedownNotice?.isFlagged && (
+        <aside
+          aria-label="Takedown review notice"
+          className="max-w-3xl mx-auto my-3 p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/70 text-amber-950 dark:text-amber-200 text-xs shadow-xs space-y-1 animate-in slide-in-from-top-2 duration-200"
+        >
+          <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+            <span className="text-base">⚠️</span>
+            <span>Flagged for Takedown Review</span>
+          </div>
+          <p className="leading-relaxed text-[11px] opacity-90">
+            This fanwork has been flagged for copyright or ownership review. If no administrative action is taken, this work will be <strong>automatically hidden within 3 hours</strong> of submission (approximately {data.takedownNotice.minutesRemaining} minute{data.takedownNotice.minutesRemaining === 1 ? "" : "s"} remaining).
+          </p>
+        </aside>
+      )}
+
       {/* RESUME READING FLOATING BANNER */}
       {showResumeBanner && existingBookmark && (
         <aside
@@ -899,21 +1055,95 @@ export default function ReaderPage() {
         )}
 
         {error && !data && !interruptedReason && (
-          <div className="p-6 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-200 rounded-lg text-center space-y-3">
-            <h2 className="text-base font-bold">Failed to Stream Work</h2>
-            <p className="text-xs">{error}</p>
-            <div className="pt-2">
-              <Link
-                href="/"
-                className="px-4 py-2 bg-brand-trunk text-white text-xs font-semibold rounded hover:bg-brand-bark transition"
+          <div className="max-w-xl mx-auto my-10 p-6 sm:p-8 rounded-2xl border border-red-300 dark:border-red-900/60 bg-surface-light dark:bg-surface-dark shadow-xl text-center space-y-4 animate-in fade-in duration-200">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-2xl">
+              ⚠️
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                Inaccessible Fanwork / Broken Link Detected
+              </h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                We could not stream this document from Google Drive. The original author may have deleted the file, moved it to another directory, or restricted access permissions to private.
+              </p>
+            </div>
+
+            <div className="p-3 bg-red-50/70 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg text-left text-xs text-red-800 dark:text-red-300">
+              <strong>Diagnostic details:</strong> {error}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBrokenLinkModal(true)}
+                className="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
               >
-                Return to Library Search
+                <span>🚨</span>
+                <span>Report Broken Link</span>
+              </button>
+              <Link
+                href="/search"
+                className="w-full sm:w-auto px-4 py-2.5 bg-brand-trunk hover:bg-brand-bark text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                <span>🔍</span>
+                <span>Return to Library</span>
               </Link>
             </div>
           </div>
         )}
 
-        {data && (
+        {data && isAdultWork && !nsfwAcknowledged ? (
+          <div className="max-w-xl mx-auto my-10 p-6 sm:p-8 rounded-2xl border border-red-300 dark:border-red-900/60 bg-surface-light dark:bg-surface-dark shadow-xl text-center space-y-5 animate-in fade-in duration-200">
+            <div className="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-3xl">
+              🔞
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/60 px-2.5 py-0.5 rounded-full inline-block">
+                Adult Content Advisory (18+)
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {data.title}
+              </h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                by <strong className="text-gray-900 dark:text-gray-100">{data.authorName}</strong>
+              </p>
+            </div>
+
+            <div className="p-4 bg-red-50/70 dark:bg-red-950/20 border-l-4 border-red-500 rounded text-left text-xs text-gray-700 dark:text-gray-300 space-y-1.5 leading-relaxed">
+              <p>
+                This fanwork is marked as <strong className="text-red-700 dark:text-red-400 font-semibold">{data.rating}</strong> and is intended exclusively for adult audiences (18 years of age or older).
+              </p>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-2 pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                <span><strong>Fandom:</strong> {data.fandom}</span>
+                {data.pairing && <span>• <strong>Pairing:</strong> {data.pairing}</span>}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/search")}
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark transition cursor-pointer"
+              >
+                &larr; Return to Safety
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNsfwAcknowledged(true);
+                  if (typeof window !== "undefined") {
+                    localStorage.setItem("ourarchive_nsfw_consent", "true");
+                  }
+                }}
+                className="w-full sm:w-auto px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Proceed to Adult Work</span>
+                <span>&rarr;</span>
+              </button>
+            </div>
+          </div>
+        ) : data ? (
           <article className="space-y-6">
             {/* Work Metadata Header */}
             <header className={`p-6 rounded-lg border space-y-3 transition-colors ${currentTheme.metaBox}`}>
@@ -1007,10 +1237,51 @@ export default function ReaderPage() {
                   )}
                 </div>
 
+                {/* Mixed Content / Adult Content Protection Banner */}
+                {(() => {
+                  const hasAdultConsent =
+                    nsfwAcknowledged ||
+                    (typeof window !== "undefined" &&
+                      localStorage.getItem("ourarchive_nsfw_consent") === "true");
+                  const hiddenAdultCount = (data.collectionWorks || []).filter(
+                    (w) => w.isNsfw && !hasAdultConsent
+                  ).length;
+
+                  if (hiddenAdultCount === 0) return null;
+
+                  return (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🔞</span>
+                        <span>
+                          <strong>{hiddenAdultCount} adult (18+ / NSFW) fanwork{hiddenAdultCount > 1 ? "s" : ""}</strong> hidden in this collection by SafeSearch.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("ourarchive_nsfw_consent", "true");
+                          }
+                          setNsfwAcknowledged(true);
+                        }}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-xs transition shrink-0 cursor-pointer shadow-2xs"
+                      >
+                        Unlock 18+ Content
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 {data.collectionWorks && data.collectionWorks.length > 0 ? (
                   <div className="grid grid-cols-1 gap-2.5">
                     {data.collectionWorks
                       .filter((w) => {
+                        const hasAdultConsent =
+                          nsfwAcknowledged ||
+                          (typeof window !== "undefined" &&
+                            localStorage.getItem("ourarchive_nsfw_consent") === "true");
+                        if (w.isNsfw && !hasAdultConsent) return false;
                         if (!collectionFilter.trim()) return true;
                         const q = collectionFilter.toLowerCase();
                         return w.title.toLowerCase().includes(q) || w.fileName.toLowerCase().includes(q);
@@ -1022,15 +1293,22 @@ export default function ReaderPage() {
                           className={`group flex items-center justify-between p-3.5 rounded-lg border transition-all cursor-pointer ${currentTheme.collectionCard}`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                work.mimeType.includes("pdf")
-                                  ? currentTheme.badgePdf
-                                  : currentTheme.badgeDoc
-                              }`}
-                            >
-                              {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
-                            </span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                  work.mimeType.includes("pdf")
+                                    ? currentTheme.badgePdf
+                                    : currentTheme.badgeDoc
+                                }`}
+                              >
+                                {work.mimeType.includes("pdf") ? "PDF" : "DOC"}
+                              </span>
+                              {work.isNsfw && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                  18+
+                                </span>
+                              )}
+                            </div>
                             <div className="min-w-0">
                               <h3 className={`text-sm font-semibold transition truncate ${currentTheme.collectionCardTitle}`}>
                                 {work.title}
@@ -1163,7 +1441,7 @@ export default function ReaderPage() {
               </div>
             </footer>
           </article>
-        )}
+        ) : null}
       </main>
 
       {/* Takedown Modal in Reader (Signed-in Users) */}
@@ -1180,6 +1458,14 @@ export default function ReaderPage() {
         isOpen={showDirectEmailModal}
         onClose={() => setShowDirectEmailModal(false)}
         workTitle={selectedChildWork ? selectedChildWork.title || selectedChildWork.fileName : data?.title}
+      />
+
+      {/* Community Broken Link Reporting Modal */}
+      <ReportBrokenLinkModal
+        isOpen={showBrokenLinkModal}
+        onClose={() => setShowBrokenLinkModal(false)}
+        workId={workId}
+        workTitle={selectedChildWork?.title || data?.title || "Target Fanwork"}
       />
 
       {/* Real-Time Reader Interruption Modal (When Admin Hides or Purges Mid-Read) */}

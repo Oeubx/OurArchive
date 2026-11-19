@@ -107,6 +107,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // If dismissing the takedown request within the 3-hour review window, clear the takedown timer
+    if (status === "dismissed" && data?.link_id) {
+      await adminSupabase
+        .from("drive_links")
+        .update({
+          takedown_flagged_at: null,
+          takedown_deadline: null,
+          updated_at: now,
+        })
+        .eq("id", data.link_id);
+    }
+
     return NextResponse.json({ request: data }, { status: 200 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";

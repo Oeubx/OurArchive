@@ -12,6 +12,15 @@ export function isAdminUser(user: User | null | undefined): boolean {
 }
 
 /**
+ * Checks if a user possesses the admin or verifier role in their JWT app_metadata.
+ */
+export function isVerifierOrAdminUser(user: User | null | undefined): boolean {
+  if (!user) return false;
+  const role = user.app_metadata?.role;
+  return role === "admin" || role === "verifier";
+}
+
+/**
  * Server-Side Guard: Ensures the current request belongs to an authenticated admin.
  * If unauthenticated or unauthorized, redirects immediately.
  */

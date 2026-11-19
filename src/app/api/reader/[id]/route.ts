@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { extractText, extractTextItems, type StructuredTextItem } from "unpdf";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { sanitizeReaderHtml } from "@/lib/utils/sanitize-html";
 import { withTimeout } from "@/lib/utils/with-timeout";
 import { unmaskWorkId } from "@/lib/utils/idMasker";
@@ -223,9 +224,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         drive_url,
         google_file_id,
         upload_mode,
+        uploader_user_id,
         verification_status,
         is_hidden,
         is_removed,
+        takedown_flagged_at,
+        takedown_deadline,
         link_metadata (
           title,
           author_name,
@@ -250,12 +254,84 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    if (link.is_hidden) {
+    // Resolve viewer user identity & authorization
+    let viewerUser: { id: string; role?: string } | null = null;
+    try {
+      const userSupabase = createClient();
+      const {
+        data: { user: authUser },
+      } = await userSupabase.auth.getUser();
+      if (authUser) {
+        viewerUser = {
+          id: authUser.id,
+          role: (authUser.app_metadata?.role as string) || "contributor",
+        };
+      }
+    } catch {
+      // Unauthenticated visitor
+    }
+
+    const isOwner = Boolean(viewerUser && link.uploader_user_id === viewerUser.id);
+    const isAdmin = Boolean(viewerUser && viewerUser.role === "admin");
+    const isVerifier = Boolean(viewerUser && (viewerUser.role === "verifier" || viewerUser.role === "admin"));
+
+    // Check if 3-hour takedown grace period has expired without admin action
+    if (link.takedown_deadline) {
+      const deadlineMs = new Date(link.takedown_deadline).getTime();
+      const nowMs = Date.now();
+      if (nowMs >= deadlineMs) {
+        const nowIso = new Date().toISOString();
+        await supabase
+          .from("drive_links")
+          .update({
+            is_hidden: true,
+            updated_at: nowIso,
+          })
+          .eq("id", workId);
+
+        await supabase
+          .from("takedown_requests")
+          .update({
+            status: "quarantined",
+            updated_at: nowIso,
+          })
+          .eq("link_id", workId)
+          .eq("status", "pending");
+
+        return NextResponse.json(
+          { error: "This fanwork has been automatically hidden following a takedown review window expiration." },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Personal Archive / Hidden check (Allowed for owner and administrator)
+    if (link.is_hidden && !isOwner && !isAdmin) {
       return NextResponse.json(
-        { error: "This work is hidden from public viewing." },
+        { error: "This fanwork is stored in the contributor's private personal archive." },
         { status: 403 }
       );
     }
+
+    // Verification check: unapproved works can be read by owner, verifiers, or admins
+    if (link.verification_status !== "verified" && !isOwner && !isVerifier) {
+      return NextResponse.json(
+        { error: "This fanwork is currently pending verification and is not yet available for public reading." },
+        { status: 403 }
+      );
+    }
+
+    const takedownNotice = link.takedown_deadline
+      ? {
+          isFlagged: true,
+          flaggedAt: link.takedown_flagged_at || null,
+          deadline: link.takedown_deadline,
+          minutesRemaining: Math.max(
+            1,
+            Math.round((new Date(link.takedown_deadline).getTime() - Date.now()) / (1000 * 60))
+          ),
+        }
+      : null;
 
     const metadata = Array.isArray(link.link_metadata)
       ? link.link_metadata[0]
@@ -285,6 +361,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         fileName: string;
         mimeType: string;
         sizeBytes: number;
+        rating?: string;
+        isNsfw?: boolean;
       }> = [];
 
       try {
@@ -299,7 +377,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               file_name,
               mime_type,
               file_size_bytes,
-              canonical_source_url
+              canonical_source_url,
+              rating,
+              tags
             )
           `)
           .neq("id", workId)
@@ -311,12 +391,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               ? item.link_metadata[0]
               : item.link_metadata;
             if (meta?.canonical_source_url === link.drive_url) {
+              const isChildNsfw =
+                meta.rating === "Explicit" ||
+                meta.rating === "Mature" ||
+                (meta.tags || []).includes("nsfw");
+
               collectionWorks.push({
                 id: item.google_file_id || item.id,
                 title: meta.title,
                 fileName: meta.file_name,
                 mimeType: meta.mime_type,
                 sizeBytes: Number(meta.file_size_bytes) || 0,
+                rating: meta.rating,
+                isNsfw: isChildNsfw,
               });
             }
           });
@@ -356,6 +443,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           "Shared Google Drive folder collection containing multiple fanworks. Select any work below to read.",
         tags: metadata?.tags || [],
         collectionWorks,
+        takedownNotice,
       });
     }
 
@@ -497,6 +585,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 drivePreviewUrl,
                 contentHtml: formattedSanitizedHtml || plainSanitizedHtml,
                 plainContentHtml: plainSanitizedHtml || formattedSanitizedHtml,
+                takedownNotice,
               });
             }
           }
@@ -522,6 +611,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         drivePreviewUrl,
         contentHtml: null,
         plainContentHtml: null,
+        takedownNotice,
       });
     }
 
@@ -604,6 +694,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       drivePreviewUrl: `https://drive.google.com/file/d/${activeFileId}/preview`,
       contentHtml: sanitizedHtml,
       plainContentHtml: null,
+      takedownNotice,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal server error";

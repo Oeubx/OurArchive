@@ -25,6 +25,7 @@ export function AdminTakedownContainer({
 
   const [takedownQueue, setTakedownQueue] = useState<TakedownRequestRecord[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
+  const [takedownTab, setTakedownTab] = useState<"active" | "history">("active");
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(
     null
   );
@@ -227,6 +228,11 @@ export function AdminTakedownContainer({
   const openRequests = takedownQueue.filter(
     (r) => r.status === "pending" || r.status === "quarantined"
   );
+  const historyRequests = takedownQueue.filter(
+    (r) => r.status === "purged" || r.status === "dismissed"
+  );
+  const displayedRequests =
+    takedownTab === "active" ? openRequests : historyRequests;
 
   return (
     <div className="bg-surface-light dark:bg-surface-dark border-2 border-amber-300 dark:border-amber-900/60 rounded-xl p-5 space-y-6 shadow-xs">
@@ -264,9 +270,32 @@ export function AdminTakedownContainer({
       {/* Incoming Supabase Takedown Requests Queue */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-bold text-gray-800 dark:text-gray-200">
-            Incoming In-System Takedown Requests ({openRequests.length} active / {takedownQueue.length} total)
-          </span>
+          {/* Active vs History Tab Controls */}
+          <div className="flex items-center gap-1.5 bg-subtle-light dark:bg-subtle-dark p-1 rounded-lg border border-border-light dark:border-border-dark">
+            <button
+              type="button"
+              onClick={() => setTakedownTab("active")}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
+                takedownTab === "active"
+                  ? "bg-brand-trunk text-white shadow-2xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              }`}
+            >
+              Active Requests ({openRequests.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTakedownTab("history")}
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
+                takedownTab === "history"
+                  ? "bg-brand-trunk text-white shadow-2xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              }`}
+            >
+              Resolved / History ({historyRequests.length})
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={loadTakedownQueue}
@@ -280,13 +309,15 @@ export function AdminTakedownContainer({
           <div className="p-4 bg-canvas-light dark:bg-canvas-dark rounded-lg border border-border-light dark:border-border-dark text-center text-xs text-gray-500">
             Loading takedown requests from Supabase...
           </div>
-        ) : takedownQueue.length === 0 ? (
+        ) : displayedRequests.length === 0 ? (
           <div className="p-4 bg-canvas-light dark:bg-canvas-dark rounded-lg border border-border-light dark:border-border-dark text-center text-xs text-gray-500">
-            No in-system takedown requests logged in Supabase yet.
+            {takedownTab === "active"
+              ? "No active takedown requests currently pending in Supabase."
+              : "No resolved or dismissed takedown records in history."}
           </div>
         ) : (
           <div className="space-y-3">
-            {takedownQueue.map((req) => {
+            {displayedRequests.map((req) => {
               const pointedDrive =
                 req.resolved_drive_url || req.submitted_drive_url;
               const isOpen =

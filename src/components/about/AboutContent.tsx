@@ -61,6 +61,15 @@ export function AboutContent() {
             Designed with non-glare warm off-white parchment tones and high-contrast obsidian dark mode so readers can enjoy reading comfortably for hours without eye strain.
           </p>
         </div>
+
+        <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-5 space-y-2 shadow-xs md:col-span-2">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm flex items-center gap-2">
+            <span>📚 Personal Document Vault &amp; Granular Sharing</span>
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            Contributors can use OurArchive as their personal document vault. Upload view-only Google Drive links and read your documents immediately in Reader mode—even prior to verification. Choose whether to keep documents private in your Personal Archive or share them with the broader community once verified.
+          </p>
+        </div>
       </section>
 
       {/* Technical Architecture */}

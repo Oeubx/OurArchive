@@ -8,6 +8,90 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.0.3] — 2026-11-16
+
+Dynamic Google Drive resilience, community reporting, role access governance, and upload adaptation update introducing folderization limit disclosures, folder vs. file search filtering, idle auto-load validation, fallback UI for dead/inaccessible Drive works, idempotent collection re-synchronization, and instant administrator user role management.
+
+### Added
+- **Upload Modal Folder Details Adaptation**: Dynamic form labels switching between collection metadata (*"Collection / Folder Title"*, *"Curator / Primary Author"*, *"Primary Fandom(s)"*) and single-work metadata based on folder grouping selection (`[OA-M2-F5]`).
+- **Folderization Limits & Rules Callout**: Informative guidelines in `UploadModal` detailing traversal depth (up to 4 levels), subfolder bounds (max 30), document limits (max 100), and automatic exclusion of archive formats (`.zip`, `.rar`, `.7z`) and `.epub` (`[OA-M2-F5]`).
+- **Folder Scanning Wait Notice**: Informative animated notice informing uploaders during deep BFS folder crawls and metadata verifications (`[OA-M2-F5]`).
+- **Folder vs. File Search Filters**: Dedicated `entryType` filter in `SearchSection`, `SearchPage`, and `/api/search` allowing users to filter specifically by `[📁 Folders Only]` or `[📄 Files Only]` via `application/vnd.google-apps.folder` MIME type (`[OA-M2-F5]`).
+- **Search Loading Indicator & Idle Auto-Load**: Inline spinning search state inside the search bar and a 2.5-second idle debounce timer that automatically loads search results after filter selection without requiring manual form submission (`[OA-M2-F5]`).
+- **Inaccessible Fanwork & Broken Link Fallback UI**: Replaced generic error text in `ReaderPage` with a structured diagnostic card when Google Drive returns 404 (file deleted/trashed) or 403 (access restricted) (`[OA-M3-F5]`).
+- **Community Broken Link Reporting**: Lightweight one-click reporting modal (`ReportBrokenLinkModal`) allowing readers to report broken, deleted, or restricted links without requiring copyright ownership proof, automatically routing reports to the Admin Triage Desk (`[OA-M3-F5]`).
+- **Idempotent Collection Re-sync**: Enhanced `/api/links/submit` to allow re-submitting existing folder links without unique constraint errors, cleanly indexing newly added child fanworks while leaving existing works intact (`[OA-M2-F5]`).
+- **Contributor Role Standardization (Migration `20261116_000011`)**: Aligned the default registered user role to `contributor` across database columns, legacy rows, and the `handle_new_user()` auth trigger (`[OA-M1-F2]`).
+- **Admin User Role Management**: Added `/api/admin/users/role` and an interactive User Directory tab in `VerifierRequestsModal` allowing administrators to adjust roles (`contributor` ↔ `verifier` ↔ `admin`) with an immutable audit log (`[OA-M1-F2]`, `[OA-M3-F3]`).
+- **Role Change Confirmation Dialog**: Modal validation dialog prompting administrators to confirm or cancel role adjustments, detailing the specific permissions being granted or revoked (`[OA-M1-F2]`).
+- **Active vs. History Takedown Desk Tabs**: Split `AdminTakedownContainer` into Active Requests and Resolved / History tabs, ensuring resolved compliance items (such as `PURGED` records) do not clutter the active incoming inbox (`[OA-M3-F2]`).
+
+### Changed
+- **Admin Dashboard KPI Reordering**: Reordered dashboard metrics to begin with **Total Submissions** (`totalLinksCount`), followed by **Approved Works**, **Under Verification**, and **Verifier Applications** (`[OA-M3-F2]`).
+
+### Removed
+- **Masked Link Section in Admin Desk**: Removed the Masked Link row from mobile triage cards and the Masked Link column from desktop triage tables in `AdminDashboardClient` (`[OA-M3-F2]`).
+
+---
+
+## [1.0.2] — 2026-11-14
+
+Fanwork metadata intelligence update introducing deterministic first-page catalog scanning, granular multi-facet search filtering, and enriched upload categorization across all contributor and admin intake surfaces.
+
+### Added
+- **Deterministic First-Page Metadata Parser**: Platform-agnostic, non-AI regex engine (`src/lib/services/metadata-parser.ts`) extracting title, author, rating, categories, archive warnings, characters, relationships, word count, status, and language from fanwork document page 1. Includes automatic SFW/NSFW classification and plain-text fallback (`[OA-M2-F2]`).
+- **Scan Metadata API Endpoint**: Ephemeral in-memory streaming endpoint at `/api/links/scan-metadata` for zero-storage, read-only page-1 metadata extraction (`[OA-M2-F2]`).
+- **Multi-Facet Dynamic Filter Drawer**: Full filter UI in `SearchSection` with Category, Rating, Archive Warning, Completion Status, Character search, and Word Count range controls (`[OA-M2-F3]`).
+- **Debounced Auto-Search**: 350ms debounced auto-search with `AbortController` cancellation to prevent database query congestion (`[OA-M2-F3]`).
+- **Granular Card Metadata Display**: `DisplayCard` updated to render category pills, warning badges, character tags, and completion status indicators (`[OA-M2-F3]`).
+- **Manual Metadata Scan in Upload Modals**: `Scan Metadata` button and granular categorization fields (category, warnings, characters, relationships, completion, language) added to contributor `UploadModal`, `AssistedIntakeModal`, and admin `AdminDirectUploadModal` with admin submit lock until scan is confirmed (`[OA-M2-F6]`).
+- **Granular Fanwork Schema (`OA-M1-F4`)**: New columns `categories`, `characters`, `warnings`, `relationships`, `is_complete`, `language` on `public.link_metadata`; 4 GIN array indexes; updated `vw_public_search_feed` and `vw_admin_triage_feed`; collection folder purge cascades for takedown integrity.
+- **Deterministic Catalog Scanning Disclosure**: Added scanning transparency subsection to `/disclaimers` and updated `docs/backlogs/module-2-drive-upload-search/drive_link_processing_spec.md` (`[OA-M3-F4]`).
+- **Metadata Parser Unit Tests**: Automated test suite in `src/lib/services/__tests__/metadata-parser.test.ts` verifying catalog extraction and SFW/NSFW classification (`[OA-M2-F2]`).
+- **3-Hour Takedown Review Grace Period & Header Banner**: Implemented a 3-hour review window (`takedown_flagged_at` and `takedown_deadline`) on `drive_links` with an active warning notice in the reader header, automatic timeout suppression if unreviewed within 3 hours, and timer cancellation upon administrator dismissal (`[OA-M3-F5]`).
+- **Synchronized Reader Pagination & Direct Resumption**: Added scroll observation across `[data-pdf-page]` elements to dynamically synchronize `Pg [X]` counter during reading, with direct page jumping and bookmark resumption scrolling directly to the saved page element (`[OA-M2-F4]`).
+- **Formatted Reader Typography Spacing**: Added `.reader-content p` typography spacing rules (`margin: 1.15em !important; line-height: 1.85 !important;`) in `globals.css` ensuring comfortable vertical separation across dialogue and paragraphs (`[OA-M2-F4]`).
+- **Archive & EPUB Ingestion Exclusion**: Excluded `.zip`, `.rar`, `.7z`, `.tar`, `.gz`, `.epub`, and compressed folder formats from folder scanning traversal, removing `application/epub+zip` from threat scanner allowlist (`[OA-M3-F1]`).
+
+### Changed
+- **UI Terminology & Jargon Cleanup**: Replaced technical database jargon ("Supabase") across user profile, search results, and reader tooltips with user-friendly terms ("Cloud Synced", "reading bookmarks", "library archive") (`[OA-M1-F2]`, `[OA-M2-F5]`).
+- **Portal Hero Copy**: Removed external drive mirror redirection clause from portal homepage hero description (`[OA-M2-F5]`).
+
+### Fixed
+- **Static Reader Page Counter on Scroll**: Fixed an issue where the reader toolbar remained static at `Pg 1` when scrolling through multi-page native extracted HTML works (`[OA-M2-F4]`).
+- **Bookmark Resume Scroll Bypass**: Fixed an issue where resuming a reading bookmark skipped scrolling if `isPdf: true` despite having extractable HTML text (`[OA-M2-F4]`).
+- **Takedown Modal Scrollbar & Field Resizing**: Fixed unstyled bright white browser scrollbar in dark modal views and constrained Proof of Ownership textarea to a non-expandable 3-line scrollable box (`[OA-M3-F5]`).
+- **Database View Recreation Error**: Added `DROP VIEW IF EXISTS CASCADE` for both search feed views in migration `20261114_000010` to resolve PostgreSQL error `42P16` during column additions (`[OA-M1-F4]`).
+
+---
+
+## [1.0.1] — 2026-11-13
+
+
+Maintenance, safety, and community transparency patch refining card UI layouts, introducing SFW/NSFW classification and search filtering, clarifying AI usage policies, and providing dynamic profile submission tracking.
+
+### Added
+- **Registration Age Affirmation (18+)**: Mandatory 18+ checkbox on sign up recording `is_adult: true` into Supabase Auth user metadata and seeding local consent (`[OA-M1-F1]`).
+- **SafeSearch Advisory Confirmation Gate**: Interstitial modal in `SearchSection` gating `[🔴 NSFW (18+)]` searches behind age affirmation (`[OA-M2-F3]`).
+- **AO3-Style Reader Warning Interstitial**: Content advisory screen in `ReaderPage` requiring explicit confirmation before displaying mature or explicit fanworks (`[OA-M2-F4]`).
+- **Adult Content Profile Preference**: Dedicated toggle in `/profile` allowing users to activate or deactivate adult content access across their device (`[OA-M1-F2]`).
+- **SFW / NSFW Classification**: Prominent classification toggle (`🟢 SFW` vs `🔴 NSFW (18+)`) in `UploadModal` with automatic rating alignment, system tagging (`sfw` / `nsfw`), and recursive inheritance for collection folder children (`[OA-M2-F6]`).
+- **SFW / NSFW Search Filters**: Interactive filter pills (`[All Works]`, `[🟢 SFW Only]`, `[🔴 NSFW (18+)]`) in `SearchSection` with backend query integration in `/api/search` (`[OA-M2-F3]`).
+- **Folder Limits & Pathing Guide**: Interactive info guide view in `UploadModal` detailing system ingestion limits (4 nesting depth, 30 subfolders, 100 readable files) with visual hierarchy pathing (`[OA-M2-F6]`).
+- **AI Policy & Transparency Disclaimer**: Added Pillar 6 to `/disclaimers` detailing human-led development by `Oeubx`, Gemini 3.8 Flash assistance via Google Antigravity, zero runtime AI, zero story reading, and rule-based MIME safety checks (`[OA-M3-F4]`).
+- **Project Repository Link**: Added `NEXT_PUBLIC_PROJECT_REPO` and direct GitHub repository hyperlink in global footer "Reach Out & Connect" section (`[OA-M0-F0]`).
+
+### Changed
+- **Terminology Rebranding**: Systematically replaced "Emergency Service" with "TEMPORARY PROJECT" across Homepage hero pill, global notice banner, footer, and community disclaimers (`[OA-M3-F4]`).
+
+### Fixed
+- **Profile Submission Count Drift**: Replaced static database seed counter with `getLiveSubmissionMetrics()` to calculate authentic submissions and indexed works directly from `drive_links` (`[OA-M1-F2]`).
+
+### Refactored
+- **Card Header Projection**: Removed legacy `SYSTEM HEADER` bar UI from `DisplayCard` and `SkeletonCard`, relocating format indicator pills adjacent to rating badges in the title row (`[OA-M2-F5]`).
+
+---
+
 ## [1.0.0] — 2026-11-12
 
 Initial production release of **OurArchive**, promoting the complete progressive delivery baseline from `staging` to `production` across Modules **M0–M3** and staging stabilization fixes.

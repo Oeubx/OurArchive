@@ -33,6 +33,8 @@ export default function SearchPage() {
     fandom: "",
     rating: "All",
     tag: "",
+    contentFilter: "all",
+    entryType: "all",
   });
 
   const [pagination, setPagination] = useState({
@@ -41,7 +43,16 @@ export default function SearchPage() {
     total: 0,
   });
 
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   const fetchWorks = useCallback(async (filters: SearchFilters, page = 1, limit = pageSize) => {
+    // Abort prior in-flight search request to prevent stale race conditions and database congestion
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
 
@@ -51,10 +62,25 @@ export default function SearchPage() {
       if (filters.fandom) params.set("fandom", filters.fandom);
       if (filters.rating && filters.rating !== "All") params.set("rating", filters.rating);
       if (filters.tag) params.set("tag", filters.tag);
+      if (filters.category && filters.category !== "All") params.set("category", filters.category);
+      if (filters.warning && filters.warning !== "All") params.set("warning", filters.warning);
+      if (filters.character) params.set("character", filters.character);
+      if (filters.relationship) params.set("relationship", filters.relationship);
+      if (filters.isComplete && filters.isComplete !== "all") params.set("isComplete", filters.isComplete);
+      if (typeof filters.minWords === "number") params.set("minWords", filters.minWords.toString());
+      if (typeof filters.maxWords === "number") params.set("maxWords", filters.maxWords.toString());
+      if (filters.contentFilter && filters.contentFilter !== "all") {
+        params.set("contentFilter", filters.contentFilter);
+      }
+      if (filters.entryType && filters.entryType !== "all") {
+        params.set("entryType", filters.entryType);
+      }
       params.set("page", page.toString());
       params.set("limit", limit.toString());
 
-      const res = await fetch(`/api/search?${params.toString()}`);
+      const res = await fetch(`/api/search?${params.toString()}`, {
+        signal: controller.signal,
+      });
       const json = await res.json();
 
       if (res.ok) {
@@ -72,6 +98,10 @@ export default function SearchPage() {
         setPagination({ page: 1, totalPages: 1, total: 0 });
       }
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Ignored; a newer auto-search query was fired
+        return;
+      }
       setError(err instanceof Error ? err.message : "Error connecting to search service.");
       setWorks([]);
       setPagination({ page: 1, totalPages: 1, total: 0 });
@@ -193,7 +223,7 @@ export default function SearchPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-gray-600 dark:text-gray-400 px-1 gap-2">
           <span>
             {loading ? (
-              "Searching library in Supabase..."
+              "Searching library archive..."
             ) : (
               <>
                 Showing <strong>{works.length}</strong> of <strong>{pagination.total}</strong> verified works

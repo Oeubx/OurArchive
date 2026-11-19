@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
       wordCount,
       summary,
       tags,
+      categories,
+      warnings,
+      characters,
+      relationships,
+      isComplete,
+      language,
       canonicalSourceUrl,
       isOwnerMasked,
       notes,
@@ -121,6 +127,21 @@ export async function POST(request: NextRequest) {
         ? Math.floor(wordCount)
         : 0;
 
+    const sanitizedCategories = Array.isArray(categories)
+      ? categories.map((c) => String(c).trim()).filter(Boolean)
+      : [];
+    const sanitizedCharacters = Array.isArray(characters)
+      ? characters.map((c) => String(c).trim()).filter(Boolean)
+      : [];
+    const sanitizedWarnings = Array.isArray(warnings)
+      ? warnings.map((w) => String(w).trim()).filter(Boolean)
+      : [];
+    const sanitizedRelationships = Array.isArray(relationships)
+      ? relationships.map((r) => String(r).trim()).filter(Boolean)
+      : pairing
+      ? [pairing.trim()]
+      : [];
+
     const { error: metadataError } = await adminSupabase.from("link_metadata").insert({
       link_id: newLink.id,
       title: (title || metadata.name).trim(),
@@ -131,6 +152,12 @@ export async function POST(request: NextRequest) {
       word_count: parsedWordCount,
       summary: summary ? summary.trim() : null,
       tags: sanitizedTags,
+      categories: sanitizedCategories,
+      characters: sanitizedCharacters,
+      warnings: sanitizedWarnings,
+      relationships: sanitizedRelationships,
+      is_complete: Boolean(isComplete),
+      language: language ? String(language).trim() : "English",
       canonical_source_url: canonicalSourceUrl ? canonicalSourceUrl.trim() : null,
 
       file_name: metadata.name,

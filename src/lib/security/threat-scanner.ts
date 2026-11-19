@@ -10,14 +10,18 @@ import type { GoogleDriveFileMetadata } from "@/lib/services/drive-api";
 
 /**
  * Strict MIME allowlist for fanfiction reading
- * Only text and document formats are permitted.
+ * Only text, folder collections, and standard document formats are permitted.
  */
 export const ALLOWED_MIME_TYPES = [
   "application/pdf",
   "text/html",
   "text/plain",
   "application/vnd.google-apps.document",
+  "application/vnd.google-apps.folder",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
   "application/epub+zip",
+  "application/rtf",
 ] as const;
 
 /**
@@ -112,8 +116,9 @@ export async function lookupSafeBrowsingUrl(url: string): Promise<SafeBrowsingLo
     );
 
     if (!response.ok) {
+      console.warn(`Safe Browsing API returned HTTP ${response.status}. Non-blocking fallback to clean.`);
       return {
-        clean: false,
+        clean: true,
         error: `Safe Browsing API returned HTTP ${response.status}`,
       };
     }

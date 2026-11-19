@@ -2,15 +2,19 @@
  * Global Platform Configuration
  */
 
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.0.3";
 
 export const TAKEDOWN_EMAIL =
   process.env.NEXT_PUBLIC_TAKEDOWN_EMAIL || "takedown@example.com";
+
+export const PROJECT_REPO =
+  process.env.NEXT_PUBLIC_PROJECT_REPO || "";
 
 export const DEV_CONNECT = {
   personalEmail: process.env.NEXT_PUBLIC_DEV_EMAIL || "",
   twitterX: process.env.NEXT_PUBLIC_DEV_TWITTER || "",
   github: process.env.NEXT_PUBLIC_DEV_GITHUB || "",
+  repository: process.env.NEXT_PUBLIC_PROJECT_REPO || "",
   linkedIn: process.env.NEXT_PUBLIC_DEV_LINKEDIN || "",
   portfolio: process.env.NEXT_PUBLIC_DEV_PORTFOLIO || "under-development",
 };

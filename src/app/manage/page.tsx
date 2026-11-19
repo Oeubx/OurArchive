@@ -25,13 +25,29 @@ export default function VerifierManagePage() {
     totalLinksCount: 0,
   });
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<"all" | "folder" | "file">("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [inspectingLink, setInspectingLink] = useState<DriveLink | null>(null);
+
+  const isFilteredActive = selectedStatusFilter !== "all" || selectedTypeFilter !== "all";
+
+  const isItemFolder = (item: DriveLink) =>
+    item.mimeType === "application/vnd.google-apps.folder" || item.rawDriveUrl.includes("/folders/");
 
   async function executeAction(
     linkId: string,
     actionType: "VERIFY" | "APPROVE" | "REJECT" | "HIDE" | "UNHIDE" | "REMOVE",
     reason = "Verifier triage action"
   ) {
+    const targetLink = links.find((l) => l.id === linkId);
+    const isFolder = targetLink && isItemFolder(targetLink);
+    if (isFolder && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Notice: "${targetLink?.title}" is a Collection Folder.\n\nExecuting ${actionType} will also automatically apply this action to all fanworks unpacked from this collection.\n\nDo you want to proceed?`
+      );
+      if (!confirmed) return;
+    }
+
     const res = await fetch("/api/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -104,9 +120,17 @@ export default function VerifierManagePage() {
     return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
   });
 
+  const folderCount = links.filter((l) => isItemFolder(l)).length;
+  const fileCount = links.filter((l) => !isItemFolder(l)).length;
+
   const filteredLinks = sortedLinks.filter((item) => {
-    if (selectedStatusFilter === "all") return true;
-    return item.status === selectedStatusFilter;
+    if (selectedStatusFilter !== "all" && item.status !== selectedStatusFilter) {
+      return false;
+    }
+    const isFolder = isItemFolder(item);
+    if (selectedTypeFilter === "folder" && !isFolder) return false;
+    if (selectedTypeFilter === "file" && isFolder) return false;
+    return true;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredLinks.length / pageSize));
@@ -273,31 +297,115 @@ export default function VerifierManagePage() {
                 </p>
               </div>
 
-              {/* Status Filter Buttons (Scrollbar hidden) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                {[
-                  { id: "all", label: `All (${links.length})` },
-                  { id: "under_verification", label: `Pending (${metrics.underVerificationCount})` },
-                  { id: "approved", label: `Approved (${metrics.approvedCount})` },
-                  { id: "hidden", label: `Hidden (${metrics.hiddenCount})` },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setSelectedStatusFilter(tab.id);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
-                      selectedStatusFilter === tab.id
-                        ? "bg-brand-trunk text-white shadow-2xs"
-                        : "bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+              {/* Sole Filter Toggle Button */}
+              <button
+                type="button"
+                onClick={() => setShowFilters((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-2xs self-start sm:self-auto ${
+                  showFilters || isFilteredActive
+                    ? "bg-brand-trunk text-white border-brand-trunk shadow-sm"
+                    : "bg-surface-light dark:bg-surface-dark border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 text-current" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                </svg>
+                <span>FILTER</span>
+                {isFilteredActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-300" title="Filters active" />
+                )}
+                <span className="text-[10px] ml-0.5">{showFilters ? "▲" : "▼"}</span>
+              </button>
             </div>
+
+            {/* Expandable Filter Drawer (Displayed below header when Filter button is clicked) */}
+            {showFilters && (
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-xs space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  {/* Status Filter Buttons */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">
+                      Status:
+                    </span>
+                    {[
+                      { id: "all", label: `All (${links.length})` },
+                      { id: "under_verification", label: `Pending (${metrics.underVerificationCount})` },
+                      { id: "approved", label: `Approved (${metrics.approvedCount})` },
+                      { id: "hidden", label: `Hidden (${metrics.hiddenCount})` },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedStatusFilter(tab.id);
+                          setCurrentPage(1);
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                          selectedStatusFilter === tab.id
+                            ? "bg-brand-trunk text-white shadow-2xs"
+                            : "bg-canvas-light dark:bg-canvas-dark border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-300 hover:bg-subtle-light dark:hover:bg-subtle-dark"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Type Filter Buttons (Folders vs. Individual Files) */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mr-1">
+                      Format:
+                    </span>
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-subtle-light dark:bg-subtle-dark border border-border-light dark:border-border-dark text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTypeFilter("all");
+                          setCurrentPage(1);
+                        }}
+                        className={`px-2 py-0.5 rounded font-semibold transition cursor-pointer ${
+                          selectedTypeFilter === "all"
+                            ? "bg-surface-light dark:bg-surface-dark text-brand-trunk dark:text-brand-light shadow-2xs"
+                            : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                        }`}
+                      >
+                        All Types
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTypeFilter("folder");
+                          setCurrentPage(1);
+                        }}
+                        className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          selectedTypeFilter === "folder"
+                            ? "bg-surface-light dark:bg-surface-dark text-blue-700 dark:text-blue-300 shadow-2xs"
+                            : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                        }`}
+                      >
+                        <span>📁</span>
+                        <span>Folders ({folderCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedTypeFilter("file");
+                          setCurrentPage(1);
+                        }}
+                        className={`px-2 py-0.5 rounded font-semibold transition flex items-center gap-1 cursor-pointer ${
+                          selectedTypeFilter === "file"
+                            ? "bg-surface-light dark:bg-surface-dark text-emerald-700 dark:text-emerald-300 shadow-2xs"
+                            : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                        }`}
+                      >
+                        <span>📄</span>
+                        <span>Files ({fileCount})</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Submission Records Container: Dual Responsive Layout */}
             <div className="border border-border-light dark:border-border-dark rounded-xl bg-surface-light dark:bg-surface-dark overflow-hidden shadow-xs">
@@ -319,8 +427,19 @@ export default function VerifierManagePage() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
-                              {link.title}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                  isItemFolder(link)
+                                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                }`}
+                              >
+                                {isItemFolder(link) ? "📁 Folder" : "📄 File"}
+                              </span>
+                              <span className="font-bold text-gray-900 dark:text-gray-100 text-sm hover:text-brand-trunk transition">
+                                {link.title}
+                              </span>
                             </div>
                             <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                               by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words
@@ -422,8 +541,19 @@ export default function VerifierManagePage() {
                             className="hover:bg-subtle-light dark:hover:bg-subtle-dark transition group"
                           >
                             <td className="p-3">
-                              <div className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
-                                {link.title}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                    isItemFolder(link)
+                                      ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                      : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  }`}
+                                >
+                                  {isItemFolder(link) ? "📁 Folder" : "📄 File"}
+                                </span>
+                                <span className="font-bold text-gray-900 dark:text-gray-100 hover:text-brand-trunk dark:hover:text-brand-light transition">
+                                  {link.title}
+                                </span>
                               </div>
                               <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                                 by {link.authorName} &bull; {link.fandom} &bull; {link.wordCount.toLocaleString()} words

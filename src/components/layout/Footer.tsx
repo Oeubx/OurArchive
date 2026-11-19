@@ -66,8 +66,25 @@ export function Footer() {
                     title="Developer GitHub Profile"
                   >
                     <span>🐙</span>
-                    <span>GitHub</span>
+                    <span>Developer</span>
                   </a>
+                )}
+
+                {/* Project Repository */}
+                {DEV_CONNECT.repository && (
+                  <>
+                    <span className="text-gray-300 dark:text-gray-600">•</span>
+                    <a
+                      href={DEV_CONNECT.repository}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-brand-trunk dark:hover:text-brand-light transition font-medium"
+                      title="OurArchive GitHub Project Repository"
+                    >
+                      <span>📦</span>
+                      <span>Project Repo</span>
+                    </a>
+                  </>
                 )}
 
                 {/* X (Twitter) */}

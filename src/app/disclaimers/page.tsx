@@ -149,6 +149,90 @@ export default function DisclaimersPage() {
             </Link>
           </div>
         </section>
+
+        {/* Pillar 6: AI Usage & Deterministic Safety Verification */}
+        <section className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg p-5 shadow-2xs space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🤖</span>
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              6. Our Policy on Artificial Intelligence (AI) &amp; How Verification Works
+            </h2>
+          </div>
+          <p>
+            We believe in complete transparency with our community regarding how OurArchive was made and how it operates:
+          </p>
+
+          <div className="space-y-3 pl-1 text-gray-700 dark:text-gray-300">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
+                <span>👤</span>
+                <span>Who Built OurArchive?</span>
+              </h3>
+              <ul className="list-disc pl-5 mt-1 space-y-1">
+                <li>
+                  <strong>Human Planning &amp; Vision:</strong> This entire system—its purpose, design, creator safety protections, and zero-download rules—was <strong>planned and directed by the platform maintainer</strong>.
+                </li>
+                <li>
+                  <strong>AI as a Coding Assistant:</strong> The code was constructed using Google&apos;s <strong>Antigravity</strong> tool powered by the <strong>Gemini 3.8 Flash</strong> model. The AI acted purely as a software engineering helper (writing code, styling pages, and setting up database queries) under human developer supervision.
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
+                <span>🚫</span>
+                <span>Does AI Run on the Live Website or Read Documents?</span>
+              </h3>
+              <ul className="list-disc pl-5 mt-1 space-y-1">
+                <li>
+                  <strong>Zero AI on the Live Site:</strong> The active website and server run on <strong>standard website code without any AI running in the background</strong>.
+                </li>
+                <li>
+                  <strong>The AI Never Reads Your Documents:</strong> No artificial intelligence model has access to, ingests, or will <strong>ever read, analyze, summarize, or train on</strong> any document or creative work submitted or mirrored here. Your creative works remain 100% yours and are never fed into any machine learning models.
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
+                <span>🔍</span>
+                <span>How Does Safety Verification Work? (No AI Involved)</span>
+              </h3>
+              <p className="mt-1">
+                When a link is submitted, OurArchive performs basic safety checks to ensure the link is safe and view-only. <strong>This process does not use AI:</strong>
+              </p>
+              <ol className="list-decimal pl-5 mt-1 space-y-1">
+                <li>
+                  <strong>We only check the file label and format:</strong> The system asks Google Drive for basic details: the file name, file size, and file type (such as PDF or Word document).
+                </li>
+                <li>
+                  <strong>Rule-based safety filter:</strong> A simple system filter checks that the file is not a harmful computer program (like <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.exe</code>, <code className="font-mono text-[11px] bg-subtle-light dark:bg-subtle-dark px-1 py-0.5 rounded">.bat</code>, or installer scripts).
+                </li>
+                <li>
+                  <strong>No AI reads the document body text:</strong> The verification scanner does not read, analyze, summarize, or train on document text.
+                </li>
+              </ol>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-xs flex items-center gap-1.5">
+                <span>📑</span>
+                <span>First-Page Catalog Metadata Scanning (Deterministic, Zero AI)</span>
+              </h3>
+              <ul className="list-disc pl-5 mt-1 space-y-1">
+                <li>
+                  <strong>Cover Page Only:</strong> When requested during link contribution or verification, the system ephemerally inspects only the first cover/title page of a document or work to extract public catalog details (Title, Rating, Category, Fandom, Warnings, Characters, and Tags).
+                </li>
+                <li>
+                  <strong>Zero AI / Pure Deterministic Code:</strong> This scanning uses standard regular expressions and pattern matching—it does not use artificial intelligence, machine learning, or large language models.
+                </li>
+                <li>
+                  <strong>Document Body Text Is Never Read:</strong> The system never reads, analyzes, summarizes, or trains on document chapters or body text. All extracted tags are stored solely to help readers find works in library search.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Footer navigation */}

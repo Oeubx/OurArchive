@@ -15,6 +15,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [driveUrl, setDriveUrl] = useState("");
   const [confirmedViewOnly, setConfirmedViewOnly] = useState(false);
   const [isFolder, setIsFolder] = useState(true); // Default to folder grouping
+  const [isNsfw, setIsNsfw] = useState(false); // SFW by default
+  const [showInfoView, setShowInfoView] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false); // Collapsed by default
 
   const [title, setTitle] = useState("");
@@ -29,6 +31,16 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
   const [tagsInput, setTagsInput] = useState("");
   const [canonicalSourceUrl, setCanonicalSourceUrl] = useState("");
   const [isOwnerMasked, setIsOwnerMasked] = useState(true);
+  const [isPersonalArchive, setIsPersonalArchive] = useState(false);
+
+  // Granular fanwork categorization state
+  const [categories, setCategories] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [characters, setCharacters] = useState("");
+  const [chapters, setChapters] = useState("");
+  const [isComplete, setIsComplete] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +53,80 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (segments.isValid && typeof segments.isFolder === "boolean") {
+      setIsFolder(segments.isFolder);
+    }
+  }, [segments.isValid, segments.isFolder]);
+
   if (!isOpen || !mounted) return null;
+
+  async function handleScanMetadata() {
+    if (!segments.isValid) {
+      setError("Please paste a valid Google Drive link first before scanning.");
+      return;
+    }
+
+    setScanning(true);
+    setError(null);
+    setScanNotice(null);
+
+    try {
+      const res = await fetch("/api/links/scan-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ driveUrl: segments.canonicalUrl }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to scan metadata from link.");
+      }
+
+      if (data.metadata) {
+        const meta = data.metadata;
+        if (meta.title) setTitle(meta.title);
+        if (meta.author && !authorName) setAuthorName(meta.author);
+        if (meta.fandom) setFandom(meta.fandom);
+        if (meta.pairing) setPairing(meta.pairing);
+        if (meta.rating) {
+          const validRatings = [
+            "General Audiences",
+            "Teen And Up Audiences",
+            "Mature",
+            "Explicit",
+            "Not Rated",
+          ];
+          if (validRatings.includes(meta.rating)) {
+            setRating(meta.rating as typeof rating);
+          }
+        }
+        if (meta.wordCount) setWordCount(meta.wordCount);
+        if (meta.canonicalSourceUrl) setCanonicalSourceUrl(meta.canonicalSourceUrl);
+        if (meta.summary) setSummary(meta.summary);
+        if (meta.additionalTags?.length) setTagsInput(meta.additionalTags.join(", "));
+        if (meta.categories?.length) setCategories(meta.categories);
+        if (meta.warnings?.length) setWarnings(meta.warnings);
+        if (meta.characters?.length) setCharacters(meta.characters.join(", "));
+        if (meta.chapters) setChapters(meta.chapters);
+        if (typeof meta.isComplete === "boolean") setIsComplete(meta.isComplete);
+        if (typeof meta.isNsfw === "boolean") setIsNsfw(meta.isNsfw);
+
+        setDetailsExpanded(true);
+        setScanNotice(
+          data.message || (
+            data.isStandardCoverFormatted
+              ? "✨ Metadata scanned and fields auto-filled from cover page!"
+              : "ℹ️ Plain document detected. Enter details manually if desired."
+          )
+        );
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error scanning metadata.");
+    } finally {
+      setScanning(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +165,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
         body: JSON.stringify({
           driveUrl: canonicalUrl,
           isFolder,
+          isNsfw,
+          isPersonalArchive,
           title: title.trim() || undefined,
           authorName: resolvedAuthor,
           fandom: resolvedFandom,
@@ -88,6 +175,11 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           wordCount: parsedWordCount || undefined,
           summary: summary.trim() || undefined,
           tags,
+          categories,
+          warnings,
+          characters: characters ? characters.split(",").map((c) => c.trim()).filter(Boolean) : [],
+          relationships: pairing ? [pairing.trim()] : [],
+          isComplete,
           canonicalSourceUrl: canonicalSourceUrl.trim() || undefined,
           isOwnerMasked,
         }),
@@ -138,7 +230,24 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl max-w-xl w-full border border-border-light dark:border-border-dark overflow-hidden my-8 text-gray-900 dark:text-gray-100">
         <div className="bg-brand-trunk text-white px-5 py-3 flex items-center justify-between">
-          <h2 className="text-base font-bold tracking-wide">Submit View-Only Fanwork (Contributor)</h2>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold tracking-wide">
+              {showInfoView ? "Folder Limits & Structure Guide" : "Submit View-Only Fanwork (Contributor)"}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowInfoView(!showInfoView)}
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition flex items-center gap-1 ${
+                showInfoView
+                  ? "bg-white text-brand-trunk hover:bg-white/90 shadow-2xs"
+                  : "bg-white/20 text-white hover:bg-white/30"
+              }`}
+              title="View folder ingestion limits and sample pathing"
+            >
+              <span>ℹ️</span>
+              <span>{showInfoView ? "Back to Form" : "Folder Limits & Guide"}</span>
+            </button>
+          </div>
           <button
             onClick={onClose}
             className="text-white/80 hover:text-white text-lg font-bold transition"
@@ -148,6 +257,87 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
           </button>
         </div>
 
+        {showInfoView ? (
+          <div className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Google Drive Folder Ingestion Architecture
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  How OurArchive recursively crawls, indexes, and unpacks collection folders.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInfoView(false)}
+                className="px-3 py-1.5 bg-brand-trunk hover:bg-brand-bark text-white rounded font-semibold text-xs transition"
+              >
+                &larr; Back to Form
+              </button>
+            </div>
+
+            {/* Visual Hierarchy */}
+            <div className="space-y-2">
+              <span className="font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider text-[11px]">
+                Visual Folder Pathing Example
+              </span>
+              <pre className="bg-canvas-light dark:bg-canvas-dark border border-border-light dark:border-border-dark rounded-lg p-3 text-[11px] font-mono text-gray-800 dark:text-gray-200 overflow-x-auto leading-relaxed">
+{`// Contributed Root Link (e.g. "My Fanwork Archive")   --> [Depth 0: Main Folder Link]
+.// Folder 1 (e.g. "Series A")                          --> [Depth 1: Subfolder]
+..// Folder inside Folder 1 (e.g. "Season 1")           --> [Depth 2: Subfolder]
+...// Folder inside Season 1 (e.g. "Act I")             --> [Depth 3: Subfolder]
+....// Deepest Folder (e.g. "Bonus Chapters")           --> [Depth 4: MAX NESTING LIMIT]
+.....// Anything deeper than 4 folders                  --> [SKIPPED - Exceeds depth limit]`}
+              </pre>
+            </div>
+
+            {/* Ingestion Limits Matrix */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Nesting Depth</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Up to <strong>4 levels deep</strong> from the main contributed link. Folders nested deeper are skipped.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Subfolders Traversed</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  At most <strong>30 total subfolders</strong> are visited per collection submission to prevent rate limits.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Max Files Unpacked</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  Up to <strong>100 individual files</strong> per contribution. Each file is cataloged as a searchable work.
+                </p>
+              </div>
+
+              <div className="p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg space-y-1">
+                <span className="font-bold text-brand-trunk dark:text-brand-light block">Supported File Formats</span>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <code className="text-emerald-700 dark:text-emerald-400 font-mono">.pdf, .docx, .doc, .txt, .epub, .html</code>. Executables and <code className="font-mono">.zip</code> are ignored.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-xs text-amber-900 dark:text-amber-300">
+              <strong>View-Only Rule Reminder:</strong> Ensure your Google Drive folder and its files are set to <em>&quot;Anyone with the link can view&quot;</em>. Public edit permissions will cause the link to be rejected.
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowInfoView(false)}
+                className="w-full sm:w-auto px-5 py-2 bg-brand-trunk hover:bg-brand-bark text-white font-semibold rounded-lg transition"
+              >
+                &larr; Return to Submission Form
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded text-xs leading-relaxed">
@@ -163,6 +353,49 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
 
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded text-[11px] text-amber-900 dark:text-amber-300 leading-normal">
             <strong>Zero-Download & Safety Rule:</strong> Only Google Drive/Docs links set to <em>&quot;Anyone with the link can view&quot;</em> are accepted. Editable links will be rejected to protect the author&apos;s content from vandalism.
+          </div>
+
+          {/* SFW / NSFW CLASSIFICATION SELECTOR */}
+          <div className="p-3 rounded-lg border border-border-light dark:border-border-dark bg-canvas-light dark:bg-canvas-dark space-y-1.5">
+            <span className="block font-bold text-gray-800 dark:text-gray-200 text-xs">
+              Content Classification <span className="text-red-600">*</span>
+            </span>
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="content_classification"
+                  checked={!isNsfw}
+                  onChange={() => {
+                    setIsNsfw(false);
+                    setRating("General Audiences");
+                  }}
+                  className="text-brand-trunk focus:ring-brand-trunk"
+                />
+                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                  🟢 SFW (Safe for Work / General Audiences)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="content_classification"
+                  checked={isNsfw}
+                  onChange={() => {
+                    setIsNsfw(true);
+                    setRating("Mature");
+                  }}
+                  className="text-red-600 focus:ring-red-600"
+                />
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  🔴 NSFW (18+ / Mature / Explicit)
+                </span>
+              </label>
+            </div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">
+              Helps readers filter works safely in search. You can also specify an exact rating in the optional details below.
+            </p>
           </div>
 
           {/* SEGMENTED LINK INPUT BOX (Prevents Abrupt Executions) */}
@@ -276,6 +509,28 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 I have inspected the segmented pieces and confirm this link is set to <strong>view-only</strong> with edit permissions disabled.
               </label>
             </div>
+
+            {/* Personal Archive / Public Visibility Checkbox */}
+            <div className="pt-2 border-t border-border-light dark:border-border-dark space-y-1">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="personalArchiveCheckbox"
+                  checked={isPersonalArchive}
+                  onChange={(e) => setIsPersonalArchive(e.target.checked)}
+                  className="mt-0.5 rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                />
+                <div>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-xs flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>Keep in my Personal Archive (Private Vault)</span>
+                  </span>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mt-0.5">
+                    Store this work in your personal archive only. Other users will not be able to search or read it until you choose to make it public. You can read it anytime from your contribute portal.
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Expandable Sub-Details Section (Default Closed) */}
@@ -289,37 +544,124 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <span className="text-brand-trunk dark:text-brand-light font-mono text-sm">
                   {detailsExpanded ? "▼" : "▶"}
                 </span>
-                <span>PROVIDE DETAILS (OPTIONAL)</span>
+                <span>
+                  {isFolder
+                    ? "PROVIDE FOLDER & COLLECTION DETAILS (OPTIONAL)"
+                    : "PROVIDE WORK DETAILS (OPTIONAL)"}
+                </span>
               </div>
               <span className="text-[10px] text-gray-400 font-normal">
-                {detailsExpanded ? "Click to collapse" : "Click to specify title, author, fandom, or tags"}
+                {detailsExpanded
+                  ? "Click to collapse"
+                  : isFolder
+                  ? "Click to specify collection title, curator, fandom, or tags"
+                  : "Click to specify title, author, fandom, or tags"}
               </span>
             </button>
 
             {detailsExpanded && (
               <div className="p-4 space-y-3.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark animate-in fade-in duration-150">
+                {/* Folderization Limits & Guidelines (Visible when Folder is selected) */}
+                {isFolder && (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <span>ℹ️</span>
+                      <span>Folder Collection Indexing Rules &amp; Limits</span>
+                    </div>
+                    <ul className="text-[11px] list-disc list-inside space-y-0.5 text-gray-700 dark:text-gray-300">
+                      <li><strong>Depth Limit:</strong> Traverses nested subfolders up to <strong>4 levels deep</strong>.</li>
+                      <li><strong>Folder Cap:</strong> Scans at most <strong>30 subfolders</strong> per collection.</li>
+                      <li><strong>Document Limit:</strong> Indexes up to <strong>100 documents</strong> (.pdf, .docx, .txt, .rtf, .html).</li>
+                      <li><strong>Excluded Formats:</strong> Compressed archives (.zip, .rar, .7z) and .epub are automatically ignored.</li>
+                    </ul>
+                  </div>
+                )}
+
+                {/* Auto-Scan Action Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-brand-trunk/5 dark:bg-brand-trunk/15 border border-brand-trunk/20">
+                  <div className="text-xs">
+                    <span className="font-bold text-brand-trunk dark:text-brand-light flex items-center gap-1.5">
+                      <span>🪄</span>
+                      <span>
+                        {isFolder
+                          ? "Folder Collection Preview & Auto-Fill"
+                          : "Cover Page Auto-Fill"}
+                      </span>
+                    </span>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                      {isFolder
+                        ? "Pre-fill form details by sampling member works in this folder (Preview only, does not save yet)."
+                        : "Extract title, rating, categories, warnings, characters, and word count directly from the cover."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleScanMetadata}
+                    disabled={scanning || !segments.isValid}
+                    className="px-3.5 py-1.5 bg-brand-trunk hover:bg-brand-bark disabled:opacity-50 text-white rounded text-xs font-semibold shrink-0 transition flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    {scanning ? (
+                      <>
+                        <span className="animate-spin text-xs">⏳</span>
+                        <span>{isFolder ? "Sampling Folder..." : "Scanning Cover..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🪄</span>
+                        <span>{isFolder ? "Auto-Fill from Folder" : "Auto-Fill from Cover"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {scanning && isFolder && (
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 animate-pulse">
+                    <span className="text-base animate-spin">⏳</span>
+                    <div>
+                      <span className="font-bold block">Scanning Folder Collection</span>
+                      <span>This may take a while as we verify the metadata and inspect the files inside this folder...</span>
+                    </div>
+                  </div>
+                )}
+
+                {scanNotice && (
+                  <div className="p-2 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 text-blue-800 dark:text-blue-300 text-xs">
+                    {scanNotice}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Work Title <span className="text-gray-400 font-normal">(Optional, uses folder/file name if blank)</span>
+                      {isFolder ? "Collection / Folder Title" : "Work Title"}{" "}
+                      <span className="text-gray-400 font-normal">
+                        (Optional, uses folder/file name if blank)
+                      </span>
                     </label>
                     <input
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="e.g. To Build a Home"
+                      placeholder={
+                        isFolder
+                          ? "e.g. Dramione Classics Collection"
+                          : "e.g. To Build a Home"
+                      }
                       className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
                     />
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Original Author <span className="text-gray-400 font-normal">(Optional)</span>
+                      {isFolder ? "Curator / Primary Author" : "Original Author"}{" "}
+                      <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
-                      placeholder="e.g. starlight_scribe"
+                      placeholder={
+                        isFolder ? "e.g. archive_curator" : "e.g. starlight_scribe"
+                      }
                       className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
                     />
                   </div>
@@ -328,7 +670,8 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                      Fandom <span className="text-gray-400 font-normal">(Optional)</span>
+                      {isFolder ? "Primary Fandom(s)" : "Fandom"}{" "}
+                      <span className="text-gray-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
@@ -384,6 +727,116 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
                   </div>
                 </div>
 
+                {/* Categories */}
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                    Category <span className="text-gray-400 font-normal">(Select all that apply)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["F/F", "M/M", "F/M", "Gen", "Multi", "Other"].map((cat) => {
+                      const selected = categories.includes(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setCategories(categories.filter((c) => c !== cat));
+                            } else {
+                              setCategories([...categories, cat]);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded text-xs font-semibold border transition ${
+                            selected
+                              ? "bg-brand-trunk text-white border-brand-trunk"
+                              : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:border-gray-400"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Archive Warnings */}
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                    Archive Warnings
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "No Archive Warnings Apply",
+                      "Creator Chose Not To Use Archive Warnings",
+                      "Graphic Depictions Of Violence",
+                      "Major Character Death",
+                      "Rape/Non-Con",
+                      "Underage",
+                    ].map((warn) => {
+                      const selected = warnings.includes(warn);
+                      return (
+                        <button
+                          key={warn}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setWarnings(warnings.filter((w) => w !== warn));
+                            } else {
+                              setWarnings([...warnings, warn]);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition ${
+                            selected
+                              ? "bg-amber-700 text-white border-amber-700"
+                              : "bg-surface-light dark:bg-surface-dark text-gray-700 dark:text-gray-300 border-border-light dark:border-border-dark hover:border-gray-400"
+                          }`}
+                        >
+                          {warn}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Characters & Chapters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Characters <span className="text-gray-400 font-normal">(Comma-separated)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={characters}
+                      onChange={(e) => setCharacters(e.target.value)}
+                      placeholder="e.g. Bae Jinsol, Seol Yoona"
+                      className="w-full px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                      Chapters &amp; Completion Status
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={chapters}
+                        onChange={(e) => setChapters(e.target.value)}
+                        placeholder="e.g. 3/3"
+                        className="w-24 px-3 py-1.5 border border-border-light dark:border-border-dark rounded bg-canvas-light dark:bg-canvas-dark text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-brand-trunk outline-hidden text-xs font-mono"
+                      />
+                      <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isComplete}
+                          onChange={(e) => setIsComplete(e.target.checked)}
+                          className="rounded text-brand-trunk focus:ring-brand-trunk cursor-pointer"
+                        />
+                        <span>Complete Work</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block font-semibold mb-1 text-gray-700 dark:text-gray-300">Tags (Comma-separated)</label>
                   <input
@@ -433,6 +886,19 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </label>
           </div>
 
+          {loading && isFolder && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 animate-pulse">
+              <svg className="animate-spin h-4 w-4 text-amber-700 dark:text-amber-300 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <div>
+                <span className="font-bold block">Submitting &amp; Indexing Folder Collection</span>
+                <span>Writing to database and cataloging member fanworks into the library...</span>
+              </div>
+            </div>
+          )}
+
           <div className="pt-3 border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
             <button
               type="button"
@@ -444,19 +910,24 @@ export function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
             </button>
             <button
               type="submit"
-              disabled={loading || !segments.isValid || !confirmedViewOnly}
+              disabled={loading || scanning || !segments.isValid || !confirmedViewOnly}
               className="px-4 py-1.5 text-xs font-semibold text-white bg-brand-trunk hover:bg-brand-bark rounded transition disabled:opacity-40 inline-flex items-center gap-1.5"
             >
-              {loading && (
+              {(loading || scanning) && (
                 <svg className="animate-spin -ml-0.5 mr-1 h-3 w-3 inline text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                 </svg>
               )}
-              {loading ? "Verifying & Submitting..." : "Submit Work"}
+              {scanning
+                ? "Previewing Details..."
+                : loading
+                ? (isFolder ? "Submitting & Indexing Collection..." : "Verifying & Submitting...")
+                : (isFolder ? "Submit Folder Collection" : "Submit Work")}
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>,
     document.body

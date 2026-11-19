@@ -1,4 +1,4 @@
-# OurArchive (v1.0.0 Template)
+# OurArchive (v1.0.3 Template)
 
 > **Platform Scope & Zero-Download Notice**  
 > **OurArchive** is a zero-download, read-only cloud drive directory and document streaming platform.
@@ -10,7 +10,8 @@
 ## 1. Project Purpose
 
 **OurArchive** provides a clean, searchable index and distraction-free online reader for shared cloud drive links:
-- Users can submit public, view-only Google Drive links (individual files or curated folders).
+- Users can submit public, view-only Google Drive links (individual files or curated collections).
+- Contributors can curate their own **Personal Document Vault (Private Archive)**, enjoying immediate distraction-free reading of their works prior to verification, with granular toggles to share them publicly once verified.
 - Readers can search and read indexed documents in a clean, distraction-free reader interface without downloading raw files.
 - Automated safety filters and administrators verify submitted links to prevent malicious file distribution.
 - Creators and Drive owners retain full sovereignty over their links with fast-track removal upon request.
